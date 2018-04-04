@@ -43,34 +43,78 @@ def get_photo(photo_capturer=None):
 
 
 class Video:
-    def __init__(self, fig=None):
+    def __init__(self, fig=None, store_frames=False, frame_rate=5, seconds=3):
+        """
+        :param fig:
+        :param bool store_frames: Whether to store all the frames in a list.
+        :param int frame_rate: The number of frames per second
+        :param int | float seconds: The length of the video.
+        """
+        self.frames = None  # type: list
+        self._store_frames = store_frames
+        self._frame_rate = frame_rate
+        self._seconds = seconds
+        self._n_frames = int(frame_rate * seconds)
+        self._frame_size = None
 
+        # Default figure
         if fig is None:
             fig = plt.figure()
-        self.fig = fig
+        self._fig = fig
 
-        # Initialize image plot
+        # Get axes and remove ticks
+        self._ax = plt.gca()
+        self._ax.xaxis.set_ticks([])
+        self._ax.yaxis.set_ticks([])
+
+        # Store animation
+        self._image_plot = None
+        self._animation = animation.FuncAnimation(
+            self._fig,
+            self._animate_step,
+            init_func=self._initialize_animation,
+            interval=1000/frame_rate,
+            repeat=False,
+            frames=self._n_frames + 10,
+        )
+        plt.show(block=True)
+
+    def _end_of_video(self):
+        self._image_plot.set_data(np.ones(shape=self._frame_size))
+        plt.text(
+            x=self._frame_size[1] * 0.5,
+            y=self._frame_size[0] * 0.5,
+            s="End of video.",
+            ha="center"
+        )
+
+    def _initialize_animation(self):
+        if self._store_frames:
+            self.frames = []
+
+        # Get and set photo
         frame = get_photo()
-        image_plot = plt.imshow(frame)  # type: image.AxesImage
+        self._image_plot = plt.imshow(frame)  # type: image.AxesImage
         plt.draw()
         plt.show()
 
-        def init():
-            image_plot.set_data(frame)
+        # Get frame-size
+        self._frame_size = frame.shape
 
-        def animate(i):
-            frame = get_photo()
-            image_plot.set_data(frame)
+    def _animate_step(self, i):
+        # Get and set photo
+        frame = get_photo()
+        self._image_plot.set_data(frame)
 
-            return image_plot
+        # Frame storage
+        if self._store_frames:
+            self.frames.append(frame)
 
-        self.anim = animation.FuncAnimation(
-            fig,
-            animate,
-            init_func=init,
-            interval=50
-        )
-        plt.show(block=True)
+        if i >= self._n_frames:
+            self._fig.canvas.stop_event_loop()
+            self._end_of_video()
+
+        return self._image_plot
 
 
 if __name__ == "__main__":

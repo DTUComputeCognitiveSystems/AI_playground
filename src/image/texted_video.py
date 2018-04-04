@@ -17,7 +17,7 @@ class VideoWText(Video):
         # Initialize text
         self._text.initialize()
 
-        return self._image_plot, self._text.text
+        return self.artists
 
     def _get_text(self, i, frame):
         return "Frame #{} of shape {}".format(i, frame.shape)
@@ -29,7 +29,7 @@ class VideoWText(Video):
         # Write some text
         self._text.set_text(self._get_text_function(i, self._current_frame))
 
-        return self._image_plot, self._text
+        return self.artists
 
 
 if __name__ == "__main__":

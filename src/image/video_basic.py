@@ -175,7 +175,7 @@ class Video:
             self._time_left_text.set_text("{:.1f}s".format(c_time_left))
 
         # Allow updating additional artists from child classes
-        self._animate_step()
+        self._animate_step(i=i)
 
         # Frame storage
         if self._store_frames:

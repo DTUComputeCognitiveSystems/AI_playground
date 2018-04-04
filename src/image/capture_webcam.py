@@ -43,15 +43,15 @@ def get_photo(photo_capturer=None):
 
 
 class Video:
-    def __init__(self, fig=None, store_frames=False, frame_rate=5, seconds=3, block=True):
+    def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, block=True):
         """
         :param fig:
-        :param bool store_frames: Whether to store all the frames in a list.
+        :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second
         :param int | float seconds: The length of the video.
         """
         self.frames = None  # type: list
-        self._store_frames = store_frames
+        self._store_frames = record_frames
         self._frame_rate = frame_rate
         self._seconds = seconds
         self._n_frames = int(frame_rate * seconds)
@@ -59,7 +59,8 @@ class Video:
         self._video_is_over = False
 
         # Test getting frame
-        _ = get_photo()
+        self._current_frame = get_photo()
+        self._frame_size = self._current_frame.shape
 
         # Default figure
         if fig is None:
@@ -103,28 +104,27 @@ class Video:
             self.frames = []
 
         # Get and set photo
-        frame = get_photo()
-        self._image_plot = plt.imshow(frame)  # type: image.AxesImage
+        self._current_frame = get_photo()
+        self._image_plot = plt.imshow(self._current_frame)  # type: image.AxesImage
         plt.draw()
         plt.show()
 
-        # Get frame-size
-        self._frame_size = frame.shape
+        return self._image_plot,
 
     def _animate_step(self, i):
         # Get and set photo
-        frame = get_photo()
-        self._image_plot.set_data(frame)
+        self._current_frame = get_photo()
+        self._image_plot.set_data(self._current_frame)
 
         # Frame storage
         if self._store_frames:
-            self.frames.append(frame)
+            self.frames.append(self._current_frame)
 
         if i >= self._n_frames:
             self._fig.canvas.stop_event_loop()
             self._end_of_video()
 
-        return self._image_plot
+        return self._image_plot,
 
     def _wait_for_end(self):
         while not self._video_is_over:

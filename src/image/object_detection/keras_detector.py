@@ -1,0 +1,120 @@
+from collections import namedtuple
+from time import time
+import pandas as pd
+
+import keras_squeezenet
+import numpy as np
+from keras.applications import densenet
+from keras.applications import inception_resnet_v2
+from keras.applications import mobilenet, resnet50
+from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
+    decode_predictions as sqnet_decode
+
+from src.image import Video
+from src.image.models_base import ImageLabeller
+
+
+_model_specification = namedtuple(
+    "model_specificaion",
+    "name, net, model, input_size, preprocessing, prediction_decoding"
+)
+
+
+_keras_models = [
+    _model_specification("mobilenet", mobilenet, mobilenet.MobileNet,
+                         224, None, None),
+    _model_specification("resnet50", resnet50, resnet50.ResNet50,
+                         224, None, None),
+    _model_specification("densenet", densenet, densenet.DenseNet121,
+                         224, None, None),
+    _model_specification("inception_resnet_v2", inception_resnet_v2, inception_resnet_v2.InceptionResNetV2,
+                         299, None, None),
+    _model_specification("keras_squeezenet", keras_squeezenet, keras_squeezenet.SqueezeNet,
+                         227, sqnet_preprocessing, sqnet_decode),
+]
+
+
+_model_modules = {
+    specification.name: specification for specification in _keras_models
+}
+
+
+class KerasDetector(ImageLabeller):
+    available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
+
+    def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False):
+
+        if model_name in _model_modules:
+            _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
+                _model_modules[model_name]
+            self._model = model()
+
+            if self._preprocessing is None:
+                self._preprocessing = self._net.preprocess_input
+            if self._prediction_decoding is None:
+                self._prediction_decoding = self._net.decode_predictions
+        else:
+            raise ValueError("Does not know model of name: {}".format(model_name))
+
+        # Parameters for reshaping
+        self._model_input_shape = (self._input_size, self._input_size, 3)
+        super().__init__(model_input_shape=self._model_input_shape, resizing_method=resizing_method, verbose=verbose)
+
+    def _label_frame(self, frame):
+        # Expand batch-dimension
+        frame = np.expand_dims(frame, axis=0)
+
+        # Forward in neural network
+        predictions = self._model.predict(x=frame)
+
+        # Convert predictions
+        decoded = self._prediction_decoding(predictions)
+
+        return decoded
+
+
+if __name__ == "__main__":
+    print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
+
+    # Get some frames from a video
+    video = Video(
+        record_frames=True,
+        frame_rate=10,
+        seconds=1,
+        title="Test Video"
+    )
+    frames = video.frames
+
+    # Go through models and time performance
+    n_models = len(KerasDetector.available_models)
+    times = []
+    for model_nr, model_name in enumerate(KerasDetector.available_models):
+
+        print("\n" + "-" * 40 + "\n{} / {}: {}".format(model_nr+1, n_models, model_name))
+
+        # Make model
+        model = KerasDetector(
+            model_name=model_name,
+            verbose=False
+        )
+
+        # Label all frames
+        start_time = time()
+        for frame in frames:
+            _ = model.label_frame(frame=frame)
+        total_time = time() - start_time
+        times.append(total_time)
+        print("\tTotal time   : {:.2f}s".format(total_time))
+        print("\tAverage time : {:.2f}s".format(total_time / len(frames)))
+
+    # Pandas table at the end
+    times = np.array(times)
+    table = pd.DataFrame(
+        data=np.array([times, times / len(frames)]).T,
+        index=KerasDetector.available_models,
+        columns=["Total time", "Average time"]
+    )
+    table = table.sort_values("Total time", ascending=False)
+    print("\n\n" + "-" * 100)
+    print("Comparison table\n")
+    print(table)

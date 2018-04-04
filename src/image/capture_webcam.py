@@ -1,3 +1,5 @@
+from time import sleep
+
 import cv2
 import matplotlib
 from matplotlib import image
@@ -15,7 +17,12 @@ def get_capturer():
     Gets a video/photo capturer from cv2 and returns the same object every time.
     :rtype: cv2.VideoCapture
     """
-    return cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(0)
+
+    if not cam.isOpened():
+        raise IOError("Camera could not be opened. Probably already in use.")
+
+    return cam
 
 
 def get_photo(photo_capturer=None):
@@ -40,6 +47,7 @@ class Video:
 
         if fig is None:
             fig = plt.figure()
+        self.fig = fig
 
         # Initialize image plot
         frame = get_photo()
@@ -62,6 +70,7 @@ class Video:
             init_func=init,
             interval=50
         )
+        plt.show(block=True)
 
 
 if __name__ == "__main__":

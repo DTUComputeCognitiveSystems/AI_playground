@@ -17,13 +17,14 @@ def _scipy_resize(frame, resizing_method, model_input_shape):
 
 class ImageLabeller:
     def __init__(self, model_input_shape, resizing_method="sci_resize",
-                 verbose=False):
+                 n_labels_returned=1, verbose=False):
         """
         :param str | Callable resizing_method:
         :param tuple | list | np.ndarray model_input_shape:
         """
         self._verbose = verbose
         self._model_input_shape = model_input_shape
+        self._n_labels_returned = int(max(1, n_labels_returned))
 
         if resizing_method is None:
             self._resizing_method = lambda x: x
@@ -53,11 +54,17 @@ class ImageLabeller:
         :param np.ndarray frame:
         :return:
         """
-        self._vprint("Original frame-size: {}".format(frame.shape))
+        # Preprocess
         new_frame = self._preprocess_frame(frame=frame)
-        self._vprint("Preprocessed frame-size: {}".format(frame.shape))
-        label = self._label_frame(frame=new_frame)
-        return label
+
+        # Get labels and optional probabilities
+        labels, probabilities = self._label_frame(frame=new_frame)
+
+        # Only return wanted number of labels
+        labels = labels[:self._n_labels_returned]
+        probabilities = probabilities[:self._n_labels_returned]
+
+        return labels, probabilities
 
     def _preprocess_frame(self, frame):
         frame = self._resizing_method(frame)

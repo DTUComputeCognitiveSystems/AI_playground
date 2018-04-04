@@ -42,7 +42,8 @@ _model_modules = {
 class KerasDetector(ImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
-    def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False):
+    def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
+                 n_labels_returned=1):
 
         if model_name in _model_modules:
             _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
@@ -58,7 +59,8 @@ class KerasDetector(ImageLabeller):
 
         # Parameters for reshaping
         self._model_input_shape = (self._input_size, self._input_size, 3)
-        super().__init__(model_input_shape=self._model_input_shape, resizing_method=resizing_method, verbose=verbose)
+        super().__init__(model_input_shape=self._model_input_shape, resizing_method=resizing_method,
+                         n_labels_returned=n_labels_returned, verbose=verbose)
 
     def _label_frame(self, frame):
         # Expand batch-dimension
@@ -67,10 +69,14 @@ class KerasDetector(ImageLabeller):
         # Forward in neural network
         predictions = self._model.predict(x=frame)
 
-        # Convert predictions
-        decoded = self._prediction_decoding(predictions)
+        # Convert predictions (index for removing batch-dimension)
+        decoded = self._prediction_decoding(predictions)[0]
 
-        return decoded
+        # Get labels and probabilities
+        labels = [val[1] for val in decoded]
+        probabilities = [val[2] for val in decoded]
+
+        return labels, probabilities
 
 
 if __name__ == "__main__":
@@ -95,17 +101,20 @@ if __name__ == "__main__":
         # Make model
         model = KerasDetector(
             model_name=model_name,
-            verbose=False
+            verbose=False,
+            n_labels_returned=2
         )
 
         # Label all frames
         start_time = time()
+        labels = []
         for frame in frames:
-            _ = model.label_frame(frame=frame)
+            labels.append(model.label_frame(frame=frame))
         total_time = time() - start_time
         times.append(total_time)
         print("\tTotal time   : {:.2f}s".format(total_time))
         print("\tAverage time : {:.2f}s".format(total_time / len(frames)))
+        print("\tLabels       : {}".format(labels))
 
     # Pandas table at the end
     times = np.array(times)

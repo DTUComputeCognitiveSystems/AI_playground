@@ -48,7 +48,7 @@ Funding
 -------
 Innovation Foundation Denmark through the DABAI project
 """
-
+from scipy.misc import imresize
 from keras.applications import mobilenet
 from keras.applications import densenet 
 from keras.applications import inception_resnet_v2
@@ -148,7 +148,7 @@ else:
     assert False
 
     
-step = 3
+
 
 font = cv2.FONT_HERSHEY_PLAIN
 text_position = (10, 500)
@@ -170,17 +170,26 @@ print(device_lib.list_local_devices())
 capturer = cv2.VideoCapture(0)
 capturer.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 capturer.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+ret, frame = capturer.read()
+#check how many pixels to skip each time
+step = frame.shape[0] // model_image_size 
+
 
 previous_time = 0
 while(True):
     # Capture frame-by-frame
     ret, frame = capturer.read()
+    print(frame.shape)
 
     # Preprocess image
-    x_offset = (frame.shape[0] - model_image_size * step) // 2
-    y_offset = (frame.shape[1] - model_image_size * step) // 2
-    x_cropped = frame[x_offset:x_offset + model_image_size * step:step,
-                      y_offset:y_offset + model_image_size * step:step, :]
+    if False:
+        x_cropped = imresize(frame, (model_image_size, model_image_size, 3))
+    else:
+        x_offset = (frame.shape[0] - model_image_size * step) // 2
+        y_offset = (frame.shape[1] - model_image_size * step) // 2
+
+        x_cropped = frame[x_offset:x_offset + model_image_size * step:step,
+                          y_offset:y_offset + model_image_size * step:step, :]
     x = np.expand_dims(x_cropped, axis=0).astype('float32')
     x = preprocess_input(x)
 

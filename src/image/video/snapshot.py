@@ -5,12 +5,13 @@ from datetime import datetime
 
 class VideoCamera(Video):
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, block=True,
-                 backgroundcolor="darkblue", color="white"):
+                 backgroundcolor="darkblue", color="white", title="Camera"):
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.photos = []
         self.photos_info = []
 
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds, block=block)
+        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds,
+                         block=block, title=title)
 
     def _initialize_animation(self):
         # Initialize video

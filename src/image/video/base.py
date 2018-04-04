@@ -62,7 +62,7 @@ class VideoTexter:
 
 class Video:
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3,
-                 time_left="ne", block=True):
+                 time_left="ne", block=True, title="Video"):
         """
         :param fig:
         :param bool record_frames: Whether to store all the frames in a list.
@@ -78,6 +78,7 @@ class Video:
         self._frame_size = None
         self._video_is_over = False
         self._frame_nr = None
+        self._title = title
 
         # For showing time left of video
         self._time_left = None
@@ -94,6 +95,8 @@ class Video:
             fig = plt.figure()
         self._fig = fig
         self._canvas = self._fig.canvas
+        plt.title(self._title)
+        self._canvas.set_window_title(self._title)
 
         # Get axes and remove ticks
         self._ax = plt.gca()

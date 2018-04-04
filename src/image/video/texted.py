@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 
 class VideoWText(Video):
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, block=True,
-                 get_text_function=None, backgroundcolor="darkblue", color="white"):
+                 get_text_function=None, backgroundcolor="darkblue", color="white", title="Video"):
         self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self._get_text_function = self._get_text if get_text_function is None else get_text_function
 
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds, block=block)
+        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds,
+                         block=block, title=title)
 
     def _initialize_animation(self):
         # Initialize video

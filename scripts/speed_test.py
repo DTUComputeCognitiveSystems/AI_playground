@@ -1,27 +1,17 @@
-
-
-from keras.applications import mobilenet, resnet50
-from keras.applications import densenet 
-from keras.applications import inception_resnet_v2
-import keras_squeezenet 
-
-from keras.preprocessing import image
-import numpy as np
 import cv2
+import keras_squeezenet
+import numpy as np
+from keras.applications import densenet
+from keras.applications import inception_resnet_v2
+from keras.applications import mobilenet, resnet50
+from time import time
+
 try:
     from functools32 import lru_cache
 except ImportError:
     from functools import lru_cache
 
-import requests
-from six import u
-from time import time
-from unidecode import unidecode
 
-
-
-
-    
 step = 3
 
 font = cv2.FONT_HERSHEY_PLAIN

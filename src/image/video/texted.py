@@ -1,4 +1,4 @@
-from src.image.video_basic import VideoTexter, Video
+from src.image.video.base import VideoTexter, Video
 import matplotlib.pyplot as plt
 
 

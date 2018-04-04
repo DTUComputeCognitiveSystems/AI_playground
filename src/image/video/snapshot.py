@@ -1,4 +1,4 @@
-from src.image.video_basic import Video, VideoTexter
+from src.image.video.base import Video, VideoTexter
 import matplotlib.pyplot as plt
 from datetime import datetime
 

@@ -171,6 +171,8 @@ capturer = cv2.VideoCapture(0)
 capturer.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
 capturer.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 ret, frame = capturer.read()
+while frame is None:
+    pass
 #check how many pixels to skip each time
 step = frame.shape[0] // model_image_size 
 previous_time = 0

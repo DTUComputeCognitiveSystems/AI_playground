@@ -173,14 +173,11 @@ capturer.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
 ret, frame = capturer.read()
 #check how many pixels to skip each time
 step = frame.shape[0] // model_image_size 
-
-
 previous_time = 0
 while(True):
     # Capture frame-by-frame
     ret, frame = capturer.read()
-    print(frame.shape)
-
+ 
     # Preprocess image
     if False:
         x_cropped = imresize(frame, (model_image_size, model_image_size, 3))

@@ -5,7 +5,7 @@ A set of demos for teaching and introducing students to advanced AI-models with 
 ### Handling Notebooks
 
 **Do not** commit with outputs when committing notebooks.  
-In Jupyter, select `Cell -> Current Outputs -> Clear` before committing.
+In Jupyter, select `Cell -> All Outputs -> Clear` before committing.
 
  
 ------

@@ -43,7 +43,7 @@ def get_photo(photo_capturer=None):
 
 
 class Video:
-    def __init__(self, fig=None, store_frames=False, frame_rate=5, seconds=3):
+    def __init__(self, fig=None, store_frames=False, frame_rate=5, seconds=3, block=True):
         """
         :param fig:
         :param bool store_frames: Whether to store all the frames in a list.
@@ -56,6 +56,10 @@ class Video:
         self._seconds = seconds
         self._n_frames = int(frame_rate * seconds)
         self._frame_size = None
+        self._video_is_over = False
+
+        # Test getting frame
+        _ = get_photo()
 
         # Default figure
         if fig is None:
@@ -77,7 +81,11 @@ class Video:
             repeat=False,
             frames=self._n_frames + 10,
         )
-        plt.show(block=True)
+
+        # Block main thread
+        if block:
+            self._wait_for_end()
+            plt.close(self._fig)
 
     def _end_of_video(self):
         self._image_plot.set_data(np.ones(shape=self._frame_size))
@@ -87,8 +95,10 @@ class Video:
             s="End of video.",
             ha="center"
         )
+        self._video_is_over = True
 
     def _initialize_animation(self):
+        self._video_is_over = False
         if self._store_frames:
             self.frames = []
 
@@ -115,6 +125,10 @@ class Video:
             self._end_of_video()
 
         return self._image_plot
+
+    def _wait_for_end(self):
+        while not self._video_is_over:
+            plt.pause(0.5)
 
 
 if __name__ == "__main__":

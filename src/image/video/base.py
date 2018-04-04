@@ -56,10 +56,10 @@ class VideoTexter:
         )
 
     def set_background_color(self, new_color):
-        self._backgroundcolor = new_color
+        self._text.set_backgroundcolor(new_color)
 
     def color(self, new_color):
-        self._color = new_color
+        self._text.set_color(new_color)
 
     @property
     def text(self):

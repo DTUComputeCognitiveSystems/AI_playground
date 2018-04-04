@@ -55,6 +55,12 @@ class VideoTexter:
             color=self._color
         )
 
+    def set_background_color(self, new_color):
+        self._backgroundcolor = new_color
+
+    def color(self, new_color):
+        self._color = new_color
+
     @property
     def text(self):
         return self._text
@@ -64,10 +70,14 @@ class Video:
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3,
                  time_left="ne", block=True, title="Video"):
         """
-        :param fig:
+        Shows the input of the webcam as a video in a Matplotlib figure.
+        :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool record_frames: Whether to store all the frames in a list.
-        :param int frame_rate: The number of frames per second
+        :param int frame_rate: The number of frames per second.
         :param int | float seconds: The length of the video.
+        :param None | str time_left: Position of count-down timer. None if no timer is wanted.
+        :param bool block: Whether to wait for video to finish (recommended).
+        :param str title: Title of video figure and canvas.
         """
         self.frames = None  # type: list
         self.artists = []

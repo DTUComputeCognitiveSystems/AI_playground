@@ -4,14 +4,27 @@ from datetime import datetime
 
 
 class VideoCamera(Video):
-    def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, block=True,
-                 backgroundcolor="darkblue", color="white", title="Camera"):
+    def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, time_left="ne", block=True, title="Camera",
+                 backgroundcolor="darkblue", color="white"):
+        """
+        Shows the input of the webcam as a video in a Matplotlib figure while storing images when enter is pressed.
+        :param fig: Matplotlib figure for video. Creates a new figure as default.
+        :param bool record_frames: Whether to store all the frames in a list.
+        :param int frame_rate: The number of frames per second.
+        :param int | float seconds: The length of the video.
+        :param None | str time_left: Position of count-down timer. None if no timer is wanted.
+        :param bool block: Whether to wait for video to finish (recommended).
+        :param str title: Title of video figure and canvas.
+
+        :param str backgroundcolor: Color of background of camera-text.
+        :param str color: Face color of camera-text.
+        """
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.photos = []
         self.photos_info = []
 
         super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds,
-                         block=block, title=title)
+                         time_left=time_left, block=block, title=title)
 
     def _initialize_animation(self):
         # Initialize video

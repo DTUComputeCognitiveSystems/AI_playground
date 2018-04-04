@@ -1,14 +1,12 @@
-from src.image.capture_webcam import Video
+from src.image.video_basic import VideoTexter, Video
 import matplotlib.pyplot as plt
 
 
 class VideoWText(Video):
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, block=True,
                  get_text_function=None, backgroundcolor="darkblue", color="white"):
-        self._text = None
+        self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self._get_text_function = self._get_text if get_text_function is None else get_text_function
-        self.backgroundcolor = backgroundcolor
-        self.color = color
 
         super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds, block=block)
 
@@ -16,19 +14,10 @@ class VideoWText(Video):
         # Initialize video
         super()._initialize_animation()
 
-        # Create text
-        self._text = plt.text(
-            x=0,
-            y=0,
-            s="",
-            horizontalalignment='left',
-            verticalalignment='bottom',
-            transform=self._ax.transAxes,
-            backgroundcolor=self.backgroundcolor,
-            color=self.color
-        )
+        # Initialize text
+        self._text.initialize()
 
-        return self._image_plot, self._text
+        return self._image_plot, self._text.text
 
     def _get_text(self, i, frame):
         return "Frame #{} of shape {}".format(i, frame.shape)

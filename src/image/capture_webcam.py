@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from functools import lru_cache
+import matplotlib.pyplot as plt
 
 
 @lru_cache(maxsize=1)
@@ -28,7 +29,17 @@ def get_photo(photo_capturer=None):
 
     # Read and wait
     _, out = photo_capturer.read()
+
     while out is None:
         pass
 
+    # Reverse last dimension (CV2 and plotting libraries apparently work differently with images)
+    out = out[:, :, ::-1]
+
     return out
+
+
+if __name__ == "__main__":
+
+    a_photo = get_photo()
+    plt.imshow(a_photo)

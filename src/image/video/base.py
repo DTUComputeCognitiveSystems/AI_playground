@@ -92,6 +92,7 @@ class Video:
         self._frame_nr = None
         self._title = title
         self._frame_times = []
+        self.photos = []
 
         # Length of video
         self._length_is_frames = length_is_nframes
@@ -131,7 +132,7 @@ class Video:
             init_func=self.__initialize_animation,
             interval=1000 / frame_rate,
             repeat=False,
-            frames=self._n_frames + 10,
+            frames=None if length_is_nframes else self._n_frames + 1000,
         )
 
         # Block main thread
@@ -170,7 +171,8 @@ class Video:
         self.artists.append(self._image_plot)
 
         # Set time-left text
-        if self._show_time_left is not None:
+
+        if self._show_time_left is not None :
             self._time_left = self._video_time_length
             self._time_left_text = VideoTexter(backgroundcolor="darkgreen", position=self._show_time_left)
             self._time_left_text.initialize()
@@ -193,6 +195,7 @@ class Video:
 
         # Update time-left text
         if self._show_time_left is not None:
+
             c_time_left = self._video_time_length - time() + self._start_time
             c_time_left = c_time_left if c_time_left > 0 else 0
             self._time_left_text.set_text("{:.1f}s".format(c_time_left))
@@ -206,10 +209,14 @@ class Video:
             self.frames.append(self._current_frame)
 
         # Check for end
+ 
         video_is_done = False
-        if self._length_is_frames and self._frame_nr >= self._video_length - 1:
+        if self.length_is_nframes and len(self.photos) >= self._video_length:
             video_is_done = True
-        elif time() >= self._start_time + self._video_length:
+
+
+        elif not self.length_is_nframes and time() >= self._start_time + self._video_length:
+            print("FF")
             video_is_done = True
 
         # End video if needed

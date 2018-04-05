@@ -25,6 +25,8 @@ class VideoCamera(Video):
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.photos = []
         self.photos_info = []
+        self.length_is_nframes = length_is_nframes
+
 
         super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
                          length_is_nframes=length_is_nframes, time_left=time_left, block=block, title=title)
@@ -50,6 +52,7 @@ class VideoCamera(Video):
         # Write some text
         self._texter.set_text(self._camera_text())
 
+            
     def _take_photo(self, event):
         key = event.key
 

@@ -63,8 +63,16 @@ class KerasDetector(ImageLabeller):
                          n_labels_returned=n_labels_returned, verbose=verbose)
 
     def _label_frame(self, frame):
+        """
+        :param np.ndarray frame:
+        :return:
+        """
+
         # Expand batch-dimension
-        frame = np.expand_dims(frame, axis=0)
+        frame = np.expand_dims(frame, axis=0).astype('float32')
+
+        # Use networks preprocessing
+        frame = self._preprocessing(frame)
 
         # Forward in neural network
         predictions = self._model.predict(x=frame)

@@ -34,7 +34,7 @@ _keras_models = [
 ]
 
 
-_model_modules = {
+model_modules = {
     specification.name: specification for specification in _keras_models
 }
 
@@ -45,9 +45,9 @@ class KerasDetector(ImageLabeller):
     def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
                  n_labels_returned=1):
 
-        if model_name in _model_modules:
+        if model_name in model_modules:
             _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
-                _model_modules[model_name]
+                model_modules[model_name]
             self._model = model()
 
             if self._preprocessing is None:
@@ -98,6 +98,7 @@ if __name__ == "__main__":
         title="Test Video"
     )
     frames = video.frames
+    video.start()
 
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)

@@ -1,33 +1,34 @@
-from src.image.video.base import Video, VideoTexter
-import matplotlib.pyplot as plt
 from datetime import datetime
+
+import matplotlib.pyplot as plt
+
+from src.image.video.base import Video
+from src.image.video.texter import VideoTexter
 
 
 class VideoCamera(Video):
-    def __init__(self, fig=None, record_frames=False, frame_rate=5, video_length=3,
-                 length_is_nframes=False, time_left="ne", block=True, title="Camera",
+    def __init__(self, fig=None, record_frames=False, frame_rate=5, n_photos=5,
+                 block=True, title="Camera",
                  backgroundcolor="darkblue", color="white"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
-        :param int | float video_length: The length of the video.
-        :param None | str time_left: Position of count-down timer. None if no timer is wanted.
         :param bool block: Whether to wait for video to finish (recommended).
         :param str title: Title of video figure and canvas.
-        :param bool length_is_nframes: Indicates whether the video-length is given as number of frames
-                                       instead of seconds.
+        :param int n_photos: Number of photos to take before stopping.
 
         :param str backgroundcolor: Color of background of camera-text.
         :param str color: Face color of camera-text.
         """
+        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=None,
+                         block=block, title=title)
+
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.photos = []
         self.photos_info = []
-
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
-                         length_is_nframes=length_is_nframes, time_left=time_left, block=block, title=title)
+        self.n_photos = n_photos
 
     def _initialize_animation(self):
         # Initialize video
@@ -42,6 +43,12 @@ class VideoCamera(Video):
 
     def _camera_text(self):
         return "Camera\nPhotos taken: {}".format(len(self.photos))
+
+    def _the_end_is_here(self):
+        if len(self.photos) >= self.n_photos:
+            return True
+        else:
+            return False
 
     def _animate_step(self, i):
         # Update video
@@ -62,4 +69,5 @@ class VideoCamera(Video):
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
-    the_video = VideoCamera(video_length=10)
+    the_video = VideoCamera(n_photos=5)
+    the_video.start()

@@ -80,7 +80,7 @@ class ImageLabeller:
         if self._verbose:
             print(*args, **kwargs)
 
-    def _label_frame(self, frame):
+    def _label_frame(self, frame) -> (list, list):
         raise NotImplementedError
 
     def label_frame(self, frame):

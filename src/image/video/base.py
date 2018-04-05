@@ -12,99 +12,72 @@ from matplotlib import pyplot as plt, animation
 from src.image.capture_webcam import get_photo
 
 
-class VideoTexter:
-    def __init__(self, backgroundcolor="darkblue", color="white", position="sw"):
-        position = position.lower().strip()
+# TODO: Make texter an object you can change the text of and the animation simply listens for change
+# TODO: Make texters more integrated - you can simply pass a texter to a video and it will put it on.
 
-        # Vertical
-        if position in ("sw", "s", "se"):
-            self._verticalalignment = 'bottom'
-            self._y = 0.0
-        elif position in ("w", "e"):
-            self._verticalalignment = 'center'
-            self._y = 0.5
-        else:
-            self._verticalalignment = 'top'
-            self._y = 1.0
 
-        # Horizontal
-        if position in ("sw", "w", "nw"):
-            self._horizontalalignment = 'left'
-            self._x = 0.0
-        elif position in ("n", "s"):
-            self._horizontalalignment = 'center'
-            self._x = 0.5
-        else:
-            self._horizontalalignment = 'right'
-            self._x = 1.0
-
-        self._backgroundcolor = backgroundcolor
-        self._color = color
-        self._text = None
-
-    def set_text(self, s):
-        self.text.set_text(s=s)
+class VideoFlair:
+    def __init__(self, artists):
+        """
+        :param list artists:
+        """
+        self._artists = artists
 
     def initialize(self):
-        self._text = plt.text(
-            x=self._x,
-            y=self._y,
-            s="",
-            horizontalalignment=self._horizontalalignment,
-            verticalalignment=self._verticalalignment,
-            transform=plt.gca().transAxes,
-            backgroundcolor=self._backgroundcolor,
-            color=self._color
-        )
+        raise NotImplementedError
 
-    def set_background_color(self, new_color):
-        self._text.set_backgroundcolor(new_color)
-
-    def color(self, new_color):
-        self._text.set_color(new_color)
+    def update(self, video):
+        raise NotImplementedError
 
     @property
-    def text(self):
-        return self._text
+    def artists(self):
+        return self._artists
 
 
 class Video:
-    def __init__(self, fig=None, record_frames=False, frame_rate=5, video_length=3,
-                 length_is_nframes=False, time_left="ne", block=True, title="Video"):
+    def __init__(self, frame_rate=5,
+                 video_length=3, length_is_nframes=False,
+                 record_frames=False,
+                 title="Video",
+                 fig=None, block=True):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
-        :param int | float video_length: The length of the video.
-        :param None | str time_left: Position of count-down timer. None if no timer is wanted.
+        :param int | float | None video_length: The length of the video.
+                                                None runs video indefinitely (or until stop-condition).
         :param bool block: Whether to wait for video to finish (recommended).
         :param str title: Title of video figure and canvas.
         :param bool length_is_nframes: Indicates whether the video-length is given as number of frames
                                        instead of seconds.
         """
-        self.frames = None  # type: list
-        self.artists = []
+        # Settings
         self._store_frames = record_frames
         self._frame_rate = frame_rate
-        self._frame_size = None
+        self._title = title
+        self._block = block
+
+        # State
         self._video_is_over = False
         self._frame_nr = None
-        self._title = title
+        self._start_time = None
+
+        # Data-storage
+        self.frames = []
         self._frame_times = []
 
-        # Length of video
+        # For holding artists for Matplotlib
+        self.artists = []
+        self.flairs = []
+
+        # Length of video if required
         self._length_is_frames = length_is_nframes
         self._video_length = video_length
-        self._n_frames = video_length if length_is_nframes else int(frame_rate * video_length)
-        self._video_time_length = self._video_length / self._frame_rate if self._length_is_frames \
-            else self._video_length
-
-        # For showing time left of video
-        self._time_left = None
-        self._time_left_text = None  # type: VideoTexter
-        self._show_time_left = time_left
-        self._start_time = None
+        if video_length is None:
+            self._n_frames = None
+        else:
+            self._n_frames = (video_length if length_is_nframes else int(frame_rate * video_length)) + 1
 
         # Test getting frame
         self._current_frame = get_photo()
@@ -123,19 +96,20 @@ class Video:
         self._ax.xaxis.set_ticks([])
         self._ax.yaxis.set_ticks([])
 
+    def start(self):
         # Store animation
         self._image_plot = None
         self._animation = animation.FuncAnimation(
             self._fig,
             self.__animate_step,
             init_func=self.__initialize_animation,
-            interval=1000 / frame_rate,
+            interval=1000 / self._frame_rate,
             repeat=False,
-            frames=self._n_frames + 10,
+            frames=self._n_frames,
         )
 
         # Block main thread
-        if block:
+        if self._block:
             self._wait_for_end()
             plt.close(self._fig)
 
@@ -155,6 +129,9 @@ class Video:
     def _animate_step(self, i):
         pass
 
+    def add_flair(self, texter):
+        self.flairs.append(texter)
+
     def __initialize_animation(self):
         self.artists = []
         self._video_is_over = False
@@ -169,12 +146,10 @@ class Video:
         plt.show()
         self.artists.append(self._image_plot)
 
-        # Set time-left text
-        if self._show_time_left is not None:
-            self._time_left = self._video_time_length
-            self._time_left_text = VideoTexter(backgroundcolor="darkgreen", position=self._show_time_left)
-            self._time_left_text.initialize()
-            self.artists.append(self._time_left_text.text)
+        # Initialize flairs
+        for flair in self.flairs:  # type: VideoFlair
+            flair.initialize()
+            self.artists.extend(flair.artists)
 
         # Allow additional artists from child classes
         self._initialize_animation()
@@ -191,11 +166,9 @@ class Video:
         self._current_frame = get_photo()
         self._image_plot.set_data(self._current_frame)
 
-        # Update time-left text
-        if self._show_time_left is not None:
-            c_time_left = self._video_time_length - time() + self._start_time
-            c_time_left = c_time_left if c_time_left > 0 else 0
-            self._time_left_text.set_text("{:.1f}s".format(c_time_left))
+        # Update flairs
+        for flair in self.flairs:  # type: VideoFlair
+            flair.update(self)
 
         # Allow updating additional artists from child classes
         self._animate_step(i=i)
@@ -205,19 +178,25 @@ class Video:
         if self._store_frames:
             self.frames.append(self._current_frame)
 
-        # Check for end
-        video_is_done = False
-        if self._length_is_frames and self._frame_nr >= self._video_length - 1:
-            video_is_done = True
-        elif time() >= self._start_time + self._video_length:
-            video_is_done = True
-
         # End video if needed
-        if video_is_done:
+        if self._the_end_is_here():
                 self._fig.canvas.stop_event_loop()
                 self._end_of_video()
 
         return self.artists
+
+    def _the_end_is_here(self):
+        # Is this our inevitable doom?
+        this_is_the_end = False
+
+        if self._video_length is None:
+            this_is_the_end = False
+        elif self._length_is_frames and self._frame_nr >= self._video_length - 1:
+            this_is_the_end = True
+        elif time() >= self._start_time + self._video_length:
+            this_is_the_end = True
+
+        return this_is_the_end
 
     def _wait_for_end(self):
         while not self._video_is_over:
@@ -236,8 +215,10 @@ if __name__ == "__main__":
 
     if not do_frame_collecting_test:
         the_video = Video(
-            video_length=10,
+            video_length=3,
+            record_frames=True
         )
+        the_video.start()
     else:
         for _ in range(10):
             n_frames = random.randint(5, 25)

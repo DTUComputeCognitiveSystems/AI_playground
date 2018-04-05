@@ -1,14 +1,16 @@
 from src.image.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.base import VideoTexter, Video
+from src.image.video.base import Video
 import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 import numpy as np
 
+from src.image.video.texter import VideoTexter
+
 
 class LabelledVideo(Video):
     def __init__(self, model, fig=None, record_frames=False, frame_rate=5, video_length=3,
-                 length_is_nframes=False, time_left="ne", block=True, title="Video",
+                 length_is_nframes=False, block=True, title="Video",
                  backgroundcolor="darkblue", color="white"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
@@ -18,7 +20,6 @@ class LabelledVideo(Video):
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
         :param int | float video_length: The length of the video.
-        :param None | str time_left: Position of count-down timer. None if no timer is wanted.
         :param bool block: Whether to wait for video to finish (recommended).
         :param str title: Title of video figure and canvas.
         :param bool length_is_nframes: Indicates whether the video-length is given as number of frames
@@ -27,12 +28,13 @@ class LabelledVideo(Video):
         :param str backgroundcolor: Color of background of label-text.
         :param str color: Face color of label-text.
         """
+        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
+                         length_is_nframes=length_is_nframes, block=block, title=title)
+
         self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self._model = model
         self._colors = self._make_colormap()
-
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
-                         length_is_nframes=length_is_nframes, time_left=time_left, block=block, title=title)
+        self.flairs.append(self._text)
 
     def _make_colormap(self):
         # Make a user-defined colormap.
@@ -80,3 +82,4 @@ if __name__ == "__main__":
         model=labelling_model,
         video_length=20,
     )
+    the_video.start()

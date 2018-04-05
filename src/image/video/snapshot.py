@@ -7,7 +7,7 @@ class VideoCamera(Video):
     def __init__(self, fig=None, record_frames=False, frame_rate=5, seconds=3, time_left="ne", block=True, title="Camera",
                  backgroundcolor="darkblue", color="white"):
         """
-        Shows the input of the webcam as a video in a Matplotlib figure while storing images when enter is pressed.
+        Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.

@@ -94,7 +94,7 @@ if __name__ == "__main__":
     video = Video(
         record_frames=True,
         frame_rate=10,
-        seconds=1,
+        video_length=1,
         title="Test Video"
     )
     frames = video.frames

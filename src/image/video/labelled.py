@@ -7,7 +7,8 @@ import numpy as np
 
 
 class LabelledVideo(Video):
-    def __init__(self, model, fig=None, record_frames=False, frame_rate=5, seconds=3, time_left="ne", block=True, title="Video",
+    def __init__(self, model, fig=None, record_frames=False, frame_rate=5, video_length=3,
+                 length_is_nframes=False, time_left="ne", block=True, title="Video",
                  backgroundcolor="darkblue", color="white"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
@@ -16,10 +17,12 @@ class LabelledVideo(Video):
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
-        :param int | float seconds: The length of the video.
+        :param int | float video_length: The length of the video.
         :param None | str time_left: Position of count-down timer. None if no timer is wanted.
         :param bool block: Whether to wait for video to finish (recommended).
         :param str title: Title of video figure and canvas.
+        :param bool length_is_nframes: Indicates whether the video-length is given as number of frames
+                                       instead of seconds.
 
         :param str backgroundcolor: Color of background of label-text.
         :param str color: Face color of label-text.
@@ -28,8 +31,8 @@ class LabelledVideo(Video):
         self._model = model
         self._colors = self._make_colormap()
 
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, seconds=seconds,
-                         time_left=time_left, block=block, title=title)
+        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
+                         length_is_nframes=length_is_nframes, time_left=time_left, block=block, title=title)
 
     def _make_colormap(self):
         # Make a user-defined colormap.
@@ -75,5 +78,5 @@ if __name__ == "__main__":
     labelling_model = KerasDetector()
     the_video = LabelledVideo(
         model=labelling_model,
-        seconds=60
+        video_length=20,
     )

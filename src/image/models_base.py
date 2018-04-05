@@ -1,4 +1,5 @@
 from collections import Callable
+import cv2
 
 import numpy as np
 from scipy.misc import imresize
@@ -15,8 +16,35 @@ def _scipy_resize(frame, resizing_method, model_input_shape):
     return new_frame
 
 
+_cv2_interpolation_map = dict(
+    near=cv2.INTER_NEAREST,
+    bilin=cv2.INTER_LINEAR,
+    cubib=cv2.INTER_CUBIC,
+    area=cv2.INTER_AREA,
+    lancz=cv2.INTER_LANCZOS4,
+    max=cv2.INTER_MAX,
+)
+
+
+def _cv2_resize(frame, resizing_method, model_input_shape):
+    for method in _cv2_interpolation_map.keys():
+        if method in resizing_method:
+            interpolation = _cv2_interpolation_map[method]
+            break
+    else:
+        interpolation = cv2.INTER_NEAREST
+
+    resized = cv2.resize(
+        src=frame,
+        dsize=model_input_shape,
+        interpolation=interpolation
+    )
+
+    return resized
+
+
 class ImageLabeller:
-    def __init__(self, model_input_shape, resizing_method="sci_resize",
+    def __init__(self, model_input_shape, resizing_method="cv2_near",
                  n_labels_returned=1, verbose=False):
         """
         :param str | Callable resizing_method:
@@ -38,6 +66,12 @@ class ImageLabeller:
             self._resizing_method = lambda x: _scipy_resize(frame=x,
                                                             resizing_method=resizing_method,
                                                             model_input_shape=model_input_shape)
+
+        elif "cv2" in resizing_method:
+            self._vprint("Using cv2 resizing.")
+            self._resizing_method = lambda x: _cv2_resize(frame=x,
+                                                          resizing_method=resizing_method,
+                                                          model_input_shape=model_input_shape)
 
         else:
             raise ValueError("Does not understand resizing_method: {}".format(resizing_method))

@@ -75,5 +75,5 @@ if __name__ == "__main__":
     labelling_model = KerasDetector()
     the_video = LabelledVideo(
         model=labelling_model,
-        seconds=10
+        seconds=60
     )

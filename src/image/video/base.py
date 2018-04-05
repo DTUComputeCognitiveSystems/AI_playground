@@ -66,6 +66,7 @@ class Video:
         # Data-storage
         self.frames = []
         self._frame_times = []
+        self.photos = []
 
         # For holding artists for Matplotlib
         self.artists = []

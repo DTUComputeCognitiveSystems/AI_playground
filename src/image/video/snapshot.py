@@ -57,6 +57,7 @@ class VideoCamera(Video):
         # Write some text
         self._texter.set_text(self._camera_text())
 
+            
     def _take_photo(self, event):
         key = event.key
 

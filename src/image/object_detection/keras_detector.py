@@ -10,7 +10,7 @@ from keras.applications import mobilenet, resnet50
 from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
     decode_predictions as sqnet_decode
 
-from src.image import Video
+from src.image.video import Video
 from src.image.models_base import ImageLabeller
 
 

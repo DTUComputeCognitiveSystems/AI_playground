@@ -11,8 +11,7 @@ from keras.applications.imagenet_utils import preprocess_input as sqnet_preproce
     decode_predictions as sqnet_decode
 
 from src.image.video import Video
-from src.image.models_base import ImageLabeller
-
+from src.image.models_base import ImageLabeller, ResizingImageLabeller
 
 _model_specification = namedtuple(
     "model_specificaion",
@@ -39,7 +38,7 @@ model_modules = {
 }
 
 
-class KerasDetector(ImageLabeller):
+class KerasDetector(ResizingImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
     def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
@@ -97,8 +96,8 @@ if __name__ == "__main__":
         video_length=1,
         title="Test Video"
     )
-    frames = video.frames
     video.start()
+    frames = video.frames
 
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)

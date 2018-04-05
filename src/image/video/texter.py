@@ -5,9 +5,10 @@ from src.image.video.base import VideoFlair, Video
 
 
 class VideoTexter(VideoFlair):
-    def __init__(self, backgroundcolor="darkblue", color="white", position="sw"):
+    def __init__(self, initial_text="", backgroundcolor="darkblue", color="white", position="sw"):
         super().__init__([])
         position = position.lower().strip()
+        self._initial_text = initial_text
 
         # Vertical
         if position in ("sw", "s", "se"):
@@ -39,7 +40,7 @@ class VideoTexter(VideoFlair):
         self._text = plt.text(
             x=self._x,
             y=self._y,
-            s="",
+            s=self._initial_text,
             horizontalalignment=self._horizontalalignment,
             verticalalignment=self._verticalalignment,
             transform=plt.gca().transAxes,

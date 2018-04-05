@@ -44,6 +44,15 @@ def _cv2_resize(frame, resizing_method, model_input_shape):
 
 
 class ImageLabeller:
+    def label_frame(self, frame):
+        raise NotImplementedError
+
+    @property
+    def is_ready(self):
+        return True
+
+
+class ResizingImageLabeller(ImageLabeller):
     def __init__(self, model_input_shape, resizing_method="cv2_near",
                  n_labels_returned=1, verbose=False):
         """

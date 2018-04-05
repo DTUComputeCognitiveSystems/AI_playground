@@ -1,19 +1,11 @@
 import random
 
-import matplotlib
-
-matplotlib.use('TkAgg')
-
 from time import time
 
 import numpy as np
 from matplotlib import pyplot as plt, animation
 
 from src.image.capture_webcam import get_photo
-
-
-# TODO: Make texter an object you can change the text of and the animation simply listens for change
-# TODO: Make texters more integrated - you can simply pass a texter to a video and it will put it on.
 
 
 class VideoFlair:

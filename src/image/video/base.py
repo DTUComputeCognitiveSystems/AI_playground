@@ -1,11 +1,12 @@
 import random
+from _tkinter import TclError
 
-from time import time
-from time import sleep
+from time import time, sleep
+
 import numpy as np
 from matplotlib import pyplot as plt, animation
 
-from src.image.capture_webcam import get_photo
+from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream
 
 
 class VideoFlair:
@@ -30,8 +31,8 @@ class Video:
     def __init__(self, frame_rate=5,
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
-                 title="Video",
-                 fig=None, block=True):
+                 title="Video", stream_type="simple",
+                 fig=None, block=True, blit=False):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
@@ -45,8 +46,10 @@ class Video:
                                        instead of seconds.
         """
         # Settings
+        self._blit = blit
         self._store_frames = record_frames
         self._frame_rate = frame_rate
+        self._frame_time = 1. / frame_rate
         self._title = title
         self._block = block
 
@@ -54,6 +57,7 @@ class Video:
         self._video_is_over = False
         self._frame_nr = None
         self._start_time = None
+        self._next_time = None
 
         # Data-storage
         self.frames = []
@@ -72,8 +76,22 @@ class Video:
         else:
             self._n_frames = (video_length if length_is_nframes else int(frame_rate * video_length)) + 1
 
-        # Test getting frame
-        self._current_frame = get_photo()
+        # Open up a camera-stram
+        if "process" in stream_type:
+            self.camera_stream = CameraStreamProcess(frame_rate=frame_rate)
+            print("Video: Multiprocessing.")
+        elif "thread" in stream_type:
+            self.camera_stream = CameraStream(frame_rate=frame_rate)
+            print("Video: Multithreaded.")
+        else:
+            self.camera_stream = SimpleStream()
+            print("Video: Simple.")
+
+        # Test getting frame and get size of that frame
+        self._current_frame = None
+        while self._current_frame is None:
+            self._current_frame = self.camera_stream.current_frame
+            sleep(0.05)
         self._frame_size = self._current_frame.shape
 
         # Default figure
@@ -99,6 +117,7 @@ class Video:
             interval=1000 / self._frame_rate,
             repeat=False,
             frames=self._n_frames,
+            blit=self._blit
         )
 
         # Block main thread
@@ -133,7 +152,7 @@ class Video:
 
         # Get and set photo
         self._frame_nr = 0
-        self._current_frame = get_photo()
+        self._current_frame = self.camera_stream.current_frame
         self._image_plot = plt.imshow(self._current_frame)
         plt.draw()
         plt.show()
@@ -149,15 +168,19 @@ class Video:
 
         # Set time of start
         self._start_time = time()
+        self._next_time = time() + self._frame_time
 
         return self.artists
 
     def __animate_step(self, i):
+        while time() < self._next_time:
+            sleep(0.2)
+        self._next_time = time() + self._frame_time
 
         self._frame_nr = i
 
         # Get and set photo
-        self._current_frame = get_photo()
+        self._current_frame = self.camera_stream.current_frame
         self._image_plot.set_data(self._current_frame)
 
         # Update flairs
@@ -193,9 +216,12 @@ class Video:
         return this_is_the_end
 
     def _wait_for_end(self):
-        while not self._video_is_over:
-            #sleep(0.5)
-            plt.pause(0.5)
+        try:
+            while not self._video_is_over:
+                plt.pause(0.2)
+        except (TclError, KeyboardInterrupt):
+            plt.close("all")
+            self.camera_stream.stop()
 
     @property
     def frame_times(self):
@@ -210,7 +236,7 @@ if __name__ == "__main__":
 
     if not do_frame_collecting_test:
         the_video = Video(
-            video_length=3,
+            video_length=60,
             record_frames=True
         )
         the_video.start()

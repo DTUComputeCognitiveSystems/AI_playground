@@ -8,7 +8,7 @@ from src.image.video.texter import VideoTexter
 
 class VideoCamera(Video):
     def __init__(self, fig=None, record_frames=False, frame_rate=5, n_photos=5,
-                 block=True, title="Camera",
+                 block=True, title="Camera", stream_type="simple",
                  backgroundcolor="darkblue", color="white"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
@@ -23,7 +23,7 @@ class VideoCamera(Video):
         :param str color: Face color of camera-text.
         """
         super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=None,
-                         block=block, title=title)
+                         block=block, title=title, stream_type=stream_type)
 
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.photos = []
@@ -51,13 +51,9 @@ class VideoCamera(Video):
             return False
 
     def _animate_step(self, i):
-        # Update video
-        _ = super()._animate_step(i=i)
-
         # Write some text
         self._texter.set_text(self._camera_text())
 
-            
     def _take_photo(self, event):
         key = event.key
 
@@ -70,5 +66,5 @@ class VideoCamera(Video):
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
-    the_video = VideoCamera(n_photos=5)
+    the_video = VideoCamera(n_photos=5, stream_type="process")
     the_video.start()

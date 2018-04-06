@@ -31,10 +31,13 @@ class LabelledVideo(Video):
         super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
                          length_is_nframes=length_is_nframes, block=block, title=title)
 
-        self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
+        # Model
         self._model = model
         self._colors = self._make_colormap()
-        self.flairs.append(self._text)
+
+        # Flair
+        self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
+        self.flairs.extend([self._text])
 
     def _make_colormap(self):
         # Make a user-defined colormap.
@@ -50,15 +53,6 @@ class LabelledVideo(Video):
         cpick.set_array(np.ndarray([]))
 
         return cpick
-
-    def _initialize_animation(self):
-        # Initialize video
-        super()._initialize_animation()
-
-        # Initialize text
-        self._text.initialize()
-
-        return self.artists
 
     def _animate_step(self, i):
         # Update video

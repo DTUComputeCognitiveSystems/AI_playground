@@ -1,7 +1,7 @@
 import random
 
 from time import time
-
+from time import sleep
 import numpy as np
 from matplotlib import pyplot as plt, animation
 
@@ -153,6 +153,7 @@ class Video:
         return self.artists
 
     def __animate_step(self, i):
+
         self._frame_nr = i
 
         # Get and set photo
@@ -193,6 +194,7 @@ class Video:
 
     def _wait_for_end(self):
         while not self._video_is_over:
+            #sleep(0.5)
             plt.pause(0.5)
 
     @property

@@ -3,7 +3,7 @@ from time import time
 
 from matplotlib import pyplot as plt, animation
 
-from src.real_time.base_program import ProgramLoop, noop
+from src.real_time.base_backend import ProgramLoop, noop
 
 
 class MatplotlibProgramLoop(ProgramLoop):

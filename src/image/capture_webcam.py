@@ -1,7 +1,7 @@
 import ctypes
 from threading import Thread, Lock, Event
 from multiprocessing import Process, Array, Event as MEvent
-from time import time
+from time import time, sleep
 
 import cv2
 import numpy as np
@@ -84,8 +84,16 @@ class CameraStream(Thread, _CameraStreamer):
 
     @property
     def current_frame(self):
+        # Get frame
         with self.lock:
             current_frame = self._current_frame
+
+        # Ensure frame
+        while current_frame is None:
+            sleep(0.05)
+            with self.lock:
+                current_frame = self._current_frame
+                
         return current_frame
 
     @property

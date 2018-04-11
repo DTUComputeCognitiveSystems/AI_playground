@@ -14,7 +14,7 @@ class RealTimeVideo:
     def __init__(self, frame_rate=5,
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
-                 title="Video", stream_type="process",
+                 title="Video", stream_type="process", ax=None,
                  fig=None, block=True, blit=False, backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
@@ -26,15 +26,21 @@ class RealTimeVideo:
         :param bool record_frames: Whether to store all the frames in a list.
         :param str title: Title of video figure and canvas.
         :param stream_type:
+        :param str | BackendLoop backend: Backend to be used. If string is given this class will initialise the
+                                          selected backend, otherwise the video will be interfaced to the
+                                          existing backend.
+        :param plt.Axes ax: Some axes to be used for the video.
+
+        For backend="matplotlib":
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool block: Whether to wait for video to finish (recommended).
         :param blit:
-        :param str | BackendLoop backend:
         """
         # Settings
         self._store_frames = record_frames
         self._frame_rate = frame_rate
         self._frame_time = int(1000 * 1. / frame_rate)
+        self._title = title
 
         # Make real-time interface
         interface = BackendInterface(
@@ -67,7 +73,7 @@ class RealTimeVideo:
 
         # For additional video-flair
         self.flairs = []
-        self.ax = None
+        self.ax = ax
 
         # Length of video if required
         self._length_is_frames = length_is_nframes
@@ -117,7 +123,8 @@ class RealTimeVideo:
         return None
 
     def _loop_initialization(self):
-        self.ax = plt.gca()
+        self.ax = plt.gca() if self.ax is None else self.ax
+        self.ax.set_title(self._title)
         if isinstance(self.real_time_backend, MatplotlibLoop):
             self.ax.xaxis.set_ticks([])
             self.ax.yaxis.set_ticks([])
@@ -192,9 +199,10 @@ if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    back_end = MatplotlibLoop()
-    back_end.block = True
+    figure = plt.figure()
 
+    back_end = MatplotlibLoop(fig=figure)
+    back_end.block = True
 
     the_video = RealTimeVideo(
         video_length=60,

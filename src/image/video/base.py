@@ -120,8 +120,9 @@ class _Video:
             print("Video: Simple.")
 
         # Test getting frame and get size of that frame
-        self._current_frame = None
+        self._current_frame = self._current_frame_time = None
         while self._current_frame is None:
+            self._current_frame_time = time()
             self._current_frame = self.camera_stream.current_frame
             sleep(0.05)
         self._frame_size = self._current_frame.shape
@@ -163,6 +164,7 @@ class _Video:
 
         # Get photo
         self._current_frame = self.camera_stream.current_frame
+        self._current_frame_time = time()
 
         # Printing
         self.dprint("Initializing video.")
@@ -179,9 +181,6 @@ class _Video:
                 self.camera_stream.stop()
 
             self.real_time_backend.canvas.mpl_connect('close_event', closer)
-
-            # Allow additional artists from child classes
-            self._initialize_video_extensions()
 
             # Title and axis settings
             self.ax.set_title(self._title)
@@ -200,12 +199,16 @@ class _Video:
                 flair.initialize()
                 self.artists.extend(flair.artists)
 
+        # Allow additional artists from child classes
+        self._initialize_video_extensions()
+
+    def _step_print(self):
+        self.dprint("\tideo frame {:4d} at time {:8.2}s.".format(self.frame_nr, time() - self.real_time_backend.start_time))
+
     def _loop_step(self):
         # Get photo
         self._current_frame = self.camera_stream.current_frame
-
-        # Printing
-        self.dprint("\tVideo frame {} at time {:.2}s".format(self.frame_nr, time() - self.real_time_backend.start_time))
+        self._current_frame_time = time()
 
         # Plotting if using Matplotlib backend
         if isinstance(self.real_time_backend, MatplotlibLoop):
@@ -224,6 +227,10 @@ class _Video:
 
         # Allow updating additional artists from child classes
         self._step_video_extensions()
+
+        # Printing
+        if not self.frame_nr % self._print_step:
+            self._step_print()
 
     def _loop_stop_check(self):
         this_is_the_end = False
@@ -317,7 +324,8 @@ if __name__ == "__main__":
         record_frames=True,
         backend=backend,
         title="Visible Video!",
-        verbose=True
+        verbose=True,
+        print_step=2
     )
     backend.start()
     print("Frames recored with non-visible video: {}".format(len(video.video_frames)))

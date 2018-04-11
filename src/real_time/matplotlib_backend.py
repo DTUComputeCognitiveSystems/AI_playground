@@ -44,9 +44,6 @@ class MatplotlibLoop(BackendLoop):
             self.stop_now = True
         self.canvas.mpl_connect('close_event', closer)
 
-        # Get axes
-        self.ax = plt.gca()
-
         # Do animation
         self._animation = animation.FuncAnimation(
             fig=self._fig,

@@ -1,4 +1,3 @@
-import random
 from time import time, sleep
 
 import numpy as np
@@ -56,6 +55,7 @@ class RealTimeVideo:
 
         # For additional video-flair
         self.flairs = []
+        self.ax = None
 
         # Length of video if required
         self._length_is_frames = length_is_nframes
@@ -84,9 +84,7 @@ class RealTimeVideo:
         self._frame_size = self._current_frame.shape
 
     def _initialize_video_extensions(self):
-        if isinstance(self.real_time_backend, MatplotlibLoop):
-            self.real_time_backend.ax.xaxis.set_ticks([])
-            self.real_time_backend.ax.yaxis.set_ticks([])
+        pass
 
     def _animate_video_extensions(self):
         pass
@@ -105,6 +103,11 @@ class RealTimeVideo:
         return self.real_time_backend.artists
 
     def _loop_initialization(self):
+        self.ax = plt.gca()
+        if isinstance(self.real_time_backend, MatplotlibLoop):
+            self.ax.xaxis.set_ticks([])
+            self.ax.yaxis.set_ticks([])
+
         self.frame_times = []
         if self._store_frames:
             self.frames = []

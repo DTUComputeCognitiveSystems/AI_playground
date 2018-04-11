@@ -42,12 +42,13 @@ class KerasDetector(ResizingImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
     def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
-                 n_labels_returned=1):
+                 n_labels_returned=1, exlude_animals = False):
 
         if model_name in model_modules:
             _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
                 model_modules[model_name]
             self._model = model()
+            self.vegetarian = exlude_animals
 
             if self._preprocessing is None:
                 self._preprocessing = self._net.preprocess_input
@@ -75,6 +76,8 @@ class KerasDetector(ResizingImageLabeller):
 
         # Forward in neural network
         predictions = self._model.predict(x=frame)
+        if self.vegetarian:
+            predictions[0, :397] = 0
 
         # Convert predictions (index for removing batch-dimension)
         decoded = self._prediction_decoding(predictions)[0]

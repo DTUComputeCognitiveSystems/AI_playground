@@ -43,6 +43,30 @@ def get_photo(photo_capturer=None):
 
     return out
 
+def get_photo_on_keypress(photo_capturer=None, name='frame'):
+    """
+    Fetches a photo from webcam when enter is pressed
+    :param cv2.VideoCapture photo_capturer
+    :rtype: np.ndarray
+    """
+    if photo_capturer is None:
+        photo_capturer = get_capturer()
+
+    # Read and wait
+    ret, frame = photo_capturer.read()
+    
+    while(ret):
+        ret, frame = photo_capturer.read()
+        cv2.imshow(name, frame)
+        k = cv2.waitKey(33)
+        if k != -1:
+            break
+    cv2.destroyAllWindows()
+    
+    # Reverse last dimension (CV2 and plotting libraries apparently work differently with images)
+    out = frame[:, :, ::-1]
+    return out
+
 
 class _CameraStreamer:
     @property

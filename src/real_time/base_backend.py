@@ -54,8 +54,7 @@ class BackendMultiInterface:
         return self._loop_step
 
     def _loop_stop_check(self):
-        for interface in self.interfaces:
-            interface.loop_stop_check()
+        return any([interface.loop_stop_check() for interface in self.interfaces])
 
     @property
     def loop_stop_check(self):

@@ -75,7 +75,7 @@ class VideoCamera(_Video):
         else:
             return False
 
-    def _animate_video_extensions(self):
+    def _step_video_extensions(self):
         # Write some text
         self._texter.set_text(self._camera_text())
 

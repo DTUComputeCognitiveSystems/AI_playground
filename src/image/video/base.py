@@ -1,12 +1,12 @@
 from time import time, sleep
 
-import numpy as np
 from matplotlib import pyplot as plt
 
 from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream
+from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
-from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.base_backend import BackendLoop
+from src.real_time.matplotlib_backend import MatplotlibLoop
 
 
 class VideoFlair:
@@ -28,11 +28,12 @@ class VideoFlair:
 
 
 class _Video:
-    def __init__(self, frame_rate,
+    def __init__(self, frame_rate, stream_type,
                  video_length, length_is_nframes,
                  record_frames,
-                 title, stream_type, ax,
-                 fig, block, blit, backend):
+                 title, ax, fig, block, blit,
+                 verbose, print_step,
+                 backend):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param int frame_rate: The number of frames per second.
@@ -58,6 +59,8 @@ class _Video:
         self._frame_rate = frame_rate
         self._frame_time = int(1000 * 1. / frame_rate)
         self._title = title
+        self._verbose = verbose
+        self._print_step = print_step
 
         # Make real-time interface
         interface = BackendInterface(
@@ -81,11 +84,16 @@ class _Video:
                 block=block,
                 blit=blit
             )
+        elif "background" in backend:
+            self.real_time_backend = BackgroundLoop(
+                backend_interface=interface,
+                block=block
+            )
         else:
-            raise NotImplementedError("So far, we have only implemented Video for Matplotlib. ")
+            raise NotImplementedError("Unknown backend for video. ")
 
         # Data-storage
-        self.vidoe_frames = []
+        self.video_frames = []
         self.frame_times = []
 
         # For additional video-flair
@@ -121,7 +129,7 @@ class _Video:
     def _initialize_video_extensions(self):
         pass
 
-    def _animate_video_extensions(self):
+    def _step_video_extensions(self):
         pass
 
     def add_flair(self, texter):
@@ -134,6 +142,10 @@ class _Video:
     ##################################################################
     # Real-time API
 
+    def dprint(self, *args, **kwargs):
+        if self._verbose:
+            print(*args, **kwargs)
+
     def start(self):
         self.real_time_backend.start()
 
@@ -144,56 +156,74 @@ class _Video:
         return None
 
     def _loop_initialization(self):
-        # Get and set axes
-        self.ax = plt.gca() if self.ax is None else self.ax
-        plt.sca(self.ax)
-
-        # Add thread-stopper to closing event
-        def closer(_):
-            self.camera_stream.stop()
-        self.real_time_backend.canvas.mpl_connect('close_event', closer)
-
-        # Allow additional artists from child classes
-        self._initialize_video_extensions()
-
-        # Title and axis settings
-        self.ax.set_title(self._title)
-        if isinstance(self.real_time_backend, MatplotlibLoop):
-            self.ax.xaxis.set_ticks([])
-            self.ax.yaxis.set_ticks([])
-
+        # For storage
         self.frame_times = []
         if self._store_frames:
-            self.vidoe_frames = []
+            self.video_frames = []
 
-        # Get and set photo
+        # Get photo
         self._current_frame = self.camera_stream.current_frame
-        self._image_plot = plt.imshow(self._current_frame)
-        self.artists.append(self._image_plot)
-        plt.draw()
-        plt.show()
 
-        # Initialize flairs
-        for flair in self.flairs:  # type: VideoFlair
-            flair.initialize()
-            self.artists.extend(flair.artists)
+        # Printing
+        self.dprint("Initializing video.")
+
+        # Plotting if using Matplotlib backend
+        if isinstance(self.real_time_backend, MatplotlibLoop):
+
+            # Get and set axes
+            self.ax = plt.gca() if self.ax is None else self.ax
+            plt.sca(self.ax)
+
+            # Add thread-stopper to closing event
+            def closer(_):
+                self.camera_stream.stop()
+
+            self.real_time_backend.canvas.mpl_connect('close_event', closer)
+
+            # Allow additional artists from child classes
+            self._initialize_video_extensions()
+
+            # Title and axis settings
+            self.ax.set_title(self._title)
+            if isinstance(self.real_time_backend, MatplotlibLoop):
+                self.ax.xaxis.set_ticks([])
+                self.ax.yaxis.set_ticks([])
+
+            # Make image plot
+            self._image_plot = plt.imshow(self._current_frame)
+            self.artists.append(self._image_plot)
+            plt.draw()
+            plt.show()
+
+            # Initialize flairs
+            for flair in self.flairs:  # type: VideoFlair
+                flair.initialize()
+                self.artists.extend(flair.artists)
 
     def _loop_step(self):
-        # Get and set photo
+        # Get photo
         self._current_frame = self.camera_stream.current_frame
-        self._image_plot.set_data(self._current_frame)
 
-        # Update flairs
-        for flair in self.flairs:  # type: VideoFlair
-            flair.update(self)
+        # Printing
+        self.dprint("\tVideo frame {} at time {:.2}s".format(self.frame_nr, time() - self.real_time_backend.start_time))
+
+        # Plotting if using Matplotlib backend
+        if isinstance(self.real_time_backend, MatplotlibLoop):
+
+            # Update image plot
+            self._image_plot.set_data(self._current_frame)
+
+            # Update flairs
+            for flair in self.flairs:  # type: VideoFlair
+                flair.update(self)
+
+            # Frame storage
+            self.frame_times.append(time())
+            if self._store_frames:
+                self.video_frames.append(self._current_frame)
 
         # Allow updating additional artists from child classes
-        self._animate_video_extensions()
-
-        # Frame storage
-        self.frame_times.append(time())
-        if self._store_frames:
-            self.vidoe_frames.append(self._current_frame)
+        self._step_video_extensions()
 
     def _loop_stop_check(self):
         this_is_the_end = False
@@ -205,24 +235,29 @@ class _Video:
         elif time() >= self.real_time_backend.start_time + self._video_length:
             this_is_the_end = True
 
+        if this_is_the_end:
+            self.dprint("\tEnd condition met.")
+
         return this_is_the_end
 
     def _finalize(self):
-        self._image_plot.set_data(np.ones(shape=self._frame_size))
-        plt.text(
-            x=self._frame_size[1] * 0.5,
-            y=self._frame_size[0] * 0.5,
-            s="End of video.",
-            ha="center"
-        )
+        self.dprint("Finalizing video.")
+        self.camera_stream.stop()
 
     def _interrupt_handler(self):
-        pass
+        self.dprint("Video interrupted.")
+        self.camera_stream.stop()
+        self.real_time_backend.stop_now = True
 
 
 class SimpleVideo(_Video):
-    def __init__(self, frame_rate=5, video_length=3, length_is_nframes=False, record_frames=False, title="Video",
-                 stream_type="process", ax=None, fig=None, block=True, blit=False, backend="matplotlib"):
+    def __init__(self,
+                 frame_rate=5, stream_type="process",
+                 video_length=3, length_is_nframes=False,
+                 record_frames=False,
+                 title="Video", ax=None, fig=None, block=True, blit=False,
+                 verbose=False, print_step=1,
+                 backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         Do not extend this class. Instead extend _Video.
@@ -244,30 +279,45 @@ class SimpleVideo(_Video):
         :param bool block: Whether to wait for video to finish (recommended).
         :param blit:
         """
-        super().__init__(frame_rate,
-                         video_length,
-                         length_is_nframes,
-                         record_frames,
-                         title,
-                         stream_type,
-                         ax,
-                         fig,
-                         block,
-                         blit, backend)
+        super().__init__(
+            frame_rate=frame_rate,
+            video_length=video_length,
+            length_is_nframes=length_is_nframes,
+            record_frames=record_frames,
+            title=title,
+            stream_type=stream_type,
+            ax=ax,
+            fig=fig,
+            block=block,
+            blit=blit,
+            backend=backend,
+            verbose=verbose,
+            print_step=print_step
+        )
 
 
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    figure = plt.figure()
-
-    back_end = MatplotlibLoop(fig=figure)
+    back_end = MatplotlibLoop()
     back_end.block = True
 
-    the_video = SimpleVideo(
-        video_length=60,
-        record_frames=True,
-        backend=back_end
+    SimpleVideo(
+        video_length=3,
+        backend=back_end,
+        title="Visible Video!"
     )
-    the_video.start()
+    back_end.start()
+
+    print("\n\nNon-visible video with prints:")
+    backend = BackgroundLoop()
+    video = SimpleVideo(
+        video_length=3,
+        record_frames=True,
+        backend=backend,
+        title="Visible Video!",
+        verbose=True
+    )
+    backend.start()
+    print("Frames recored with non-visible video: {}".format(len(video.video_frames)))

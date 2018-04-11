@@ -65,9 +65,9 @@ class LabelledVideo(_Video):
 
         return cpick
 
-    def _animate_video_extensions(self):
+    def _step_video_extensions(self):
         # Update video
-        _ = super()._animate_video_extensions()
+        _ = super()._step_video_extensions()
 
         # Get labels and probabilities
         labels, probabilities = self._model.label_frame(frame=self._current_frame)

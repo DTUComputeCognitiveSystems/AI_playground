@@ -87,7 +87,7 @@ class MatplotlibLoop(BackendLoop):
         self.interface_loop_step()
 
         # Check for end
-        if self.interface_loop_stop_check():
+        if self.interface_loop_stop_check() or self.stop_now:
             self.fig.canvas.stop_event_loop()
             self.__finalize()
             self.stop_now = True

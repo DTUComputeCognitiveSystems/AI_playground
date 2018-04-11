@@ -1,9 +1,6 @@
-from _tkinter import TclError
+import sched
 from collections import Iterable
 from time import time
-import sched
-
-from numba.utils import finalize
 
 from src.real_time.base_backend import BackendLoop, BackendInterface
 
@@ -60,7 +57,7 @@ class BackgroundLoop(BackendLoop):
         self.interface_loop_step()
 
         # Check for end
-        if self.interface_loop_stop_check():
+        if self.interface_loop_stop_check() or self.stop_now:
             self.interface_finalize()
             self.stop_now = True
 
@@ -105,7 +102,7 @@ if __name__ == "__main__":
         loop_stop_check=stop_checker,
         finalize=lambda: print("Finalizing"),
         interrupt_handler=lambda: print("Interrupted!"),
-        loop_time_milliseconds=1000
+        loop_time_milliseconds=400
     )
 
     backend = BackgroundLoop()

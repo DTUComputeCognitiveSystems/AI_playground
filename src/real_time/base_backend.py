@@ -1,6 +1,5 @@
 from collections import Callable
 
-
 # noinspection PyUnusedLocal
 def noop(*args, **kwargs):
     pass

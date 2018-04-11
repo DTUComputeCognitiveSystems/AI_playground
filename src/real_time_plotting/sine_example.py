@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from math import sin
 
-from src.image.video.realtime_video import RealTimeVideo
+from src.image.video.snapshot import VideoCamera
 from src.real_time.base_backend import BackendInterface
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.base_backend import BackendLoop
@@ -64,9 +64,7 @@ if __name__ == "__main__":
     back_end.block = True
 
     ax1 = plt.subplot(2, 1, 1)
-    the_video = RealTimeVideo(
-        video_length=60,
-        record_frames=True,
+    the_video = VideoCamera(
         backend=back_end,
         ax=ax1
     )

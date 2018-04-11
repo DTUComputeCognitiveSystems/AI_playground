@@ -1,17 +1,17 @@
 from collections import namedtuple
 from time import time
-import pandas as pd
 
 import keras_squeezenet
 import numpy as np
+import pandas as pd
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
 from keras.applications import mobilenet, resnet50
 from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
     decode_predictions as sqnet_decode
 
-from src.image.video import Video
-from src.image.models_base import ImageLabeller, ResizingImageLabeller
+from src.image.models_base import ResizingImageLabeller
+from src.image.video import SimpleVideo
 
 _model_specification = namedtuple(
     "model_specificaion",
@@ -90,14 +90,14 @@ if __name__ == "__main__":
     print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
 
     # Get some frames from a video
-    video = Video(
+    video = SimpleVideo(
         record_frames=True,
         frame_rate=10,
         video_length=1,
         title="Test Video"
     )
     video.start()
-    frames = video.frames
+    frames = video.vidoe_frames
 
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)

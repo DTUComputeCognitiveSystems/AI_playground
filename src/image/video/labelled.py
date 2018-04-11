@@ -1,6 +1,6 @@
 from src.image.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.base import Video
+from src.image.video.base import _Video
 import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 import numpy as np
@@ -8,10 +8,10 @@ import numpy as np
 from src.image.video.texter import VideoTexter
 
 
-class LabelledVideo(Video):
+class LabelledVideo(_Video):
     def __init__(self, model, fig=None, record_frames=False, frame_rate=5, video_length=3,
                  length_is_nframes=False, block=True, title="Video",
-                 backgroundcolor="darkblue", color="white"):
+                 backgroundcolor="darkblue", color="white", stream_type="process", ax=None, backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
         model.
@@ -28,8 +28,19 @@ class LabelledVideo(Video):
         :param str backgroundcolor: Color of background of label-text.
         :param str color: Face color of label-text.
         """
-        super().__init__(fig=fig, record_frames=record_frames, frame_rate=frame_rate, video_length=video_length,
-                         length_is_nframes=length_is_nframes, block=block, title=title)
+        super().__init__(
+            frame_rate=frame_rate,
+            video_length=video_length,
+            length_is_nframes=length_is_nframes,
+            record_frames=record_frames,
+            title=title,
+            stream_type=stream_type,
+            ax=ax,
+            fig=fig,
+            block=block,
+            blit=False,
+            backend=backend
+        )
 
         # Model
         self._model = model
@@ -54,9 +65,9 @@ class LabelledVideo(Video):
 
         return cpick
 
-    def _animate_step(self, i):
+    def _animate_video_extensions(self):
         # Update video
-        _ = super()._animate_step(i=i)
+        _ = super()._animate_video_extensions()
 
         # Get labels and probabilities
         labels, probabilities = self._model.label_frame(frame=self._current_frame)
@@ -65,13 +76,11 @@ class LabelledVideo(Video):
         self._text.set_text(labels[0])
         self._text.set_background_color(self._colors.to_rgba(probabilities[0]))
 
-        return self.artists
-
 
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
-    labelling_model = KerasDetector()
+    labelling_model = KerasDetector(model_name="mobilenet")
     the_video = LabelledVideo(
         model=labelling_model,
         video_length=20,

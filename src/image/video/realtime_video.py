@@ -7,6 +7,7 @@ from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleSt
 from src.image.video.base import VideoFlair
 from src.real_time.base_backend import BackendInterface
 from src.real_time.matplotlib_backend import MatplotlibLoop
+from src.real_time.base_backend import BackendLoop
 
 
 class RealTimeVideo:
@@ -43,7 +44,10 @@ class RealTimeVideo:
         )
 
         # Set backend
-        if "matplotlib" in backend:
+        if isinstance(backend, BackendLoop):
+            self.real_time_backend = backend
+            self.real_time_backend.add_interface(interface=interface)
+        elif "matplotlib" in backend:
             self.real_time_backend = MatplotlibLoop(
                 backend_interface=interface,
                 title=title,

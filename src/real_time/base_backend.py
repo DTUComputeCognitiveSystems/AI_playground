@@ -32,10 +32,13 @@ class BackendMultiInterface:
         """
         Interface for a backend. Multiple interfaces can be combined in this class and will all be run in the
         real-time loop.
-        :param tuple[BackendInterface] arts: Interfaces.
+        :param tuple args: Interfaces.
         """
-        self.interfaces = args
+        self.interfaces = list(args)  # type: list[BackendInterface]
         self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+
+    def add_interface(self, interface: BackendInterface):
+        self.interfaces.append(interface)
 
     def _loop_initialization(self):
         for interface in self.interfaces:
@@ -82,11 +85,14 @@ class BackendMultiInterface:
 
 
 class BackendLoop:
-    def __init__(self, interface: BackendInterface):
-        self.interface = interface
+    def __init__(self, *args):
+        self.interface = BackendMultiInterface(*args)
 
         # Defaults
         self.stop_now = False
+
+    def add_interface(self, interface):
+        self.interface.add_interface(interface=interface)
 
     def start(self):
         raise NotImplementedError

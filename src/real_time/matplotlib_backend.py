@@ -27,6 +27,7 @@ class MatplotlibLoop(BackendLoop):
         super().__init__(backend_interface)
 
         # Fields
+        self.artists = []
         self.canvas = self.ax = self._animation = self._current_loop_nr = self._start_time = None
 
     def start(self):

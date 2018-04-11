@@ -27,13 +27,67 @@ class BackendInterface:
         self.loop_time_milliseconds = loop_time_milliseconds
 
 
+class BackendMultiInterface:
+    def __init__(self, *args):
+        """
+        Interface for a backend. Multiple interfaces can be combined in this class and will all be run in the
+        real-time loop.
+        :param tuple[BackendInterface] arts: Interfaces.
+        """
+        self.interfaces = args
+        self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+
+    def _loop_initialization(self):
+        for interface in self.interfaces:
+            interface.loop_initialization()
+
+    @property
+    def loop_initialization(self):
+        return self._loop_initialization
+
+    def _loop_step(self):
+        for interface in self.interfaces:
+            interface.loop_step()
+
+    @property
+    def loop_step(self):
+        return self._loop_step
+
+    def _loop_stop_check(self):
+        for interface in self.interfaces:
+            interface.loop_stop_check()
+
+    @property
+    def loop_stop_check(self):
+        return self._loop_stop_check
+
+    def _finalize(self):
+        for interface in self.interfaces:
+            interface.finalize()
+
+    @property
+    def finalize(self):
+        return self._finalize
+
+    def _interrupt_handler(self):
+        for interface in self.interfaces:
+            interface.interrupt_handler()
+
+    @property
+    def interrupt_handler(self):
+        return self._interrupt_handler
+
+    @property
+    def loop_time_milliseconds(self):
+        return self._loop_time_milliseconds
+
+
 class BackendLoop:
     def __init__(self, interface: BackendInterface):
         self.interface = interface
 
         # Defaults
         self.stop_now = False
-        self.artists = []
 
     def start(self):
         raise NotImplementedError
@@ -71,5 +125,3 @@ class BackendLoop:
     @property
     def loop_time_milliseconds(self):
         return self.interface.loop_time_milliseconds
-
-

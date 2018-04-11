@@ -14,7 +14,7 @@ class RealTimeVideo:
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
                  title="Video", stream_type="process",
-                 fig=None, block=True, blit=False):
+                 fig=None, block=True, blit=False, backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
@@ -41,13 +41,18 @@ class RealTimeVideo:
             interrupt_handler=self._interrupt_handler,
             loop_time_milliseconds=self._frame_time
         )
-        self.real_time_backend = MatplotlibLoop(
-            backend_interface=interface,
-            title=title,
-            fig=fig,
-            block=block,
-            blit=blit
-        )
+
+        # Set backend
+        if "matplotlib" in backend:
+            self.real_time_backend = MatplotlibLoop(
+                backend_interface=interface,
+                title=title,
+                fig=fig,
+                block=block,
+                blit=blit
+            )
+        else:
+            raise NotImplementedError("So far, we have only implemented Video for Matplotlib. ")
 
         # Data-storage
         self.frames = []
@@ -100,7 +105,9 @@ class RealTimeVideo:
 
     @property
     def artists(self):
-        return self.real_time_backend.artists
+        if isinstance(self.real_time_backend, MatplotlibLoop):
+            return self.real_time_backend.artists
+        return None
 
     def _loop_initialization(self):
         self.ax = plt.gca()

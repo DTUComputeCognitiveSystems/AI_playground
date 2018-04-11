@@ -123,7 +123,11 @@ class RealTimeVideo:
         return None
 
     def _loop_initialization(self):
+        # Get and set axes
         self.ax = plt.gca() if self.ax is None else self.ax
+        plt.sca(self.ax)
+
+        # Title and axis settings
         self.ax.set_title(self._title)
         if isinstance(self.real_time_backend, MatplotlibLoop):
             self.ax.xaxis.set_ticks([])

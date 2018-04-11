@@ -68,8 +68,8 @@ class MatplotlibLoop(BackendLoop):
 
     def __initialize_animation(self):
 
-        # Allow additional artists from child classes
-        self.loop_initialization()
+        # Initialize parts through interfaces
+        self.interface_loop_initialization()
 
         # Make sure figure is drawn
         plt.draw()
@@ -84,10 +84,10 @@ class MatplotlibLoop(BackendLoop):
         self._current_loop_nr = i
 
         # Run animation step
-        self.loop_step()
+        self.interface_loop_step()
 
         # Check for end
-        if self.loop_stop_check():
+        if self.interface_loop_stop_check():
             self.fig.canvas.stop_event_loop()
             self.__finalize()
             self.stop_now = True
@@ -95,7 +95,7 @@ class MatplotlibLoop(BackendLoop):
         return self.artists
 
     def __finalize(self):
-        self.finalize()
+        self.interface_finalize()
         plt.close("all")
 
     def __wait_for_end(self):
@@ -104,7 +104,7 @@ class MatplotlibLoop(BackendLoop):
                 plt.pause(0.2)
         except (TclError, KeyboardInterrupt):
             plt.close("all")
-            self.interrupt_handler()
+            self.interface_interrupt_handler()
 
     @property
     def current_loop_nr(self) -> int:

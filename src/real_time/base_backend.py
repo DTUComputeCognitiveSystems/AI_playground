@@ -122,23 +122,23 @@ class BackendLoop:
     # Interface redirect
 
     @property
-    def loop_initialization(self):
+    def interface_loop_initialization(self):
         return self.interface.loop_initialization
 
     @property
-    def loop_step(self):
+    def interface_loop_step(self):
         return self.interface.loop_step
 
     @property
-    def loop_stop_check(self):
+    def interface_loop_stop_check(self):
         return self.interface.loop_stop_check
 
     @property
-    def finalize(self):
+    def interface_finalize(self):
         return self.interface.finalize
 
     @property
-    def interrupt_handler(self):
+    def interface_interrupt_handler(self):
         return self.interface.interrupt_handler
 
     @property

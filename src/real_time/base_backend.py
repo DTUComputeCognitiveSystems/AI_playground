@@ -35,10 +35,17 @@ class BackendMultiInterface:
         :param tuple args: Interfaces.
         """
         self.interfaces = list(args)  # type: list[BackendInterface]
-        self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+        self._loop_time_milliseconds = None
 
     def add_interface(self, interface: BackendInterface):
         self.interfaces.append(interface)
+        self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+
+    def __len__(self):
+        return len(self.interfaces)
+
+    def __bool__(self):
+        return bool(self.interfaces)
 
     def _loop_initialization(self):
         for interface in self.interfaces:
@@ -81,6 +88,8 @@ class BackendMultiInterface:
 
     @property
     def loop_time_milliseconds(self):
+        if self._loop_time_milliseconds is None:
+            self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
         return self._loop_time_milliseconds
 
 
@@ -95,6 +104,11 @@ class BackendLoop:
         self.interface.add_interface(interface=interface)
 
     def start(self):
+        if not self.interface:
+            raise ValueError("No interfaces given to backend. We have nothing to run :/")
+        self._start()
+
+    def _start(self):
         raise NotImplementedError
 
     @property

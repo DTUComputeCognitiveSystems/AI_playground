@@ -18,15 +18,18 @@ class RealTimeVideo:
                  fig=None, block=True, blit=False, backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
-        :param fig: Matplotlib figure for video. Creates a new figure as default.
-        :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
         :param int | float | None video_length: The length of the video.
                                                 None runs video indefinitely (or until stop-condition).
-        :param bool block: Whether to wait for video to finish (recommended).
-        :param str title: Title of video figure and canvas.
         :param bool length_is_nframes: Indicates whether the video-length is given as number of frames
                                        instead of seconds.
+        :param bool record_frames: Whether to store all the frames in a list.
+        :param str title: Title of video figure and canvas.
+        :param stream_type:
+        :param fig: Matplotlib figure for video. Creates a new figure as default.
+        :param bool block: Whether to wait for video to finish (recommended).
+        :param blit:
+        :param str | BackendLoop backend:
         """
         # Settings
         self._store_frames = record_frames
@@ -189,9 +192,13 @@ if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
+    back_end = MatplotlibLoop()
+    back_end.block = True
+
+
     the_video = RealTimeVideo(
         video_length=60,
         record_frames=True,
-        block=True
+        backend=back_end
     )
     the_video.start()

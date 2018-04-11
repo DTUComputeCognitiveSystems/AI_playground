@@ -1,4 +1,5 @@
 from _tkinter import TclError
+from collections import Iterable
 from time import time
 
 from matplotlib import pyplot as plt, animation
@@ -7,7 +8,7 @@ from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
 class MatplotlibLoop(BackendLoop):
-    def __init__(self, backend_interface,
+    def __init__(self, backend_interface=(),
                  title="Real time animation",
                  fig=None, block=True, blit=False):
         """
@@ -18,27 +19,31 @@ class MatplotlibLoop(BackendLoop):
         :param bool blit:
         """
         # Settings
-        self._blit = blit
-        self._title = title
-        self._block = block
-        self._fig = fig
+        self.blit = blit
+        self.title = title
+        self.block = block
+        self.fig = fig
 
         # Connect interface
-        super().__init__(backend_interface)
+        if isinstance(backend_interface, Iterable):
+            backend_interface = tuple(backend_interface)
+        elif not isinstance(backend_interface, tuple):
+            backend_interface = (backend_interface,)
+        super().__init__(*backend_interface)
 
         # Fields
         self.artists = []
         self.canvas = self.ax = self._animation = self._current_loop_nr = self._start_time = None
 
-    def start(self):
+    def _start(self):
         # Default figure
-        if self._fig is None:
-            self._fig = plt.figure()
+        if self.fig is None:
+            self.fig = plt.figure()
 
         # Set canvas
-        self.canvas = self._fig.canvas
-        plt.title(self._title)
-        self.canvas.set_window_title(self._title)
+        self.canvas = self.fig.canvas
+        plt.title(self.title)
+        self.canvas.set_window_title(self.title)
 
         # Set close-event
         def closer(_):
@@ -47,19 +52,19 @@ class MatplotlibLoop(BackendLoop):
 
         # Do animation
         self._animation = animation.FuncAnimation(
-            fig=self._fig,
+            fig=self.fig,
             func=self.__animate_step,
             init_func=self.__initialize_animation,
             interval=self.loop_time_milliseconds,
             repeat=False,
             frames=None,
-            blit=self._blit
+            blit=self.blit
         )
 
         # Block main thread
-        if self._block:
+        if self.block:
             self.__wait_for_end()
-            plt.close(self._fig)
+            plt.close(self.fig)
 
     def __initialize_animation(self):
 
@@ -83,7 +88,7 @@ class MatplotlibLoop(BackendLoop):
 
         # Check for end
         if self.loop_stop_check():
-            self._fig.canvas.stop_event_loop()
+            self.fig.canvas.stop_event_loop()
             self.__finalize()
             self.stop_now = True
 

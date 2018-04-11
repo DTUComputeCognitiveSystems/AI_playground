@@ -100,7 +100,7 @@ if __name__ == "__main__":
         title="Test Video"
     )
     video.start()
-    frames = video.vidoe_frames
+    frames = video.video_frames
 
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)

@@ -1,17 +1,17 @@
 from collections import namedtuple
 from time import time
-import pandas as pd
 
 import keras_squeezenet
 import numpy as np
+import pandas as pd
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
 from keras.applications import mobilenet, resnet50
 from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
     decode_predictions as sqnet_decode
 
-from src.image.video import Video
-from src.image.models_base import ImageLabeller, ResizingImageLabeller
+from src.image.models_base import ResizingImageLabeller
+from src.image.video import SimpleVideo
 
 _model_specification = namedtuple(
     "model_specificaion",
@@ -42,12 +42,13 @@ class KerasDetector(ResizingImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
     def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
-                 n_labels_returned=1):
+                 n_labels_returned=1, exlude_animals = False):
 
         if model_name in model_modules:
             _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
                 model_modules[model_name]
             self._model = model()
+            self.vegetarian = exlude_animals
 
             if self._preprocessing is None:
                 self._preprocessing = self._net.preprocess_input
@@ -75,6 +76,8 @@ class KerasDetector(ResizingImageLabeller):
 
         # Forward in neural network
         predictions = self._model.predict(x=frame)
+        if self.vegetarian:
+            predictions[0, :397] = 0
 
         # Convert predictions (index for removing batch-dimension)
         decoded = self._prediction_decoding(predictions)[0]
@@ -90,14 +93,14 @@ if __name__ == "__main__":
     print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
 
     # Get some frames from a video
-    video = Video(
+    video = SimpleVideo(
         record_frames=True,
         frame_rate=10,
         video_length=1,
         title="Test Video"
     )
     video.start()
-    frames = video.frames
+    frames = video.video_frames
 
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)

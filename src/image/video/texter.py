@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.text
 
-from src.image.video.base import VideoFlair, Video
+from src.image.video.base import VideoFlair, _Video, SimpleVideo
 
 
 class VideoTexter(VideoFlair):
@@ -51,7 +51,7 @@ class VideoTexter(VideoFlair):
 
     def update(self, video):
         """
-        :param Video video:
+        :param _Video video:
         :return:
         """
         self.text.set_text("Text")
@@ -72,7 +72,7 @@ class VideoTexter(VideoFlair):
 
 if __name__ == "__main__":
 
-    video = Video(
+    video = SimpleVideo(
         video_length=10
     )
     video.add_flair(VideoTexter())

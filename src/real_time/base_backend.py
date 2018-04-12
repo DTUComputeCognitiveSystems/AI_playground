@@ -1,6 +1,5 @@
 from collections import Callable
 
-
 # noinspection PyUnusedLocal
 def noop(*args, **kwargs):
     pass
@@ -27,15 +26,88 @@ class BackendInterface:
         self.loop_time_milliseconds = loop_time_milliseconds
 
 
+class BackendMultiInterface:
+    def __init__(self, *args):
+        """
+        Interface for a backend. Multiple interfaces can be combined in this class and will all be run in the
+        real-time loop.
+        :param tuple args: Interfaces.
+        """
+        self.interfaces = list(args)  # type: list[BackendInterface]
+        self._loop_time_milliseconds = None
+
+    def add_interface(self, interface: BackendInterface):
+        self.interfaces.append(interface)
+        self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+
+    def __len__(self):
+        return len(self.interfaces)
+
+    def __bool__(self):
+        return bool(self.interfaces)
+
+    def _loop_initialization(self):
+        for interface in self.interfaces:
+            interface.loop_initialization()
+
+    @property
+    def loop_initialization(self):
+        return self._loop_initialization
+
+    def _loop_step(self):
+        for interface in self.interfaces:
+            interface.loop_step()
+
+    @property
+    def loop_step(self):
+        return self._loop_step
+
+    def _loop_stop_check(self):
+        return any([interface.loop_stop_check() for interface in self.interfaces])
+
+    @property
+    def loop_stop_check(self):
+        return self._loop_stop_check
+
+    def _finalize(self):
+        for interface in self.interfaces:
+            interface.finalize()
+
+    @property
+    def finalize(self):
+        return self._finalize
+
+    def _interrupt_handler(self):
+        for interface in self.interfaces:
+            interface.interrupt_handler()
+
+    @property
+    def interrupt_handler(self):
+        return self._interrupt_handler
+
+    @property
+    def loop_time_milliseconds(self):
+        if self._loop_time_milliseconds is None:
+            self._loop_time_milliseconds = max([interface.loop_time_milliseconds for interface in self.interfaces])
+        return self._loop_time_milliseconds
+
+
 class BackendLoop:
-    def __init__(self, interface: BackendInterface):
-        self.interface = interface
+    def __init__(self, *args):
+        self.interface = BackendMultiInterface(*args)
 
         # Defaults
         self.stop_now = False
-        self.artists = []
+
+    def add_interface(self, interface):
+        self.interface.add_interface(interface=interface)
 
     def start(self):
+        if not self.interface:
+            raise ValueError("No interfaces given to backend. We have nothing to run :/")
+        self._start()
+
+    def _start(self):
         raise NotImplementedError
 
     @property
@@ -49,27 +121,25 @@ class BackendLoop:
     # Interface redirect
 
     @property
-    def loop_initialization(self):
+    def interface_loop_initialization(self):
         return self.interface.loop_initialization
 
     @property
-    def loop_step(self):
+    def interface_loop_step(self):
         return self.interface.loop_step
 
     @property
-    def loop_stop_check(self):
+    def interface_loop_stop_check(self):
         return self.interface.loop_stop_check
 
     @property
-    def finalize(self):
+    def interface_finalize(self):
         return self.interface.finalize
 
     @property
-    def interrupt_handler(self):
+    def interface_interrupt_handler(self):
         return self.interface.interrupt_handler
 
     @property
     def loop_time_milliseconds(self):
         return self.interface.loop_time_milliseconds
-
-

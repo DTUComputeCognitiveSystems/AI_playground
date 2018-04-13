@@ -6,10 +6,14 @@ import numpy as np
 import pandas as pd
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
-from keras.applications import mobilenet, resnet50
+from keras.applications import mobilenet, resnet50, vgg16
 from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
     decode_predictions as sqnet_decode
+from keras.models import Model
+from keras.layers import Dense, Flatten, Dropout
+from keras.layers.pooling import GlobalAveragePooling2D
 
+import keras
 from src.image.models_base import ResizingImageLabeller
 from src.image.video import SimpleVideo
 
@@ -87,7 +91,24 @@ class KerasDetector(ResizingImageLabeller):
         probabilities = [val[2] for val in decoded]
 
         return labels, probabilities
-
+def configure_simple_model():
+    """ loads a pretrained model and replaces the last layer with a layer to finetune"""
+    base_model = densenet.DenseNet121(input_shape=(224, 224,3),include_top = False)
+    
+    x = Flatten()(base_model.output)
+    x = Dense(1024, activation='relu')(x)
+    x = Dropout(0.5)(x)
+    
+    predictions = Dense(1, activation = 'softmax')(x)
+    
+    #create graph of your new model
+    head_model = Model(input = base_model.input, output = predictions)
+    
+    
+    head_model.compile(loss=keras.losses.binary_crossentropy,
+                  optimizer=keras.optimizers.Adadelta(),
+                  metrics=['accuracy'])
+    return head_model
 
 if __name__ == "__main__":
     print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")

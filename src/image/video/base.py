@@ -140,6 +140,10 @@ class _Video:
     def frame_nr(self):
         return self.real_time_backend.current_loop_nr
 
+    @property
+    def frame_size(self):
+        return self._frame_size
+
     ##################################################################
     # Real-time API
 

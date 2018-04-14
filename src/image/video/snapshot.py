@@ -2,10 +2,91 @@ from datetime import datetime
 from time import time
 
 import matplotlib.pyplot as plt
+from matplotlib import patches
 
-from src.image.video.base import _Video
+from src.image.video.base import _Video, VideoFlair
 from src.image.video.texter import VideoTexter
 from src.real_time.matplotlib_backend import MatplotlibLoop
+
+
+class CrossHair(VideoFlair):
+    def __init__(self, frame_size, ch_type="box", edgecolor="r", width_ratio=0.5, height_ratio=None, linewidth=1):
+        """
+
+        :param tuple | list frame_size:
+        :param str | None ch_type:
+        :param str | tuple edgecolor:
+        :param float | None width_ratio:
+        :param float | None height_ratio:
+        :param float | int linewidth:
+        """
+        super().__init__([])
+        self.ch_type = ch_type
+        self.linewidth = linewidth
+        self.width_ratio = width_ratio
+        self.height_ratio = height_ratio
+        self.frame_size = frame_size
+        self.edgecolor = edgecolor
+
+    def initialize(self):
+        if self.ch_type is not None:
+
+            ax = plt.gca()
+
+            # Default ratios
+            if self.width_ratio is None and self.height_ratio is not None:
+                self.width_ratio = self.height_ratio
+            if self.height_ratio is None and self.width_ratio is not None:
+                self.height_ratio = self.width_ratio
+            assert isinstance(self.width_ratio, float) and 0 < self.width_ratio <= 1
+            assert isinstance(self.height_ratio, float) and 0 < self.height_ratio <= 1
+
+            # Determine coordinates
+            width = int(self.frame_size[1] * self.width_ratio)
+            w_space = self.frame_size[1] - width
+            height = int(self.frame_size[0] * self.height_ratio)
+            h_space = self.frame_size[0] - height
+
+            # Make cross-hair
+            if "box" in self.ch_type:
+                ch = patches.Rectangle(
+                    xy=(int(w_space / 2), int(h_space / 2)),
+                    width=width,
+                    height=height,
+                    fill=False,
+                    edgecolor=self.edgecolor,
+                    linewidth=self.linewidth,
+                )
+            elif "circ" in self.ch_type:
+                ch = patches.Circle(
+                    xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
+                    radius=int(min(width, height) / 2),
+                    fill=False,
+                    edgecolor=self.edgecolor,
+                    linewidth=self.linewidth,
+                )
+            elif "ellip" in self.ch_type:
+                ch = patches.Ellipse(
+                    xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
+                    width=width,
+                    height=height,
+                    fill=False,
+                    edgecolor=self.edgecolor,
+                    linewidth=self.linewidth,
+                )
+            else:
+                raise ValueError("Unknown cross-hair type: {}.".format(self.ch_type))
+
+            # Add to axes
+            ax.add_patch(
+                ch
+            )
+
+            # Append to artists
+            self.artists.append(ch)
+
+    def update(self, video):
+        pass
 
 
 class VideoCamera(_Video):
@@ -13,6 +94,7 @@ class VideoCamera(_Video):
                  frame_rate=5, stream_type="simple",
                  record_frames=False,
                  n_photos=5, backgroundcolor="darkblue", color="white",
+                 crosshair_type="box",
                  title="Camera", ax=None, fig=None, block=True,
                  verbose=False, print_step=1,
                  backend="matplotlib"):
@@ -22,6 +104,7 @@ class VideoCamera(_Video):
         :param bool record_frames: Whether to store all the frames in a list.
         :param int frame_rate: The number of frames per second.
         :param bool block: Whether to wait for video to finish (recommended).
+        :param str | None crosshair_type: Type of crosshair to show.
         :param str title: Title of video figure and canvas.
         :param int n_photos: Number of photos to take before stopping.
 
@@ -45,7 +128,8 @@ class VideoCamera(_Video):
         )
 
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
-        self.flairs.extend([self._texter])
+        self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type)
+        self.flairs.extend([self._texter, self._cross_hair])
         self.photos = []
         self.photos_info = []
         self.n_photos = n_photos

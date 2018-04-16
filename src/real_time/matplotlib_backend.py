@@ -10,7 +10,7 @@ from src.real_time.base_backend import BackendLoop, BackendInterface
 class MatplotlibLoop(BackendLoop):
     def __init__(self, backend_interface=(),
                  title="Real time animation",
-                 fig=None, block=True, blit=False):
+                 fig=None, block=False, blit=False):
         """
         :param BackendInterface backend_interface:
         :param str title:

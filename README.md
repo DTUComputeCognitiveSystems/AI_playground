@@ -17,7 +17,7 @@ AI_playground/
 ```
 
 ##### Running Code
-All scripts are run from the top directory, `AI_playground`. Examples of how to run a script on Windows and Linux
+All scripts are run from the top directory `AI_playground`. Examples of how to run a script on Windows and Linux
 are shown below, using the snapshot.py-script which opens the webcam for storing photos.  
 
 To run a script in the command line on **Windows** type:

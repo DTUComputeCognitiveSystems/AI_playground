@@ -15,7 +15,7 @@ from src.real_time.matplotlib_backend import MatplotlibLoop
 class LabelledVideo(_Video):
     def __init__(self,
                  model, backgroundcolor="darkblue", color="white", store_predictions=False,
-                 frame_rate=5, stream_type="process",
+                 frame_rate=5, stream_type="thread",
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
                  title="Video", ax=None, fig=None, block=True,

@@ -1,7 +1,6 @@
 from time import time, sleep
 
 from matplotlib import pyplot as plt
-
 from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
@@ -207,7 +206,7 @@ class _Video:
         self._initialize_video_extensions()
 
     def _step_print(self):
-        self.dprint("\tideo frame {:4d} at time {:8.2}s.".format(self.frame_nr, time() - self.real_time_backend.start_time))
+        self.dprint("\tVideo frame {:4d} at time {:8.2}s.".format(self.frame_nr, time() - self.real_time_backend.start_time))
 
     def _loop_step(self):
         # Get photo
@@ -263,8 +262,8 @@ class _Video:
 
 class SimpleVideo(_Video):
     def __init__(self,
-                 frame_rate=5, stream_type="process",
-                 video_length=3, length_is_nframes=False,
+                 frame_rate=5, stream_type="simple",
+                 video_length=10, length_is_nframes=False,
                  record_frames=False,
                  title="Video", ax=None, fig=None, block=True, blit=False,
                  verbose=False, print_step=1,

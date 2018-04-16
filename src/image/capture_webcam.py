@@ -17,8 +17,13 @@ def get_capturer():
     """
     cam = cv2.VideoCapture(0)
 
+
     if not cam.isOpened():
         raise IOError("Camera could not be opened. Probably already in use.")
+    _, out = cam.read()
+    
+    if(np.mean(out) <0.5):
+        raise IOError("Camera could not be opened (based on output). Probably already in use. Try to close other applications.")
 
     return cam
 

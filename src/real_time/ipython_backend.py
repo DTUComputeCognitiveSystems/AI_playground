@@ -1,10 +1,11 @@
 import sched
 from collections import Iterable
-from time import time
+from time import time, sleep
 import matplotlib.pyplot as plt
 
 from src.real_time.base_backend import BackendLoop, BackendInterface
 from IPython.display import display, clear_output
+import ipywidgets as widgets
 
 
 class IPythonLoop(BackendLoop):
@@ -28,12 +29,16 @@ class IPythonLoop(BackendLoop):
 
         # Fields
         self.artists = []
+        self.widgets = []
         self.canvas = self.scheduler = self._start_time = self._current_loop_nr = self.ax = None
 
     def _start(self):
         # Default figure
         if self.fig is None:
             self.fig, self.ax = plt.subplots()
+        elif isinstance(self.fig, tuple):
+            self.fig = plt.figure(figsize=self.fig)
+            self.ax = plt.gca()
 
         # Set canvas
         self.canvas = self.fig.canvas
@@ -50,16 +55,16 @@ class IPythonLoop(BackendLoop):
 
         # Initialize parts through interfaces
         self.interface_loop_initialization()
-
-        # Clear and display figure
         clear_output(wait=True)
-        display((self.fig,))
 
         # Set time of start
         self._start_time = time()
 
         # Loop number
         self._current_loop_nr = 0
+
+        # Display now
+        display(self.fig)
 
         # Set starting event
         self.scheduler.enter(
@@ -75,18 +80,14 @@ class IPythonLoop(BackendLoop):
             self.interface_interrupt_handler()
 
         # Wait
-        clear_output(wait=True)
         plt.show(block=True)
 
     def _loop_step(self):
+
         self._current_loop_nr += 1
 
         # Run animation step
         self.interface_loop_step()
-
-        # Clear and display figure
-        clear_output(wait=True)
-        display(self.fig)
 
         # Check for end
         if self.interface_loop_stop_check() or self.stop_now:
@@ -100,6 +101,9 @@ class IPythonLoop(BackendLoop):
                 priority=1,
                 action=self._loop_step,
             )
+        
+        clear_output(wait=True)
+        display(self.fig)
 
     ######
 
@@ -110,3 +114,7 @@ class IPythonLoop(BackendLoop):
     @property
     def start_time(self) -> float:
         return self._start_time
+
+
+
+

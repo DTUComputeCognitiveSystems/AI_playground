@@ -5,7 +5,7 @@ from src.image.video.base import VideoFlair, _Video, SimpleVideo
 
 
 class VideoTexter(VideoFlair):
-    def __init__(self, initial_text="", backgroundcolor="darkblue", color="white", position="sw"):
+    def __init__(self, initial_text="", backgroundcolor="darkblue", color="white", position="ne"):
         super().__init__([])
         position = position.lower().strip()
         self._initial_text = initial_text
@@ -14,7 +14,7 @@ class VideoTexter(VideoFlair):
         if position in ("sw", "s", "se"):
             self._verticalalignment = 'bottom'
             self._y = 0.0
-        elif position in ("w", "e"):
+        elif position in ("w", "e", "c"):
             self._verticalalignment = 'center'
             self._y = 0.5
         else:
@@ -25,7 +25,7 @@ class VideoTexter(VideoFlair):
         if position in ("sw", "w", "nw"):
             self._horizontalalignment = 'left'
             self._x = 0.0
-        elif position in ("n", "s"):
+        elif position in ("n", "s", "c"):
             self._horizontalalignment = 'center'
             self._x = 0.5
         else:
@@ -36,8 +36,9 @@ class VideoTexter(VideoFlair):
         self._color = color
         self._text = None  # type: matplotlib.text.Text
 
-    def initialize(self):
-        self._text = plt.text(
+    def initialize(self, fig=None):
+        fig = plt if fig is None else fig
+        self._text = fig.text(
             x=self._x,
             y=self._y,
             s=self._initial_text,

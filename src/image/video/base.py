@@ -19,7 +19,7 @@ class VideoFlair:
         """
         self._artists = artists
 
-    def initialize(self):
+    def initialize(self, fig=None):
         raise NotImplementedError
 
     def update(self, video):
@@ -114,13 +114,16 @@ class _Video:
         # Open up a camera-stram
         if "process" in stream_type:
             self.camera_stream = CameraStreamProcess(frame_rate=frame_rate)
-            print("Video: Multiprocessing.")
+            if self._verbose:
+                print("Video: Multiprocessing.")
         elif "thread" in stream_type:
             self.camera_stream = CameraStream(frame_rate=frame_rate)
-            print("Video: Multithreaded.")
+            if self._verbose:
+                print("Video: Multithreaded.")
         else:
             self.camera_stream = SimpleStream()
-            print("Video: Simple.")
+            if self._verbose:
+                print("Video: Simple.")
 
         # Test getting frame and get size of that frame
         self._current_frame = self._current_frame_time = None

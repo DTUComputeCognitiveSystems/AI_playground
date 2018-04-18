@@ -1,0 +1,46 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{url}
+\title{Installation instructions \\ \vspace{0.5cm}
+	   \normalsize Introduction to intelligent systems - the toolbox
+	   \vspace{-1cm}}
+	   
+
+\begin{document}
+\maketitle
+\hline
+
+\section{Installing Anaconda}
+\begin{itemize}
+\item Windows: \\
+	\url{https://conda.io/docs/user-guide/install/windows.html}
+\item macOS: \\
+	\url{https://conda.io/docs/user-guide/install/macos.html}
+\item Linux: \\
+	\url{https://conda.io/docs/user-guide/install/linux.html}
+\end{itemize}
+
+\section{Packages}
+In a command promp type the following commands
+\begin{enumerate}
+\item Install tensorflow \\
+	\texttt{pip install tensorflow} or if you have a nvidia-gpu in your computer \\
+	\texttt{pip install tensorflow-gpu}
+\item Install keras \\
+	\texttt{pip install keras}
+\item Install openCV \\
+	\texttt{pip install opencv} for linux and mac \\
+	\texttt{conda install -c menpo opencv} for windows
+\end{enumerate}
+
+\section{Toolbox}
+Open a command promp in a folder of your choice, and type in the following command: \\
+\texttt{git clone https://github.com/DTUComputeCognitiveSystems/AI\_playground}
+
+
+
+\end{document}
+

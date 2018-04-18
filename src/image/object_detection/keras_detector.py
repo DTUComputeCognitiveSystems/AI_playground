@@ -18,7 +18,7 @@ from src.image.models_base import ResizingImageLabeller
 from src.image.video import SimpleVideo
 
 _model_specification = namedtuple(
-    "model_specificaion",
+    "model_specification",
     "name, net, model, input_size, preprocessing, prediction_decoding"
 )
 
@@ -45,22 +45,28 @@ model_modules = {
 class KerasDetector(ResizingImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
-    def __init__(self, model_name='resnet50', resizing_method="sci_resize", verbose=False,
+    def __init__(self, model =None, model_name='resnet50', resizing_method="sci_resize", verbose=False,
                  n_labels_returned=1, exlude_animals = False):
+        if model != None:
 
-        if model_name in model_modules:
-            _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
-                model_modules[model_name]
-            self._model = model()
-            self.vegetarian = exlude_animals
-
-            if self._preprocessing is None:
-                self._preprocessing = self._net.preprocess_input
-            if self._prediction_decoding is None:
-                self._prediction_decoding = self._net.decode_predictions
+            self._model = model
+            self._input_size = model.input_shape[1]
+            self._preprocessing = lambda x: sqnet_preprocessing(x, mode = 'tf')
+            self._prediction_decoding = lambda x: [[[-1, "True" if x[0][0] > x[0][1] else "False",x[0][0]if x[0][0] > x[0][1] else x[0][1]]]]
         else:
-            raise ValueError("Does not know model of name: {}".format(model_name))
-
+            if model_name in model_modules:
+                _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
+                    model_modules[model_name]
+                self._model = model()
+                
+    
+                if self._preprocessing is None:
+                    self._preprocessing = self._net.preprocess_input
+                if self._prediction_decoding is None:
+                    self._prediction_decoding = self._net.decode_predictions
+            else:
+                raise ValueError("Does not know model of name: {}".format(model_name))
+        self.vegetarian = exlude_animals
         # Parameters for reshaping
         self._model_input_shape = (self._input_size, self._input_size, 3)
         super().__init__(model_input_shape=self._model_input_shape, resizing_method=resizing_method,

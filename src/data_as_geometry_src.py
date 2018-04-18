@@ -1,8 +1,39 @@
 import numpy as np
+from IPython.display import display
 from ipywidgets import Layout, FloatText, Box, VBox
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D, proj3d
+from matplotlib.patches import FancyArrowPatch
+
+def set_axes_equal(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    '''
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.mean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.mean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.mean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5*max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
 
 def generate_circle_data(N=500):
+    ''' Generate two classes of data '''
     N = 500
     t = np.linspace(0, 360, N)
     x1 = np.random.normal(size=N, scale=1.3)
@@ -79,7 +110,17 @@ def plot_decision_lines(X, Y, W):
     ax.plot(xx, l3_0, label='neuron 3', lw=3)
     ax.plot(X[Y==0,0], X[Y==0,1], 'b.', label='class 1')
     ax.plot(X[Y==1,0], X[Y==1,1], 'r.', label='class 2')
+    inside = np.logical_and(l1_0>-8, l1_0<8)
+    ax.arrow(np.mean(xx[inside]), np.mean(l1_0[inside]), W[0,0], W[0,1], 
+             head_width=0.5, head_length=0.5, fc='k', ec='k')
+    inside = np.logical_and(l2_0>-8, l2_0<8)
+    ax.arrow(np.mean(xx[inside]), np.mean(l2_0[inside]), W[1,0], W[1,1], 
+             head_width=0.5, head_length=0.5, fc='k', ec='k')
+    inside = np.logical_and(l3_0>-8, l3_0<8)
+    ax.arrow(np.mean(xx[inside]), np.mean(l3_0[inside]), W[2,0], W[2,1], 
+             head_width=0.5, head_length=0.5, fc='k', ec='k')
     ax.legend(bbox_to_anchor=(1, 1))
+    ax.axis('equal')
     ax.axis([-8, 8, -8, 8])
     plt.show()
     
@@ -94,6 +135,7 @@ def plot_decision_contour(X, Y, W):
 
     fig, ax = plt.subplots(1,3, figsize=(15, 5))
     for i in range(3):
+        ax[i].set_title('Neuron ' + str(i+1) + ' activation', fontsize=15)
         ax[i].plot(X[Y==0,0], X[Y==0,1], 'b.', label='class 1')
         ax[i].plot(X[Y==1,0], X[Y==1,1], 'r.', label='class 2')
         cf = ax[i].contourf(x, y, l[i], 100)
@@ -101,22 +143,23 @@ def plot_decision_contour(X, Y, W):
     plt.show()
     
 def plot3d_space(X, Y, W, N):
-    n = 100
+    n = 10
     X2 = np.concatenate([X, np.ones((X.shape[0], 1))], axis=1)
     H = np.tanh(W.dot(X2.T))
-    x, y = np.meshgrid(np.linspace(-1, 1, n), np.linspace(-1, 1, n))
-    z = -(N[0]*x + N[1]*y-1.6) / N[2]
+    x, y = np.meshgrid(np.linspace(-1.5, 1, n), np.linspace(-1.5, 1, n))
+    z = -(N[0]*x + N[1]*y + N[3]) / N[2]
     fig = plt.figure(figsize=(10,5))
-    ax = fig.add_subplot(1, 2, 1, projection='3d')
+    ax = fig.add_subplot(1, 3, 1, projection='3d')
+    ax.set_aspect('equal')
     ax.scatter(H[0,Y==0], H[1,Y==0], H[2,Y==0], c='b', label='class 1')
     ax.scatter(H[0,Y==1], H[1,Y==1], H[2,Y==1], c='r', label='class 2')
-    ax.quiver(0, 0, -1, N[0], N[1], N[2])
+    ax.quiver(np.mean(x), np.mean(y), np.mean(z), N[0], N[1], N[2])
     ax.plot_surface(x,y,z,alpha=0.2)
     ax.set_xlabel('h1-neuron 1')
     ax.set_ylabel('h2-neuron 2')
     ax.set_zlabel('h3-neuron 3')
-    ax.axis('equal')
-    fig.legend()
+    set_axes_equal(ax)
+    plt.legend()
 
     n = 100
     x, y = np.meshgrid(np.linspace(-8, 8, n), np.linspace(-8, 8, n))
@@ -128,10 +171,26 @@ def plot3d_space(X, Y, W, N):
     hid = np.concatenate([hid, np.ones((1, hid.shape[1]))], axis=0)
     activation = np.tanh(N.T.dot(hid).reshape(n, n))
     
-    ax = fig.add_subplot(1, 2, 2)
+    ax = fig.add_subplot(1, 3, 2)
     ax.plot(X[Y==0,0], X[Y==0,1], 'b.', label='class 1')
     ax.plot(X[Y==1,0], X[Y==1,1], 'r.', label='class 2')
     cf=ax.contourf(x, y, activation, 100)
     ax.legend(bbox_to_anchor=(1.6, 0.5))
     fig.colorbar(cf,ax=ax)
+    
+    red_class = activation < 0
+    ax = fig.add_subplot(1, 3, 3)
+    ax.plot(X[Y==0,0], X[Y==0,1], 'b.', label='class 1')
+    ax.plot(X[Y==1,0], X[Y==1,1], 'r.', label='class 2')
+    ax.contourf(x, y, red_class, 100, cmap='RdBu')
     plt.show()
+    
+    point_act = N.dot(np.concatenate([H, np.ones((1, H.shape[1]))], axis=0))
+    point_cla = point_act > 0
+    Yb = np.bool8(Y)
+    print('Results:')
+    print('-------------------------------------------------')
+    print('Number of red points classified as red:  ', np.sum(point_cla[Yb] == Yb[Yb]))
+    print('Number of red points classified as blue: ', np.sum(point_cla[Yb] != Yb[Yb]))
+    print('Number of blue points classified as blue:', np.sum(point_cla[~Yb] == Yb[~Yb]))
+    print('Number of blue points classifies as red: ', np.sum(point_cla[~Yb] != Yb[~Yb]))

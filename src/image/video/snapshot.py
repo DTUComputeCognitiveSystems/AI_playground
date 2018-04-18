@@ -81,7 +81,7 @@ class CrossHair(VideoFlair):
             ax.add_patch(
                 ch
             )
-
+            self.coordinates = ((int(w_space / 2), int(h_space / 2)), (width, height))
             # Append to artists
             self.artists.append(ch)
 

@@ -31,7 +31,45 @@ def set_axes_equal(ax):
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
-
+def widget0():
+    # True value
+    # n = [-2, 1]
+    alpha=FloatText(value=-2, description=r'\(\alpha \)')
+    beta=FloatText(value=1, description=r'\(\beta\)')
+    w = [alpha, beta]
+    box_layout = Layout(display='flex',
+                        flex_flow='row',
+                        align_items='stretch',
+                        width='100%')
+    box = Box(children=w, layout=box_layout)
+    display(box)
+    return w
+    
+def exercise_2_4(W):
+    alpha, beta = W
+    # Generate data
+    x1 = np.random.multivariate_normal([2,2], [[1,0],[0,1]], size=500)
+    x2 = np.random.multivariate_normal([-2,0], [[1,0],[0,1]], size=500)
+    # Generate line
+    xmin = np.minimum(x1[:,0].min(), x2[:,0].min())
+    xmax = np.maximum(x1[:,0].max(), x2[:,0].max())
+    ymin = np.minimum(x1[:,1].min(), x2[:,1].min())
+    ymax = np.maximum(x1[:,1].max(), x2[:,1].max())
+    x = np.linspace(xmin, xmax, 100)
+    y = alpha*x + beta
+    idx=np.logical_and(ymax>y,y>ymin)
+    x = x[idx]
+    y = y[idx]
+    # Plot
+    fig= plt.figure()
+    ax = fig.gca()
+    ax.plot(x1[:,0], x1[:,1], 'b.')
+    ax.plot(x2[:,0], x2[:,1], 'r.')
+    ax.plot(x, y, '-k')
+    ax.axis('equal')
+    ax.grid()
+    
+    
 def generate_circle_data(N=500):
     ''' Generate two classes of data '''
     N = 500

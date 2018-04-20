@@ -2,6 +2,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from ipywidgets import widgets
 from matplotlib.colors import to_rgb
 
 from notebooks.src.understanding_images.d3 import pixels_3d, pixels_image_3d
@@ -54,6 +55,24 @@ def plot_single_pixel(color):
         no_axis=True,
         linewidths=0.1
     )
+
+
+def rgb_sliders():
+    sliders = []
+    for text in ["Red", "Green", "Blue"]:
+        sliders.append(widgets.FloatSlider(
+            value=0.5,
+            min=0,
+            max=1.0,
+            step=0.01,
+            description='{}:'.format(text),
+            disabled=False,
+            continuous_update=False,
+            orientation='horizontal',
+            readout=True,
+            readout_format='.2f',
+        ))
+    return sliders
 
 
 if __name__ == "__main__":

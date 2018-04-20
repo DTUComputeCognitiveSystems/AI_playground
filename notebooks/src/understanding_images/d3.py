@@ -156,7 +156,32 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
     return face_colors
 
 
-def pixels_3d(rgb_image, rgb_to_white=True, no_axis=True, from_top=False):
+def pixels_image_3d(rgb_image, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
+                    linewidths=0.0):
+    positions = []
+    pixel_colors = []
+    new_mask = None if mask is None else []
+    for row in range(rgb_image.shape[0]):
+        for col in range(rgb_image.shape[1]):
+            rgb_color = rgb_image[row, col, :]
+            positions.append((row, col))
+            pixel_colors.append(rgb_color)
+
+            if mask is not None:
+                new_mask.append(mask[row, col])
+
+    pixels_3d(
+        positions=positions,
+        pixel_colors=pixel_colors,
+        rgb_to_white=rgb_to_white,
+        no_axis=no_axis,
+        camera_position=camera_position,
+        mask=new_mask
+    )
+
+
+def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
+              linewidths=0.0):
     # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])
@@ -175,65 +200,74 @@ def pixels_3d(rgb_image, rgb_to_white=True, no_axis=True, from_top=False):
 
     # Holders
     cubes = []
-    colors = []
+    cube_colors = []
+
+    # Ensure number of dimensions in positions
+    positions = [
+        list(val) + [0] * (3 - len(val)) for val in positions
+    ]
 
     # Go through all pixels
-    for row in range(rgb_image.shape[0]):
-        for col in range(rgb_image.shape[1]):
-            c_cube_base = base_cube + col * move_y + row * move_x
+    for pix_nr, (rgb_color, position) in enumerate(zip(pixel_colors, positions)):
 
-            # Get the wanted color of the pixel
-            rgb_color = rgb_image[row, col, :]
-            cmyk_color = rgb_to_cmyk(rgb_color)
+            do_pixel = True
+            if mask is not None:
+                do_pixel = mask[pix_nr]
 
-            # Get CMYK components
-            cmyk_components = np.zeros((3, 4), dtype=np.float32)
-            cmyk_components[:, 3] = cmyk_color[3]
-            for nr, val in enumerate(cmyk_color[:3]):
-                cmyk_components[nr, nr] = val
+            if do_pixel:
+                c_cube_base = base_cube + position[0] * move_x + position[1] * move_y + position[2] * move_z
 
-            # Convert each component to RBG
-            subtractive_components = cmyk_to_rgb(cmyk_components)
+                # Get the wanted color of the pixel
+                cmyk_color = rgb_to_cmyk(rgb_color)
 
-            # Split into three pixels
-            for nr, component_intensity in enumerate(rgb_color):
-                # Get current subtractive color and set transparency
-                subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
-                subtractive_color = np.concatenate((subtractive_color, [cmyk_intensities[nr]]), 0)
+                # Get CMYK components
+                cmyk_components = np.zeros((3, 4), dtype=np.float32)
+                cmyk_components[:, 3] = cmyk_color[3]
+                for nr, val in enumerate(cmyk_color[:3]):
+                    cmyk_components[nr, nr] = val
 
-                # Make RGB-wrapping
-                if rgb_to_white:
-                    c_rgb_color = np.ones(4) - component_intensity
-                    c_rgb_color[nr] = 1
-                else:
-                    c_rgb_color = np.zeros(4)
-                    c_rgb_color[nr] = component_intensity
-                c_rgb_color[3] = 1
+                # Convert each component to RBG
+                subtractive_components = cmyk_to_rgb(cmyk_components)
+
+                # Split into three pixels
+                for nr, component_intensity in enumerate(rgb_color):
+                    # Get current subtractive color and set transparency
+                    subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
+                    subtractive_color = np.concatenate((subtractive_color, [cmyk_intensities[nr]]), 0)
+
+                    # Make RGB-wrapping
+                    if rgb_to_white:
+                        c_rgb_color = np.ones(4) - component_intensity
+                        c_rgb_color[nr] = 1
+                    else:
+                        c_rgb_color = np.zeros(4)
+                        c_rgb_color[nr] = component_intensity
+                    c_rgb_color[3] = 1
 
 
-                # Bottom color
-                bottom_color = black if nr == 2 else see_through
+                    # Bottom color
+                    bottom_color = black if nr == 2 else see_through
 
-                # Distribute face colors
-                c_face_colors = [
-                    bottom_color, subtractive_color,
-                    c_rgb_color, c_rgb_color, c_rgb_color, c_rgb_color,
-                ]
+                    # Distribute face colors
+                    c_face_colors = [
+                        bottom_color, subtractive_color,
+                        c_rgb_color, c_rgb_color, c_rgb_color, c_rgb_color,
+                    ]
 
-                # Append cube and colors
-                cubes.append(c_cube_base - nr * move_z)
-                colors.append(c_face_colors)
+                    # Append cube and colors
+                    cubes.append(c_cube_base - nr * move_z)
+                    cube_colors.append(c_face_colors)
 
     # Make arrays
-    colors = np.array(colors)
+    cube_colors = np.array(cube_colors)
     cubes = np.stack(cubes, axis=0)
 
     # Plot cubes
     plot_cubes(
         cubes,
-        face_colors=colors,
-        linewidths=0.0,
-        auto_center=True
+        face_colors=cube_colors,
+        auto_center=True,
+        linewidths=linewidths
     )
 
     # Axes settings
@@ -242,5 +276,10 @@ def pixels_3d(rgb_image, rgb_to_white=True, no_axis=True, from_top=False):
     if no_axis:
         ax.set_axis_off()
 
-    if from_top:
-        ax.view_init(90, 0)
+    if camera_position is not None:
+        if "x" in camera_position:
+            ax.view_init(0, -90)
+        elif "y" in camera_position:
+            ax.view_init(0, 0)
+        elif "z" in camera_position:
+            ax.view_init(90, 0)

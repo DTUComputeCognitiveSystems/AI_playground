@@ -1,58 +1,11 @@
-import random
-import warnings
-from collections import Iterable
-from colorsys import rgb_to_hls, hls_to_rgb, rgb_to_hsv, hsv_to_rgb
-from pathlib import Path
+from colorsys import rgb_to_hsv
+from typing import Iterable
 
 import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection, Line3DCollection
+from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb
-
-
-def color_angles_image(image_size=(80, 100), colors=None):
-    # Default colors
-    if colors is None:
-        colors = [
-            [0.8, 0.0, 0.0],
-            [0.0, 0.8, 0.0],
-            [0.0, 0.0, 0.8],
-            [0.0, 0.8, 0.8],
-        ]
-
-    # Image center
-    image_center = np.array(image_size) / 2
-
-    # Define rows and columns
-    rows = np.arange(0, image_size[0]) - image_center[0]
-    cols = np.arange(0, image_size[1]) - image_center[1]
-
-    # Make angles
-    rows_expanded = np.flipud(np.expand_dims(rows, 1))
-    cols_expanded = np.expand_dims(cols, 0)
-    angles = np.arctan(rows_expanded / cols_expanded)
-
-    # Add pi to negative angles, to bottom half and remove nan-pixel
-    negative_angles = angles < 0
-    angles[negative_angles] += np.pi
-    angles[(rows_expanded < 0.5) * (cols_expanded < 0.5)] += np.pi
-    angles[(rows_expanded < -0.5) * (cols_expanded > 0.5)] += np.pi
-    angles[np.isnan(angles)] = 0
-
-    # Increments for each color
-    n_colors = len(colors)
-    angle_increments = np.pi * 2 / n_colors
-
-    # Make image
-    image = np.zeros((*image_size, 3), dtype=np.float32)
-
-    # Go through colors
-    for color_nr, color in enumerate(colors):
-        image[(angle_increments * color_nr <= angles) *
-              (angles < angle_increments * (color_nr + 1)), :] = color
-
-    return image
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from notebooks.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
 
 
 def plot_cubes(cube_definitions,
@@ -116,7 +69,7 @@ def plot_cubes(cube_definitions,
     # Get axes
     if ax is None:
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')  # type: Axes3D
+        ax = fig.add_subplot(111, projection='3d')
 
     # Plot faces
     face_plots = []
@@ -130,9 +83,9 @@ def plot_cubes(cube_definitions,
     if set_axis_limits:
         global_max = all_points.max()
         global_min = all_points.min()
-        ax.set_xlim([global_min, global_max])
-        ax.set_ylim([global_min, global_max])
-        ax.set_zlim([global_min, global_max])
+        ax.set_xlim(*[global_min, global_max])
+        ax.set_ylim(*[global_min, global_max])
+        ax.set_zlim(*[global_min, global_max])
 
     # Check if points are wanted
     if mark_points is not None:
@@ -203,126 +156,35 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
     return face_colors
 
 
-# def rgb_to_box_definitions(r, g, b):
-#
-#
-#
-
-def rgb_to_cmyk(colors):
-    # Ensure format and dimensions
-    colors = np.array(colors)
-    single_color = False
-    if len(colors.shape) == 1:
-        colors = np.expand_dims(colors, 0)
-        single_color = True
-    colors = colors[:, :3]
-
-    # Determine black key
-    k = 1 - colors.max(1)
-
-    # Colors
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        c = (1 - colors[:, 0] - k) / (1 - k)
-        m = (1 - colors[:, 1] - k) / (1 - k)
-        y = (1 - colors[:, 2] - k) / (1 - k)
-
-    # Fix nans (where black)
-    c[np.isnan(c)] = 0
-    m[np.isnan(m)] = 0
-    y[np.isnan(y)] = 0
-
-    # Collect
-    new_colors = np.stack([c, m, y, k], 1)
-
-    # If only one color was passed
-    if single_color:
-        new_colors = np.squeeze(new_colors, 0)
-
-    return new_colors
-
-
-def cmyk_to_rgb(colors):
-    # Ensure format and dimensions
-    colors = np.array(colors)
-    single_color = False
-    if len(colors.shape) == 1:
-        colors = np.expand_dims(colors, 0)
-        single_color = True
-
-    r = (1 - colors[:, 0]) * (1 - colors[:, 3])
-    g = (1 - colors[:, 1]) * (1 - colors[:, 3])
-    b = (1 - colors[:, 2]) * (1 - colors[:, 3])
-
-    # Collect
-    new_colors = np.stack([r, g, b], 1)
-
-    # If only one color was passed
-    if single_color:
-        new_colors = np.squeeze(new_colors, 0)
-
-    return new_colors
-
-
-if __name__ == "__main__":
-    with Path("notebooks", "src", "mario_art").open("r") as file:
-        lines = file.readlines()
-    lines = [val.strip() for val in lines]
-    #
-    # lines = [
-    #     "r,g,b,k,x,y"
-    # ]
-
-    plt.close("all")
-    #
-    # # plt.imshow(color_angles_image())
-    #
+def pixels_3d(rgb_image, rgb_to_white=True, no_axis=True, from_top=False):
+    # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])
     move_z = np.array([[0, 0, 1]])
     base_cube = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)])
 
-    color_map = dict(
-        r=(1, 0, 0),
-        w=(1, 1, 1),
-        b=(0, 0, 1),
-        g=(0, 1, 0),
-        x=np.array((139, 69, 19)) / 255,
-        y=np.array((255, 224, 189)) / 255,
-        i=np.array((255, 255, 0)) / 255,
-        k=(0, 0, 0)
-    )
-
-    brightness = None
-    adjust_white_brightness = False
-    rgb_saturation = 1.00
-
-    # Set CMYK intensities based on transparency and wanted ligth through
+    # Set CMYK intensities based on transparency and wanted light through
     cmyk_intensities = np.array([1. / 3, 0.5, 1.0])
 
-    # The designated CMY-component for each RGB-component (arbitrary)
+    # The designated CMY-component for each RGB-component (pretty arbitrary)
     rgbnr2cmynr = [1, 2, 0]
 
     # Basic color-components
     see_through = (0.0, 0.0, 0.0, 0.0)
     black = (0.0, 0.0, 0.0, 1.0)
 
+    # Holders
     cubes = []
     colors = []
-    for row, line in enumerate(lines):
-        for col, char in enumerate(line.split(",")):
+
+    # Go through all pixels
+    for row in range(rgb_image.shape[0]):
+        for col in range(rgb_image.shape[1]):
             c_cube_base = base_cube + col * move_y + row * move_x
 
             # Get the wanted color of the pixel
-            rgb_color = np.array(color_map[char])
-            hls_color = list(rgb_to_hsv(*rgb_color))
+            rgb_color = rgb_image[row, col, :]
             cmyk_color = rgb_to_cmyk(rgb_color)
-
-            # if brightness is not None:
-            #     if adjust_white_brightness or rgb_color.sum() < 1 - 1e-5:
-            #         hls_color = list(rgb_to_hsv(*rgb_color))
-            #         hls_color[2] = hls_color[2] * brightness
-            #         rgb_color = np.array(hsv_to_rgb(*hls_color))
 
             # Get CMYK components
             cmyk_components = np.zeros((3, 4), dtype=np.float32)
@@ -332,7 +194,6 @@ if __name__ == "__main__":
 
             # Convert each component to RBG
             subtractive_components = cmyk_to_rgb(cmyk_components)
-            # ks = cmyk_components[:, 3]
 
             # Split into three pixels
             for nr, component_intensity in enumerate(rgb_color):
@@ -341,8 +202,14 @@ if __name__ == "__main__":
                 subtractive_color = np.concatenate((subtractive_color, [cmyk_intensities[nr]]), 0)
 
                 # Make RGB-wrapping
-                c_rgb_color = np.array([0., 0., 0., 1.])
-                c_rgb_color[nr] = component_intensity
+                if rgb_to_white:
+                    c_rgb_color = np.ones(4) - component_intensity
+                    c_rgb_color[nr] = 1
+                else:
+                    c_rgb_color = np.zeros(4)
+                    c_rgb_color[nr] = component_intensity
+                c_rgb_color[3] = 1
+
 
                 # Bottom color
                 bottom_color = black if nr == 2 else see_through
@@ -357,32 +224,23 @@ if __name__ == "__main__":
                 cubes.append(c_cube_base - nr * move_z)
                 colors.append(c_face_colors)
 
+    # Make arrays
     colors = np.array(colors)
     cubes = np.stack(cubes, axis=0)
 
-    # cubes = [
-    #     base_cube,
-    #     base_cube + move_z,
-    #     # base_cube + move_z*2,
-    # ]
-    # colors = [
-    #     (1, 0, 0, 0.2),
-    #     (0, 1, 0, 0.8),
-    #     (0, 0, 1, 0.4),
-    #     (0, 0, 1, 0.4),
-    #     (0, 0, 0, 0.3),
-    # ]
-
-    # cube_definitions = []
-    # cube_definitions.append(cube_definitions[0] + np.expand_dims([1, 0, 0], 0))
+    # Plot cubes
     plot_cubes(
         cubes,
         face_colors=colors,
         linewidths=0.0,
         auto_center=True
     )
+
+    # Axes settings
     ax = plt.gca()
-    # ax.set_axis_off()
-    ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
+
+    if no_axis:
+        ax.set_axis_off()
+
+    if from_top:
+        ax.view_init(90, 0)

@@ -1,10 +1,10 @@
-from colorsys import rgb_to_hsv
 from typing import Iterable
 
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
 from notebooks.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
 
 
@@ -68,7 +68,7 @@ def plot_cubes(cube_definitions,
 
     # Get axes
     if ax is None:
-        fig = plt.figure()
+        fig = plt.gcf()
         ax = fig.add_subplot(111, projection='3d')
 
     # Plot faces
@@ -101,6 +101,8 @@ def plot_cubes(cube_definitions,
             ax.scatter(*points_plot)
 
     ax.set_aspect('equal')
+
+    return ax, face_plots,
 
 
 def _fix_cube_colors(color=(0.5, 0.5, 0.5)):
@@ -176,12 +178,13 @@ def pixels_image_3d(rgb_image, rgb_to_white=True, no_axis=True, camera_position=
         rgb_to_white=rgb_to_white,
         no_axis=no_axis,
         camera_position=camera_position,
-        mask=new_mask
+        mask=new_mask,
+        linewidths=linewidths
     )
 
 
 def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
-              linewidths=0.0):
+              linewidths=0.0, ax=None):
     # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])
@@ -189,7 +192,8 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
     base_cube = np.array([(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)])
 
     # Set CMYK intensities based on transparency and wanted light through
-    cmyk_intensities = np.array([1. / 3, 0.5, 1.0])
+    # cmyk_transparancies = np.array([0.5, 0.5, 1.0])
+    cmyk_transparancies = np.array([1. / 3, 0.5, 1.0])
 
     # The designated CMY-component for each RGB-component (pretty arbitrary)
     rgbnr2cmynr = [1, 2, 0]
@@ -233,7 +237,7 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
                 for nr, component_intensity in enumerate(rgb_color):
                     # Get current subtractive color and set transparency
                     subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
-                    subtractive_color = np.concatenate((subtractive_color, [cmyk_intensities[nr]]), 0)
+                    subtractive_color = np.concatenate((subtractive_color, [cmyk_transparancies[nr]]), 0)
 
                     # Make RGB-wrapping
                     if rgb_to_white:
@@ -243,7 +247,6 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
                         c_rgb_color = np.zeros(4)
                         c_rgb_color[nr] = component_intensity
                     c_rgb_color[3] = 1
-
 
                     # Bottom color
                     bottom_color = black if nr == 2 else see_through
@@ -263,23 +266,34 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
     cubes = np.stack(cubes, axis=0)
 
     # Plot cubes
-    plot_cubes(
+    output = plot_cubes(
         cubes,
         face_colors=cube_colors,
         auto_center=True,
-        linewidths=linewidths
+        linewidths=linewidths,
+        ax=ax
     )
 
     # Axes settings
-    ax = plt.gca()
+    ax = output[0]
 
     if no_axis:
         ax.set_axis_off()
 
     if camera_position is not None:
+        arguments = 0
+        axes_angles = np.array([0, 0])
         if "x" in camera_position:
-            ax.view_init(0, -90)
-        elif "y" in camera_position:
-            ax.view_init(0, 0)
-        elif "z" in camera_position:
-            ax.view_init(90, 0)
+            axes_angles += np.array([0, -90])
+            arguments += 1
+        if "y" in camera_position:
+            axes_angles += np.array([0, 0])
+            arguments += 1
+        if "z" in camera_position:
+            axes_angles += np.array([90, 0])
+            arguments += 1
+
+        if arguments != 0:
+            ax.view_init(*(axes_angles / arguments))
+
+    return output

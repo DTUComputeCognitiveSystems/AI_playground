@@ -182,14 +182,17 @@ def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True,
         # Compute means
         row_mean = rgb_image.mean(0)
         col_mean = rgb_image.mean(1)
+        global_mean = row_mean.mean(0)
 
         # Set positions
         positions.extend([(rgb_image.shape[0] + show_means, val) for val in range(rgb_image.shape[1])])
         positions.extend([(val, rgb_image.shape[1] + show_means) for val in range(rgb_image.shape[0])])
+        positions.append((rgb_image.shape[0] + show_means, rgb_image.shape[1] + show_means))
 
         # Set colors
         pixel_colors.extend(list(row_mean))
         pixel_colors.extend(list(col_mean))
+        pixel_colors.append(global_mean)
 
     pixels_3d(
         positions=positions,

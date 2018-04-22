@@ -184,7 +184,7 @@ def pixels_image_3d(rgb_image, rgb_to_white=True, no_axis=True, camera_position=
 
 
 def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
-              linewidths=0.0, ax=None):
+              linewidths=0.0, ax=None, insides="cmyk"):
     # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])
@@ -211,6 +211,9 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
         list(val) + [0] * (3 - len(val)) for val in positions
     ]
 
+    # Checks
+    do_cmyk = "cmy" in insides
+
     # Go through all pixels
     for pix_nr, (rgb_color, position) in enumerate(zip(pixel_colors, positions)):
 
@@ -221,24 +224,23 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
             if do_pixel:
                 c_cube_base = base_cube + position[0] * move_x + position[1] * move_y + position[2] * move_z
 
-                # Get the wanted color of the pixel
-                cmyk_color = rgb_to_cmyk(rgb_color)
+                # Check if CMYK method is used
+                subtractive_components = None
+                if do_cmyk:
+                    # Get the wanted color of the pixel
+                    cmyk_color = rgb_to_cmyk(rgb_color)
 
-                # Get CMYK components
-                cmyk_components = np.zeros((3, 4), dtype=np.float32)
-                cmyk_components[:, 3] = cmyk_color[3]
-                for nr, val in enumerate(cmyk_color[:3]):
-                    cmyk_components[nr, nr] = val
+                    # Get CMYK components
+                    cmyk_components = np.zeros((3, 4), dtype=np.float32)
+                    cmyk_components[:, 3] = cmyk_color[3]
+                    for nr, val in enumerate(cmyk_color[:3]):
+                        cmyk_components[nr, nr] = val
 
-                # Convert each component to RBG
-                subtractive_components = cmyk_to_rgb(cmyk_components)
+                    # Convert each component to RBG
+                    subtractive_components = cmyk_to_rgb(cmyk_components)
 
                 # Split into three pixels
                 for nr, component_intensity in enumerate(rgb_color):
-                    # Get current subtractive color and set transparency
-                    subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
-                    subtractive_color = np.concatenate((subtractive_color, [cmyk_transparancies[nr]]), 0)
-
                     # Make RGB-wrapping
                     if rgb_to_white:
                         c_rgb_color = np.ones(4) - component_intensity
@@ -251,9 +253,21 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_p
                     # Bottom color
                     bottom_color = black if nr == 2 else see_through
 
+                    # Check if CMYK method is used
+                    if do_cmyk:
+                        # Get current subtractive color and set transparency
+                        subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
+                        subtractive_color = np.concatenate((subtractive_color, [cmyk_transparancies[nr]]), 0)
+
+                        # Check scheme for insides
+                        insides_color = subtractive_color
+
+                    else:
+                        insides_color = np.array(list(rgb_color) + [cmyk_transparancies[nr]])
+
                     # Distribute face colors
                     c_face_colors = [
-                        bottom_color, subtractive_color,
+                        bottom_color, insides_color,
                         c_rgb_color, c_rgb_color, c_rgb_color, c_rgb_color,
                     ]
 

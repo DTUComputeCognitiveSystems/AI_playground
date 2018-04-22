@@ -46,7 +46,7 @@ def plot_color_scales(
     )
 
 
-def plot_single_pixel(color, ax=None):
+def plot_single_pixel(color, ax=None, insides="full"):
     color = np.array(to_rgb(color))
     output = d3.pixels_3d(
         positions=[(0, 0, 0)],
@@ -55,6 +55,7 @@ def plot_single_pixel(color, ax=None):
         no_axis=True,
         linewidths=0.1,
         ax=ax,
+        insides=insides,
     )
     return output
 
@@ -80,11 +81,13 @@ def rgb_sliders():
 
 
 class PixelViewer:
-    def __init__(self, rgb_widgets, rgb_box):
-        self.ax = None
-        self.canvas = None
+    def __init__(self, rgb_widgets, rgb_box, view_pixel_cubes=True, view_coordinates=True, fig_size=None,
+                 coordinates_history=False):
         self.rgb_widgets = rgb_widgets
         self.rgb_box = rgb_box
+        self._view_pixel_cubes = view_pixel_cubes
+        self._view_coordinates = view_coordinates
+        self._coordinates_history = coordinates_history
 
         # Assign pixel-viewer to sliders events
         for val in self.rgb_box.children:
@@ -94,38 +97,96 @@ class PixelViewer:
         self.rgb = [val.value for val in self.rgb_widgets]
 
         # Make figure
-        self.fig = plt.figure(self._title_text())
+        self.fig = plt.figure(self._title_text(), figsize=fig_size)
         self.canvas = self.fig.canvas
-        self.ax = self.fig.add_subplot(111, projection='3d')
+
+        # Number of axes
+        n_axes = sum([view_pixel_cubes, view_coordinates])
+
+        # Prepare axes
+        self.axes = dict()
+        ax_nr = 1
+        if self._view_pixel_cubes:
+            self.axes["cubes_axes"] = self.fig.add_subplot(1, n_axes, ax_nr, projection='3d')
+            ax_nr += 1
+        if self._view_coordinates:
+            self.axes["coordinate_axes"] = self.fig.add_subplot(1, n_axes, ax_nr, projection='3d')
+            self.axes["coordinate_axes"].view_init(elev=20, azim=35)
+            ax_nr += 1
 
         # Show now
         self.show_pixel()
 
     def _title_text(self):
-        return "RGB = {}".format(*self.rgb)
+        return "RGB = {}".format(self.rgb)
+
+    def _update_coordinates(self):
+        # Get axes
+        axes = self.axes.get("coordinate_axes", None)
+
+        # Reset plot
+        if not self._coordinates_history:
+            axes.cla()
+
+        # Plot RGB
+        axes.plot(
+            [0, self.rgb[0]*0.95],
+            [0, self.rgb[1]*0.95],
+            [0, self.rgb[2]*0.95],
+            c="k",
+            zorder=-1,
+        )
+        axes.scatter(
+            *[[val] for val in self.rgb],
+            s=100,
+            zorder=1,
+            c=self.rgb,
+            edgecolors="k",
+        )
+
+        # Set limits
+        axes.set_xlim(0., 1.1)
+        axes.set_ylim(0., 1.1)
+        axes.set_zlim(0., 1.1)
+
+        # Set labels
+        axes.set_xlabel("Red")
+        axes.set_ylabel("Green")
+        axes.set_zlabel("Blue")
 
     def _update_pixel_cubes(self):
+        # Get axes
+        cubes_axes = self.axes.get("cubes_axes", None)
+
         # Clear for new plot
-        self.ax.cla()
+        cubes_axes.cla()
         self.canvas.set_window_title(self._title_text())
 
         # Get camera angle if there is one
-        azim = self.ax.azim
-        elev = self.ax.elev
+        azim = cubes_axes.azim
+        elev = cubes_axes.elev
 
         # Visualize pixel
-        output = plot_single_pixel(self.rgb, self.ax)
-        self.ax = output[0]
+        output = plot_single_pixel(self.rgb, cubes_axes)
+        cubes_axes = output[0]
 
         # Set angle
-        self.ax.view_init(elev=elev, azim=azim)
+        cubes_axes.view_init(elev=elev, azim=azim)
+
+        # Save axes
+        self.axes["cubes_axes"] = cubes_axes
 
     def show_pixel(self, _=None):
         # Update RGB-values
         self.rgb = [val.value for val in self.rgb_widgets]
 
         # Update pixel-cubes
-        self._update_pixel_cubes()
+        if self._view_pixel_cubes:
+            self._update_pixel_cubes()
+
+        # Update coordinates plot
+        if self._view_coordinates:
+            self._update_coordinates()
 
         # Update angle
         plt.draw()

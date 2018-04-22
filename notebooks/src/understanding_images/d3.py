@@ -7,7 +7,6 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 from notebooks.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
 
-
 _default_rgb_to_white = False
 
 
@@ -162,7 +161,8 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
 
 
 def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None, mask=None,
-                    linewidths=0.0, insides="cmyk"):
+                    linewidths=0.0, insides="cmyk",
+                    show_means=0):
     positions = []
     pixel_colors = []
     new_mask = None if mask is None else []
@@ -174,6 +174,22 @@ def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True,
 
             if mask is not None:
                 new_mask.append(mask[row, col])
+
+    if show_means:
+        if isinstance(show_means, bool):
+            show_means = 3
+
+        # Compute means
+        row_mean = rgb_image.mean(0)
+        col_mean = rgb_image.mean(1)
+
+        # Set positions
+        positions.extend([(rgb_image.shape[0] + show_means, val) for val in range(rgb_image.shape[1])])
+        positions.extend([(val, rgb_image.shape[1] + show_means) for val in range(rgb_image.shape[0])])
+
+        # Set colors
+        pixel_colors.extend(list(row_mean))
+        pixel_colors.extend(list(col_mean))
 
     pixels_3d(
         positions=positions,
@@ -221,63 +237,63 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=_default_rgb_to_white, no_ax
     # Go through all pixels
     for pix_nr, (rgb_color, position) in enumerate(zip(pixel_colors, positions)):
 
-            do_pixel = True
-            if mask is not None:
-                do_pixel = mask[pix_nr]
+        do_pixel = True
+        if mask is not None:
+            do_pixel = mask[pix_nr]
 
-            if do_pixel:
-                c_cube_base = base_cube + position[0] * move_x + position[1] * move_y + position[2] * move_z
+        if do_pixel:
+            c_cube_base = base_cube + position[0] * move_x + position[1] * move_y + position[2] * move_z
+
+            # Check if CMYK method is used
+            subtractive_components = None
+            if do_cmyk:
+                # Get the wanted color of the pixel
+                cmyk_color = rgb_to_cmyk(rgb_color)
+
+                # Get CMYK components
+                cmyk_components = np.zeros((3, 4), dtype=np.float32)
+                cmyk_components[:, 3] = cmyk_color[3]
+                for nr, val in enumerate(cmyk_color[:3]):
+                    cmyk_components[nr, nr] = val
+
+                # Convert each component to RBG
+                subtractive_components = cmyk_to_rgb(cmyk_components)
+
+            # Split into three pixels
+            for nr, component_intensity in enumerate(rgb_color):
+                # Make RGB-wrapping
+                if rgb_to_white:
+                    c_rgb_color = np.ones(4) - component_intensity
+                    c_rgb_color[nr] = 1
+                else:
+                    c_rgb_color = np.zeros(4)
+                    c_rgb_color[nr] = component_intensity
+                c_rgb_color[3] = 1
+
+                # Bottom color
+                bottom_color = black if nr == 2 else see_through
 
                 # Check if CMYK method is used
-                subtractive_components = None
                 if do_cmyk:
-                    # Get the wanted color of the pixel
-                    cmyk_color = rgb_to_cmyk(rgb_color)
+                    # Get current subtractive color and set transparency
+                    subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
+                    subtractive_color = np.concatenate((subtractive_color, [cmyk_transparancies[nr]]), 0)
 
-                    # Get CMYK components
-                    cmyk_components = np.zeros((3, 4), dtype=np.float32)
-                    cmyk_components[:, 3] = cmyk_color[3]
-                    for nr, val in enumerate(cmyk_color[:3]):
-                        cmyk_components[nr, nr] = val
+                    # Check scheme for insides
+                    insides_color = subtractive_color
 
-                    # Convert each component to RBG
-                    subtractive_components = cmyk_to_rgb(cmyk_components)
+                else:
+                    insides_color = np.array(list(rgb_color) + [cmyk_transparancies[nr]])
 
-                # Split into three pixels
-                for nr, component_intensity in enumerate(rgb_color):
-                    # Make RGB-wrapping
-                    if rgb_to_white:
-                        c_rgb_color = np.ones(4) - component_intensity
-                        c_rgb_color[nr] = 1
-                    else:
-                        c_rgb_color = np.zeros(4)
-                        c_rgb_color[nr] = component_intensity
-                    c_rgb_color[3] = 1
+                # Distribute face colors
+                c_face_colors = [
+                    bottom_color, insides_color,
+                    c_rgb_color, c_rgb_color, c_rgb_color, c_rgb_color,
+                ]
 
-                    # Bottom color
-                    bottom_color = black if nr == 2 else see_through
-
-                    # Check if CMYK method is used
-                    if do_cmyk:
-                        # Get current subtractive color and set transparency
-                        subtractive_color = subtractive_components[rgbnr2cmynr[nr]]
-                        subtractive_color = np.concatenate((subtractive_color, [cmyk_transparancies[nr]]), 0)
-
-                        # Check scheme for insides
-                        insides_color = subtractive_color
-
-                    else:
-                        insides_color = np.array(list(rgb_color) + [cmyk_transparancies[nr]])
-
-                    # Distribute face colors
-                    c_face_colors = [
-                        bottom_color, insides_color,
-                        c_rgb_color, c_rgb_color, c_rgb_color, c_rgb_color,
-                    ]
-
-                    # Append cube and colors
-                    cubes.append(c_cube_base - nr * move_z)
-                    cube_colors.append(c_face_colors)
+                # Append cube and colors
+                cubes.append(c_cube_base - nr * move_z)
+                cube_colors.append(c_face_colors)
 
     # Make arrays
     cube_colors = np.array(cube_colors)

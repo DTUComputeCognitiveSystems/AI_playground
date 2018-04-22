@@ -12,13 +12,14 @@ from notebooks.src.understanding_images.make_pixel_art import storage_dir
 importlib.reload(d3)
 
 
-def plot_art(n=1, no_axis=True, fig_size=(12, 8)):
+def plot_art(n=1, no_axis=True, fig_size=(12, 8), show_means=0):
     rgb_image = np.load(str(Path(storage_dir, "art{}.npy".format(n))))
     plt.figure(figsize=fig_size)
     d3.pixels_image_3d(
         rgb_image=rgb_image,
         no_axis=no_axis,
         insides="full",
+        show_means=show_means,
     )
 
 

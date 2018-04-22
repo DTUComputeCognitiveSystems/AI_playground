@@ -7,12 +7,13 @@ from matplotlib.colors import to_rgb
 import importlib
 
 from notebooks.src.understanding_images import d3
+from notebooks.src.understanding_images.make_pixel_art import storage_dir
 
 importlib.reload(d3)
 
 
 def plot_art(n=1, no_axis=True, fig_size=(12, 8)):
-    rgb_image = np.load(str(Path("notebooks", "src", "understanding_images", "data", "art{}.npy".format(n))))
+    rgb_image = np.load(str(Path(storage_dir, "art{}.npy".format(n))))
     plt.figure(figsize=fig_size)
     d3.pixels_image_3d(
         rgb_image=rgb_image,

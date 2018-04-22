@@ -87,6 +87,74 @@ def rgb_sliders():
     return sliders, rgb_box
 
 
+def art_viewer_menu():
+    files = list(sorted(list(storage_dir.glob("*.npy"))))
+    file_names = [val.name for val in files]
+
+    dropdown = widgets.Dropdown(
+        options=file_names,
+        value=file_names[0],
+        description='File:',
+        disabled=False,
+    )
+
+    camera_position = widgets.RadioButtons(
+        options=['xyz', 'x', 'y', "z"],
+        description='Camera viewpoint:',
+        disabled=False
+    )
+
+    show_mean = widgets.ToggleButton(
+        value=False,
+        description='Show Means/Averages',
+        disabled=False,
+        button_style='', # 'success', 'info', 'warning', 'danger' or ''
+        icon='check'
+    )
+
+    container = widgets.HBox([dropdown, show_mean, camera_position])
+
+    return container, dropdown, camera_position, show_mean
+
+
+class ArtViewer:
+    def __init__(self, widget_dropdown, widget_camera_position, widget_show_mean, fig_size=(12, 8)):
+        self.fig_size = fig_size
+        self.widget_dropdown = widget_dropdown
+        self.widget_camera_position = widget_camera_position
+        self.widget_show_mean = widget_show_mean
+
+        # Assign viewer to events
+        for val in [widget_dropdown, widget_camera_position, widget_show_mean]:
+            val.observe(self.update)
+
+        self.fig = plt.figure(figsize=self.fig_size)
+        self.ax = self.fig.add_subplot(111, projection='3d')
+
+        self.update()
+
+    def update(self, _=None):
+        name = self.widget_dropdown.value
+        show_means = self.widget_show_mean.value
+        camera_position = self.widget_camera_position.value
+
+        # Clear axes
+        self.ax.cla()
+
+        # Open image
+        rgb_image = np.load(str(Path(storage_dir, name)))
+
+        # Plot image
+        d3.pixels_image_3d(
+            rgb_image=rgb_image,
+            no_axis=True,
+            insides="full",
+            show_means=show_means,
+            camera_position=camera_position,
+            ax=self.ax
+        )
+
+
 class PixelViewer:
     def __init__(self, rgb_widgets, rgb_box, view_pixel_cubes=True, view_coordinates=True, fig_size=(12, 8),
                  coordinates_history=False):

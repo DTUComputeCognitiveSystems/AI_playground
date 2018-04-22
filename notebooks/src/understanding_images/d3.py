@@ -162,7 +162,7 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
 
 def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None, mask=None,
                     linewidths=0.0, insides="cmyk",
-                    show_means=0):
+                    show_means=0, ax=None):
     positions = []
     pixel_colors = []
     new_mask = None if mask is None else []
@@ -203,6 +203,7 @@ def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True,
         mask=new_mask,
         linewidths=linewidths,
         insides=insides,
+        ax=ax,
     )
 
 

@@ -82,7 +82,6 @@ def rgb_sliders():
 class PixelViewer:
     def __init__(self, rgb_widgets, rgb_box):
         self.ax = None
-        self.fig = None
         self.canvas = None
         self.rgb_widgets = rgb_widgets
         self.rgb_box = rgb_box
@@ -91,36 +90,42 @@ class PixelViewer:
         for val in self.rgb_box.children:
             val.observe(self.show_pixel)
 
+        # Get RGB-values
+        self.rgb = [val.value for val in self.rgb_widgets]
+
+        # Make figure
+        self.fig = plt.figure(self._title_text())
+        self.canvas = self.fig.canvas
+        self.ax = self.fig.add_subplot(111, projection='3d')
+
         # Show now
         self.show_pixel()
 
-    def show_pixel(self, _=None):
-        # Get RGB-values
-        r, g, b = [val.value for val in self.rgb_widgets]
+    def _title_text(self):
+        return "RGB = {}".format(*self.rgb)
 
-        # Set title and get figure / canvas
-        title_text = "RGB = {}".format((r, g, b))
-        if self.fig is None:
-            self.fig = plt.figure(title_text)
-            self.canvas = self.fig.canvas
-        else:
-            # Clear for new plot
-            plt.cla()
-        self.canvas.set_window_title(title_text)
+    def _update_pixel_cubes(self):
+        # Clear for new plot
+        self.ax.cla()
+        self.canvas.set_window_title(self._title_text())
 
         # Get camera angle if there is one
-        azim = elev = None
-        if self.ax is not None:
-            azim = self.ax.azim
-            elev = self.ax.elev
+        azim = self.ax.azim
+        elev = self.ax.elev
 
         # Visualize pixel
-        output = plot_single_pixel((r, g, b), self.ax)
+        output = plot_single_pixel(self.rgb, self.ax)
+        self.ax = output[0]
 
         # Set angle
-        self.ax = output[0]
-        if azim is not None:
-            self.ax.view_init(elev=elev, azim=azim)
+        self.ax.view_init(elev=elev, azim=azim)
+
+    def show_pixel(self, _=None):
+        # Update RGB-values
+        self.rgb = [val.value for val in self.rgb_widgets]
+
+        # Update pixel-cubes
+        self._update_pixel_cubes()
 
         # Update angle
         plt.draw()

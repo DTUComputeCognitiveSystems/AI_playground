@@ -11,17 +11,19 @@ from notebooks.src.understanding_images import d3
 importlib.reload(d3)
 
 
-def plot_art(n=1, no_axis=True):
-    rgb_image = np.load(str(Path("notebooks", "src", "understanding_images", "data", "art{}.npz".format(n))))
+def plot_art(n=1, no_axis=True, fig_size=(12, 8)):
+    rgb_image = np.load(str(Path("notebooks", "src", "understanding_images", "data", "art{}.npy".format(n))))
+    plt.figure(figsize=fig_size)
     d3.pixels_image_3d(
         rgb_image=rgb_image,
-        no_axis=no_axis
+        no_axis=no_axis,
+        insides="full",
     )
 
 
 def plot_color_scales(
         scales="red,lime,blue,yellow,magenta,cyan,white",
-        n_shapes=10, x_spread=3, y_spread=0, z_spread=3.5):
+        n_shapes=10, x_spread=3, y_spread=0, z_spread=3.5, fig_size=(12, 8)):
     if isinstance(scales, str):
         scales = scales.split(",")
 
@@ -37,12 +39,14 @@ def plot_color_scales(
             pixel_colors.append(color_base * val)
 
     # Plot 3D pixels
-    return d3.pixels_3d(
+    plt.figure(figsize=fig_size)
+    _ = d3.pixels_3d(
         positions=positions,
         pixel_colors=pixel_colors,
         camera_position="xy",
         no_axis=True,
         linewidths=0.1,
+        insides="full",
     )
 
 
@@ -81,7 +85,7 @@ def rgb_sliders():
 
 
 class PixelViewer:
-    def __init__(self, rgb_widgets, rgb_box, view_pixel_cubes=True, view_coordinates=True, fig_size=None,
+    def __init__(self, rgb_widgets, rgb_box, view_pixel_cubes=True, view_coordinates=True, fig_size=(12, 8),
                  coordinates_history=False):
         self.rgb_widgets = rgb_widgets
         self.rgb_box = rgb_box

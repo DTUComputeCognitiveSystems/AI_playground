@@ -8,6 +8,9 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from notebooks.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
 
 
+_default_rgb_to_white = False
+
+
 def plot_cubes(cube_definitions,
                ax=None, linewidths=1.0, edgecolors="k", face_colors=(0, 0, 1),
                set_axis_limits=True, auto_center=True, alpha=None, mark_points=None):
@@ -158,8 +161,8 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
     return face_colors
 
 
-def pixels_image_3d(rgb_image, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
-                    linewidths=0.0):
+def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None, mask=None,
+                    linewidths=0.0, insides="cmyk"):
     positions = []
     pixel_colors = []
     new_mask = None if mask is None else []
@@ -179,12 +182,13 @@ def pixels_image_3d(rgb_image, rgb_to_white=True, no_axis=True, camera_position=
         no_axis=no_axis,
         camera_position=camera_position,
         mask=new_mask,
-        linewidths=linewidths
+        linewidths=linewidths,
+        insides=insides,
     )
 
 
-def pixels_3d(positions, pixel_colors, rgb_to_white=True, no_axis=True, camera_position=None, mask=None,
-              linewidths=0.0, ax=None, insides="cmyk"):
+def pixels_3d(positions, pixel_colors, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None,
+              mask=None, linewidths=0.0, ax=None, insides="cmyk"):
     # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])

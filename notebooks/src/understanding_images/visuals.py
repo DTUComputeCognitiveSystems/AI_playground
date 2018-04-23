@@ -2,8 +2,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from ipywidgets import Layout
-from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton
+from ipywidgets import Layout, Button
+from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton, Label
 from matplotlib.colors import to_rgb
 import importlib
 
@@ -76,65 +76,75 @@ def rgb_sliders():
     return sliders, rgb_box
 
 
-def art_viewer_menu():
-    files = list(sorted(list(storage_dir.glob("*.npy"))))
-    file_names = [val.name for val in files]
-
-    dropdown = Dropdown(
-        options=file_names,
-        value=file_names[0],
-        description='File:',
-        disabled=False,
-        layout={"margin": "10px"}
-    )
-
-    style = {'description_width': 'initial'}
-    camera_position = RadioButtons(
-        options=['xyz', 'x', 'y', "z"],
-        description='Camera viewpoint:',
-        disabled=False,
-        style=style,
-    )
-
-    show_mean = ToggleButton(
-        value=False,
-        description='Show Means/Averages',
-        disabled=False,
-        button_style='', # 'success', 'info', 'warning', 'danger' or ''
-        icon='check',
-        layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
-    )
-
-    container = VBox(
-        (dropdown, HBox(
-            [show_mean, camera_position],
-            layout=Layout(justify_content="space-around", width="100%"),
-        )),
-    )
-
-    return container, dropdown, camera_position, show_mean
-
-
 class ArtViewer:
-    def __init__(self, widget_dropdown, widget_camera_position, widget_show_mean, fig_size=(12, 8)):
+    def __init__(self, fig_size=(10, 6)):
         self.fig_size = fig_size
-        self.widget_dropdown = widget_dropdown
-        self.widget_camera_position = widget_camera_position
-        self.widget_show_mean = widget_show_mean
+        files = list(sorted(list(storage_dir.glob("*.npy"))))
+        file_names = [val.name for val in files]
+
+        self.start_button = Button(
+            value=False,
+            description='Show!',
+            disabled=False,
+            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
+            icon=''
+        )
+
+        self.w_dropdown = Dropdown(
+            options=file_names,
+            value=file_names[0],
+            description='File:',
+            disabled=False,
+            layout={"margin": "10px"}
+        )
+
+        style = {'description_width': 'initial'}
+        self.w_camera_position = RadioButtons(
+            options=['xyz', 'x', 'y', "z"],
+            description='Camera viewpoint:',
+            disabled=False,
+            style=style,
+        )
+
+        self.w_show_mean = ToggleButton(
+            value=False,
+            description='Show Means/Averages',
+            disabled=False,
+            button_style='',  # 'success', 'info', 'warning', 'danger' or ''
+            icon='check',
+            layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
+        )
+
+        self.fig = None
+        self.ax = None
+
+        self.container = VBox(
+            (
+                HBox([self.w_dropdown, self.start_button]),
+                HBox([self.w_show_mean, self.w_camera_position],
+                     layout=Layout(justify_content="space-around", width="100%"),
+                    ),
+            ),
+        )
 
         # Assign viewer to events
-        for val in [widget_dropdown, widget_camera_position, widget_show_mean]:
-            val.observe(self.update)
+        self.start_button.on_click(self.update)
 
-        self.fig = plt.figure(figsize=self.fig_size)
-        self.ax = self.fig.add_subplot(111, projection='3d')
-
-        self.update()
+    def start(self):
+        return self.container
 
     def update(self, _=None):
-        name = self.widget_dropdown.value
-        show_means = self.widget_show_mean.value
-        camera_position = self.widget_camera_position.value
+        self.start_button.disabled = True
+
+        # Get settings
+        name = self.w_dropdown.value
+        show_means = self.w_show_mean.value
+        camera_position = self.w_camera_position.value
+
+        # Make figure
+        if self.fig is None:
+            self.fig = plt.figure(figsize=self.fig_size)
+            self.ax = self.fig.add_subplot(111, projection='3d')
 
         # Clear axes
         self.ax.cla()
@@ -151,6 +161,10 @@ class ArtViewer:
             camera_position=camera_position,
             ax=self.ax
         )
+
+        # Show and enable button
+        plt.show()
+        self.start_button.disabled = False
 
 
 class PixelViewer:
@@ -203,9 +217,9 @@ class PixelViewer:
 
         # Plot RGB
         axes.plot(
-            [0, self.rgb[0]*0.95],
-            [0, self.rgb[1]*0.95],
-            [0, self.rgb[2]*0.95],
+            [0, self.rgb[0] * 0.95],
+            [0, self.rgb[1] * 0.95],
+            [0, self.rgb[2] * 0.95],
             c="k",
             zorder=-1,
         )

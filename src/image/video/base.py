@@ -5,7 +5,11 @@ from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleSt
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
+from src.real_time.ipython_backend import IPythonLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
+
+
+_matplotlib_based = (MatplotlibLoop, IPythonLoop)
 
 
 class VideoFlair:
@@ -15,7 +19,7 @@ class VideoFlair:
         """
         self._artists = artists
 
-    def initialize(self):
+    def initialize(self, fig=None):
         raise NotImplementedError
 
     def update(self, video):
@@ -110,13 +114,16 @@ class _Video:
         # Open up a camera-stram
         if "process" in stream_type:
             self.camera_stream = CameraStreamProcess(frame_rate=frame_rate)
-            print("Video: Multiprocessing.")
+            if self._verbose:
+                print("Video: Multiprocessing.")
         elif "thread" in stream_type:
             self.camera_stream = CameraStream(frame_rate=frame_rate)
-            print("Video: Multithreaded.")
+            if self._verbose:
+                print("Video: Multithreaded.")
         else:
             self.camera_stream = SimpleStream()
-            print("Video: Simple.")
+            if self._verbose:
+                print("Video: Simple.")
 
         # Test getting frame and get size of that frame
         self._current_frame = self._current_frame_time = None
@@ -155,7 +162,7 @@ class _Video:
 
     @property
     def artists(self):
-        if isinstance(self.real_time_backend, MatplotlibLoop):
+        if isinstance(self.real_time_backend, _matplotlib_based):
             return self.real_time_backend.artists
         return None
 
@@ -173,7 +180,7 @@ class _Video:
         self.dprint("Initializing video.")
 
         # Plotting if using Matplotlib backend
-        if isinstance(self.real_time_backend, MatplotlibLoop):
+        if isinstance(self.real_time_backend, _matplotlib_based):
 
             # Get and set axes
             self.ax = plt.gca() if self.ax is None else self.ax
@@ -187,7 +194,7 @@ class _Video:
 
             # Title and axis settings
             self.ax.set_title(self._title)
-            if isinstance(self.real_time_backend, MatplotlibLoop):
+            if isinstance(self.real_time_backend, _matplotlib_based):
                 self.ax.xaxis.set_ticks([])
                 self.ax.yaxis.set_ticks([])
 
@@ -214,7 +221,7 @@ class _Video:
         self._current_frame_time = time()
 
         # Plotting if using Matplotlib backend
-        if isinstance(self.real_time_backend, MatplotlibLoop):
+        if isinstance(self.real_time_backend, _matplotlib_based):
 
             # Update image plot
             self._image_plot.set_data(self._current_frame)

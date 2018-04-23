@@ -6,6 +6,9 @@ A set of demos for teaching and introducing students to advanced AI-models with 
 The main structure of the repository is:
 ```
 AI_playground/
+    documentation/
+        installation    <- Toolbox installation instructions 
+
     notebooks/          <- Interactive notebooks for teaching and showing.
         figures/        
         
@@ -17,7 +20,7 @@ AI_playground/
 ```
 
 ##### Running Code
-All scripts are run from the top directory, `AI_playground`. Examples of how to run a script on Windows and Linux
+All scripts are run from the top directory `AI_playground`. Examples of how to run a script on Windows and Linux
 are shown below, using the snapshot.py-script which opens the webcam for storing photos.  
 
 To run a script in the command line on **Windows** type:

@@ -2,7 +2,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from ipywidgets import widgets
+from ipywidgets import Layout
+from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton
 from matplotlib.colors import to_rgb
 import importlib
 
@@ -10,18 +11,6 @@ from notebooks.src.understanding_images import d3
 from notebooks.src.understanding_images.make_pixel_art import storage_dir
 
 importlib.reload(d3)
-
-
-def plot_art(n=1, no_axis=True, fig_size=(12, 8), show_means=0, camera_position=""):
-    rgb_image = np.load(str(Path(storage_dir, "art{}.npy".format(n))))
-    plt.figure(figsize=fig_size)
-    d3.pixels_image_3d(
-        rgb_image=rgb_image,
-        no_axis=no_axis,
-        insides="full",
-        show_means=show_means,
-        camera_position=camera_position
-    )
 
 
 def plot_color_scales(
@@ -70,7 +59,7 @@ def plot_single_pixel(color, ax=None, insides="full"):
 def rgb_sliders():
     sliders = []
     for text in ["Red", "Green", "Blue"]:
-        sliders.append(widgets.FloatSlider(
+        sliders.append(FloatSlider(
             value=1.0,
             min=0,
             max=1.0,
@@ -83,7 +72,7 @@ def rgb_sliders():
             readout_format='.2f',
         ))
 
-    rgb_box = widgets.VBox(sliders)
+    rgb_box = VBox(sliders)
     return sliders, rgb_box
 
 
@@ -91,28 +80,37 @@ def art_viewer_menu():
     files = list(sorted(list(storage_dir.glob("*.npy"))))
     file_names = [val.name for val in files]
 
-    dropdown = widgets.Dropdown(
+    dropdown = Dropdown(
         options=file_names,
         value=file_names[0],
         description='File:',
         disabled=False,
+        layout={"margin": "10px"}
     )
 
-    camera_position = widgets.RadioButtons(
+    style = {'description_width': 'initial'}
+    camera_position = RadioButtons(
         options=['xyz', 'x', 'y', "z"],
         description='Camera viewpoint:',
-        disabled=False
+        disabled=False,
+        style=style,
     )
 
-    show_mean = widgets.ToggleButton(
+    show_mean = ToggleButton(
         value=False,
         description='Show Means/Averages',
         disabled=False,
         button_style='', # 'success', 'info', 'warning', 'danger' or ''
-        icon='check'
+        icon='check',
+        layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
     )
 
-    container = widgets.HBox([dropdown, show_mean, camera_position])
+    container = VBox(
+        (dropdown, HBox(
+            [show_mean, camera_position],
+            layout=Layout(justify_content="space-around", width="100%"),
+        )),
+    )
 
     return container, dropdown, camera_position, show_mean
 

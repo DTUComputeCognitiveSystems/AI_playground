@@ -23,6 +23,7 @@ def run_video_recognition(model_name = "mobilenet", video_length = 10):
     the_video.start()
     while(not the_video.real_time_backend.stop_now ):
         plt.pause(.5)
+
 class Image_Collector:
     def __init__(self, num_pictures =2, num_objects =2):
         self.num_pictures = num_pictures
@@ -34,6 +35,7 @@ class Image_Collector:
         self.net_name = ""
     def run_collector(self, use_binary = False):
         if use_binary:
+            self.num_objects =2
             instructions = ["Hold object before camera to take picture and press enter", 
                 "Take pictures without the object by pressing enter"]
         else:
@@ -56,9 +58,13 @@ class Image_Collector:
             self.start_coordinates, _ =my_camera._cross_hair.coordinates
             self.labels.append(label_name)
             self.frames.append(my_camera.photos[:self.num_pictures])
-            my_camera._finalize()
-    def load_network(self,model_name = "mobilenet"):
-        
+       
+            
+    def load_network(self,model_name = "mobilenet", net = None):
+        if net != None:
+            self.net = KerasDetector(model = net)
+            self.net_name = "Custom"
+            return
         if self.net == None or model_name != self.net_name:
             self.net_name = model_name
             self.net = KerasDetector(model_name="mobilenet",exlude_animals=  True)
@@ -95,23 +101,56 @@ class Image_Collector:
 
         
             
+    def show_augmented(self):
+        
+        datagen = ImageDataGenerator(
+            rotation_range=20,
+            width_shift_range=0,
+            height_shift_range=0,
+            shear_range=0.2,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            fill_mode='nearest')
+
+        plt.close("all")
+        num_objects= len(self.labels)
+        num_augments = 4
+        f, axarr = plt.subplots(num_objects, num_augments+1, figsize=(4*(num_augments+1),3*num_objects))
+        augmented_frames = []
+        for i in range(len(self.labels)):
+            augmented_frames.append([self.frames[i][0]])
+            img_iterator = datagen.flow(self.frames[i][0][np.newaxis, :])
+            for j in range(num_augments):
+                augmented_frames[i].append(img_iterator.next()[0].astype(np.int32))
+
+
+        for i in range (num_objects):
+
+            for j in range(num_augments+1):
+                if j==0 and i ==0:
+                    axarr[i,j].set_title("True image")
+                elif i ==0:
+                    axarr[i,j].set_title("Augmented")
+
+                axarr[i,j].imshow(augmented_frames[i][j])
+                axarr[i,j].tick_params( which='both', labelbottom=False,labelleft = False,length=0)
+        
             
-            
-    def show_images(self, model_name = "mobilenet"):
-        self.load_network(model_name = model_name)
+    def show_images(self, model_name = "mobilenet", net = None):
+        self.load_network(model_name = model_name, net = net)
         plt.close("all")
         num_objects= len(self.labels)
         f, axarr = plt.subplots(num_objects, self.num_pictures, figsize=(4*self.num_pictures,3*num_objects))
         axarr=np.asarray(axarr) if num_objects ==1 and self.num_pictures==1 else axarr
         axarr = np.expand_dims(axarr, axis=0) if num_objects ==1 else axarr
         axarr =  np.expand_dims(axarr, axis=-1) if self.num_pictures ==1 else axarr
-        
+        fontdict ={'fontsize':22}
         for i in range (num_objects):
             print(100*"_" +"\nObject {}".format(self.labels[i]) )
             for j in range(self.num_pictures):
                 if j==0:
                     axarr[i,j].set_ylabel(self.labels[i], rotation=0, size='large', labelpad=5*(len(self.labels[i])))
-                axarr[i,j].set_title("Picture {}".format(j))
+                axarr[i,j].set_title("Picture {}".format(j),fontdict = fontdict)
                 probable_labels=self.net.label_frame(self.frames[i][j])[0]
                 print("Picture {}: ".format(j),", ".join(probable_labels))
                 axarr[i,j].imshow(self.frames[i][j])

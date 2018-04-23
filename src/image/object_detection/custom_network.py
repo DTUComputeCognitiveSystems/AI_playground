@@ -5,7 +5,7 @@ Created on Mon Apr 23 12:02:54 2018
 @author: lauri
 """
 from matplotlib import pyplot as plt
-from keras.utils import to_categorical
+
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Input, Flatten, Dropout, Conv2D

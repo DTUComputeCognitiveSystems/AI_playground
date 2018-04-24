@@ -6,10 +6,8 @@ A set of demos for teaching and introducing students to advanced AI-models with 
 The main structure of the repository is:
 ```
 AI_playground/
-    documentation/
-        installation    <- Toolbox installation instructions 
-
     notebooks/          <- Interactive notebooks for teaching and showing.
+        src/
         figures/        
         
     src/                <- Content of main code and tools.

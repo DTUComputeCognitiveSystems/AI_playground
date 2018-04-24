@@ -32,7 +32,7 @@ class KerasLearningPlotter(keras.callbacks.Callback):
         self.i += 1
 
         clear_output(wait=True)
-        f, (ax1, ax2) = plt.subplots(1, 2, sharex=True)
+        f, (ax1, ax2) = plt.subplots(1, 2, sharex=True,figsize=(20,10))
         f.suptitle('Epoch ' + str(self.e), fontsize=20)
 
         # Plot training curves

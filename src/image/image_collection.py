@@ -10,6 +10,7 @@ from src.image.video.snapshot import VideoCamera
 from matplotlib import pyplot as plt
 from src.image.object_detection.keras_detector import KerasDetector
 import numpy as np
+import os
 from keras.preprocessing.image import ImageDataGenerator,img_to_array, load_img
 from os.path import isfile, join
 import matplotlib.image as mpimg
@@ -25,9 +26,10 @@ def run_video_recognition(model_name = "mobilenet", video_length = 10):
         plt.pause(.5)
 
 class Image_Collector:
-    def __init__(self, num_pictures =2, num_objects =2):
+    def __init__(self, num_pictures =2, num_objects =2, picture_size = (224, 224)):
         self.num_pictures = num_pictures
         self.num_objects = num_objects
+        self.picture_size = picture_size
 
         self.frames = []
         self.labels = []
@@ -48,16 +50,18 @@ class Image_Collector:
             
             
             back_end = MatplotlibLoop()
-            my_camera = VideoCamera(n_photos = self.num_pictures, backend=back_end, title = instructions[i])
+            my_camera = VideoCamera(n_photos = self.num_pictures, backend=back_end, title = instructions[i],crosshair_size = self.picture_size)
             
         
             my_camera.start()
             
             while(not my_camera.real_time_backend.stop_now ):
                 plt.pause(.5)
-            self.start_coordinates, _ =my_camera._cross_hair.coordinates
+            (start_y, start_x), _ =my_camera._cross_hair.coordinates
             self.labels.append(label_name)
-            self.frames.append(my_camera.photos[:self.num_pictures])
+            self.frames.append(np.stack(
+                    my_camera.photos[:self.num_pictures ])
+                    [:,start_x:start_x+self.picture_size[0], start_y:start_y+self.picture_size[1]] )
        
             
     def load_network(self,model_name = "mobilenet", net = None):
@@ -72,8 +76,20 @@ class Image_Collector:
     def save_images(self,filepath,use_augmentation = False):
         if len(self.labels)==0:
             raise IOError("No images to save")
+        newpath = os.path.join(filepath, "ml_images")
+        if not os.path.exists(newpath):
+            os.makedirs(newpath)
+
+        unaugmented_path = os.path.join(newpath, "original_imgs")
+        if not os.path.exists(unaugmented_path):
+            os.makedirs(unaugmented_path)
+        for prefix, cur_list in zip(self.labels, self.frames):
+            for i in range(len(cur_list)):
+                mpimg.imsave(os.path.join(unaugmented_path, prefix + "_" + str(i)+".jpg"), cur_list[i])
+            
+     
+
         num_augmentations = 30 if use_augmentation else 1
-        (start_x, start_y) = self.start_coordinates
         if use_augmentation:
             datagen = ImageDataGenerator(
             rotation_range=20,
@@ -94,7 +110,7 @@ class Image_Collector:
             fill_mode='nearest')
         for prefix, cur_list in zip(self.labels, self.frames):
             i = 0
-            for batch in datagen.flow(np.stack(cur_list)[:, start_x:start_x+224, start_y:start_y+224],save_to_dir=filepath, save_prefix=prefix, save_format='jpg'):
+            for batch in datagen.flow(np.stack(cur_list),save_to_dir=newpath, save_prefix=prefix, save_format='jpg'):
                 i += 1
                 if i >= num_augmentations:
                     break 
@@ -120,6 +136,7 @@ class Image_Collector:
         for i in range(len(self.labels)):
             augmented_frames.append([self.frames[i][0]])
             img_iterator = datagen.flow(self.frames[i][0][np.newaxis, :])
+            #TODO image type not correct
             for j in range(num_augments):
                 augmented_frames[i].append(img_iterator.next()[0].astype(np.int32))
 

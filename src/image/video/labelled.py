@@ -10,7 +10,7 @@ import numpy as np
 from src.image.video.texter import VideoTexter
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
-
+from src.image.video.snapshot import CrossHair
 
 class LabelledVideo(_Video):
     def __init__(self,
@@ -19,7 +19,9 @@ class LabelledVideo(_Video):
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
                  title="Video", ax=None, fig=None, block=True,
-                 verbose=False, print_step=1,
+                 verbose=False, print_step=1, 
+                 crosshair_type='box',
+                 crosshair_size = (224, 224),
                  backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
@@ -62,6 +64,10 @@ class LabelledVideo(_Video):
         self._colors = self._make_colormap()
 
         # Flair
+        self._cross_hair = None
+        if crosshair_type!= None:
+            self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size = crosshair_size)
+            self.flairs.extend([self._cross_hair])
         self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
         self.flairs.extend([self._text])
 
@@ -97,7 +103,14 @@ class LabelledVideo(_Video):
 
     def _step_video_extensions(self):
         # Get labels and probabilities
-        labels, probabilities = self._model.label_frame(frame=self._current_frame)
+        if self._cross_hair !=None:
+            (start_y, start_x), _ =self._cross_hair.coordinates
+            (end_x, end_y) = (start_x + 224, start_y + 224)
+            self.picture_coordinates =((start_x, start_y), (end_x, end_y))
+            ((x, y), (end_x, end_y)) = self.picture_coordinates
+            labels, probabilities = self._model.label_frame(frame=self._current_frame[x:end_x, y:end_y])
+        else:
+            labels, probabilities = self._model.label_frame(frame=self._current_frame)
         self._current_label = labels[0]
         self._current_label_probability = probabilities[0]
 

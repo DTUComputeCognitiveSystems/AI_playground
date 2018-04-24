@@ -10,7 +10,7 @@ from src.real_time.matplotlib_backend import MatplotlibLoop
 
 
 class CrossHair(VideoFlair):
-    def __init__(self, frame_size, ch_type="box", edgecolor="r", width_ratio=0.5, height_ratio=None, linewidth=1):
+    def __init__(self, frame_size, ch_type="box", edgecolor="r", width_ratio=0.5, height_ratio=None, linewidth=1, size = None):
         """
 
         :param tuple | list frame_size:
@@ -27,24 +27,31 @@ class CrossHair(VideoFlair):
         self.height_ratio = height_ratio
         self.frame_size = frame_size
         self.edgecolor = edgecolor
+        self.size= size
 
     def initialize(self):
+        
         if self.ch_type is not None:
 
             ax = plt.gca()
 
             # Default ratios
-            if self.width_ratio is None and self.height_ratio is not None:
-                self.width_ratio = self.height_ratio
-            if self.height_ratio is None and self.width_ratio is not None:
-                self.height_ratio = self.width_ratio
-            assert isinstance(self.width_ratio, float) and 0 < self.width_ratio <= 1
-            assert isinstance(self.height_ratio, float) and 0 < self.height_ratio <= 1
+            if self.size == None:
+                if self.width_ratio is None and self.height_ratio is not None:
+                    self.width_ratio = self.height_ratio
+                if self.height_ratio is None and self.width_ratio is not None:
+                    self.height_ratio = self.width_ratio
+                assert isinstance(self.width_ratio, float) and 0 < self.width_ratio <= 1
+                assert isinstance(self.height_ratio, float) and 0 < self.height_ratio <= 1
+    
+                # Determine coordinates
+                width = int(self.frame_size[1] * self.width_ratio)
+                height = int(self.frame_size[0] * self.height_ratio)
 
-            # Determine coordinates
-            width = int(self.frame_size[1] * self.width_ratio)
+            else:
+                height, width = self.size
+                
             w_space = self.frame_size[1] - width
-            height = int(self.frame_size[0] * self.height_ratio)
             h_space = self.frame_size[0] - height
 
             # Make cross-hair
@@ -95,6 +102,7 @@ class VideoCamera(_Video):
                  record_frames=False,
                  n_photos=5, backgroundcolor="darkblue", color="white",
                  crosshair_type="box",
+                 crosshair_size = (224, 224),
                  title="Camera", ax=None, fig=None, block=True,
                  verbose=False, print_step=1,
                  backend="matplotlib"):
@@ -128,7 +136,7 @@ class VideoCamera(_Video):
         )
 
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
-        self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type)
+        self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size = crosshair_size)
         self.flairs.extend([self._texter, self._cross_hair])
         self.photos = []
         self.photos_info = []

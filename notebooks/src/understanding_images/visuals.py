@@ -3,7 +3,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from ipywidgets import Layout, Button
+from ipywidgets import Layout, Button, Checkbox
 from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton
 from matplotlib.colors import to_rgb
 
@@ -15,7 +15,7 @@ importlib.reload(d3)
 
 def plot_color_scales(
         scales="red,lime,blue,yellow,magenta,cyan,white",
-        n_shapes=10, x_spread=3, y_spread=0, z_spread=3.5, fig_size=(12, 8)):
+        n_shapes=20, x_spread=3, y_spread=0, z_spread=3.5, fig_size=(12, 8)):
     if isinstance(scales, str):
         scales = scales.split(",")
 
@@ -40,6 +40,9 @@ def plot_color_scales(
         linewidths=0.1,
         insides="full",
     )
+
+    ax = plt.gca()
+    ax.format_coord = lambda x, y: ''
 
 
 class ArtViewer:
@@ -72,12 +75,12 @@ class ArtViewer:
             style=style,
         )
 
-        self.w_show_mean = ToggleButton(
+        self.w_show_mean = Checkbox(
             value=False,
             description='Show Means/Averages',
             disabled=False,
-            button_style='',  # 'success', 'info', 'warning', 'danger' or ''
-            icon='check',
+            # button_style='',  # 'success', 'info', 'warning', 'danger' or ''
+            # icon='check',
             layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
         )
 
@@ -111,6 +114,7 @@ class ArtViewer:
         if self.fig is None:
             self.fig = plt.figure(figsize=self.fig_size)
             self.ax = self.fig.add_subplot(111, projection='3d')
+            self.ax.format_coord = lambda x, y: ''
 
         # Clear axes
         self.ax.cla()
@@ -162,7 +166,7 @@ class PixelViewer:
         rgb_widgets = []
         for text in ["Red", "Green", "Blue"]:
             rgb_widgets.append(FloatSlider(
-                value=1.0,
+                value=0.0,
                 min=0,
                 max=1.0,
                 step=0.01,
@@ -207,10 +211,12 @@ class PixelViewer:
         ax_nr = 1
         if self._view_pixel_cubes:
             self.axes["cubes_axes"] = self.fig.add_subplot(1, n_axes, ax_nr, projection='3d')
+            self.axes["cubes_axes"].format_coord = lambda x, y: ''
             ax_nr += 1
         if self._view_coordinates:
             self.axes["coordinate_axes"] = self.fig.add_subplot(1, n_axes, ax_nr, projection='3d')
             self.axes["coordinate_axes"].view_init(elev=20, azim=35)
+            self.axes["coordinate_axes"].format_coord = lambda x, y: ''
             ax_nr += 1
 
     def _update_coordinates(self):
@@ -238,9 +244,9 @@ class PixelViewer:
         )
 
         # Set limits
-        axes.set_xlim(0., 1.1)
-        axes.set_ylim(0., 1.1)
-        axes.set_zlim(0., 1.1)
+        axes.set_xlim(0., 1.)
+        axes.set_ylim(0., 1.)
+        axes.set_zlim(0., 1.)
 
         # Set labels
         axes.set_xlabel("Red")

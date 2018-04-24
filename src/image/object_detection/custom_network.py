@@ -17,27 +17,31 @@ class Classifier:
     def __init__(self):
         self.model= Sequential()
         self.model.add(MaxPooling2D(pool_size=(4, 4),input_shape=(224, 224, 3)))
-        
+        self.model.add(Conv2D(1, (9,9)))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
         self.model.add(Flatten( ))
+        
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(20, activation='relu'))
         self.model.add(Dropout(0.5))
         self.model.add(Dense(2, activation='softmax'))
         self.model.compile(loss=categorical_crossentropy,
                       optimizer=keras.optimizers.Adagrad(),
                       metrics=['accuracy'])
         
-    def train(self,train_data, num_epochs = 5 ):
+    def train(self,train_data, num_epochs = 5 , verbose = 0, callbacks = []):
         x_train, y_train = train_data
         self.model.fit(x_train, y_train,
-          batch_size=128,
+          batch_size=512,
           epochs=num_epochs,
-          verbose=1,
-          validation_split=0.1)
+          verbose=verbose,
+          validation_split=0.1, callbacks = callbacks)
     def evaluate(self,test_data):
         x_val, y_val = test_data
         loss, acc = self.model.evaluate(x_val, y_val)
         print("Accuracy on the validation set is {:}%.".format(100*acc))
     def run_live(self,video_length = 10):
-        the_video = LabelledVideo(KerasDetector(model = self.model),video_length=video_length )
+        the_video = LabelledVideo(KerasDetector(model = self.model),video_length=video_length,  crosshair_type = 'box', crosshair_size= (224, 224))
         the_video.start()
         while(not the_video.real_time_backend.stop_now ):
             plt.pause(.5)

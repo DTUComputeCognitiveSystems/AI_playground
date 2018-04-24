@@ -102,7 +102,7 @@ color_specs.append(dict(
     b=(0.24, 0.15, 0.67),
     k=(0., 0., 0.),
     t=(0.55, 0.71, 0.93),
-    y=(0.85, 1., 0.0),
+    y=(1., 1., 0.0),
     o=(1., 0.6, 0.0),
     p=(0.95, 0.71, 0.82)
 ))
@@ -242,8 +242,50 @@ wwwwwwwwwwwkkkwwwwww
 """)
 
 
+#####
+# Pikachu
+
+# Define colors
+color_specs.append(dict(
+    w=(1., 1., 1.),
+    k=(0., 0., 0.),
+    y=(1., 1., 0.),
+    r=(1.0, 0.0, 0.),
+))
+
+# Make art
+splitters.append("")
+arts.append("""
+wwwwwwwwwwwwwwkwww
+kkwwwwwwwwwwwkykww
+kkkwwwwwwwwwkyykww
+kkkwwwwwwwwkyyykww
+kkykwwwwwwkyyyykww
+kyykkwwwwkykkkkkkk
+kkyykkkkkkkkkyyykk
+wkyyyyyyyyyyyyykkw
+wkyyyyyyyyyyykkwww
+wkkyyyyyyyyykkwwww
+wkyyyyyyyyyyykwwww
+wkywkyyyyywkykwwww
+kkykkyyyyykkykkwww
+kyryyyykyyyyrykwww
+kkrryyyyyyyrrkkwww
+wkkryyykyyyrkkwwww
+wkyyyyyyyyyyykwwww
+kkyyyyyyyyyyykkwww
+kyyyyyyyyyyyyykwww
+kyykyyyyyyykyykwww
+kykyyyyyyyyykykwww
+wkyyyyyyyyyyykkwww
+wkkyyykkkyyykkwwww
+kyykkkkkkkkkyykwww
+wkkkwwwwwwwkkkwwww
+""")
+
+
 #########
-# Store art
+# Store artf
 for nr, (art, splitter, colors) in enumerate(zip(arts, splitters, color_specs)):
     _save_art(
         art_str=art, splitter_str=splitter, colors_map=colors, art_name="art{}".format(nr)

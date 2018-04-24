@@ -6,6 +6,9 @@ from src.image.video.labelled import LabelledVideo
 
 
 class VideoRecognitionDashboard:
+    # TODO: Perhaps this could be automated to take any of the video classes and use interact() from IPython to
+    # TODO:     generate widgets?
+
     def __init__(self):
 
         self.start_button = Button(

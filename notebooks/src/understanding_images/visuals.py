@@ -1,11 +1,11 @@
+import importlib
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 from ipywidgets import Layout, Button
-from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton, Label
+from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton
 from matplotlib.colors import to_rgb
-import importlib
 
 from notebooks.src.understanding_images import d3
 from notebooks.src.understanding_images.make_pixel_art import storage_dir
@@ -40,40 +40,6 @@ def plot_color_scales(
         linewidths=0.1,
         insides="full",
     )
-
-
-def plot_single_pixel(color, ax=None, insides="full"):
-    color = np.array(to_rgb(color))
-    output = d3.pixels_3d(
-        positions=[(0, 0, 0)],
-        pixel_colors=[color],
-        camera_position="x",
-        no_axis=True,
-        linewidths=0.1,
-        ax=ax,
-        insides=insides,
-    )
-    return output
-
-
-def rgb_sliders():
-    sliders = []
-    for text in ["Red", "Green", "Blue"]:
-        sliders.append(FloatSlider(
-            value=1.0,
-            min=0,
-            max=1.0,
-            step=0.01,
-            description='{}:'.format(text),
-            disabled=False,
-            continuous_update=False,
-            orientation='horizontal',
-            readout=True,
-            readout_format='.2f',
-        ))
-
-    rgb_box = VBox(sliders)
-    return sliders, rgb_box
 
 
 class ArtViewer:
@@ -168,13 +134,49 @@ class ArtViewer:
 
 
 class PixelViewer:
-    def __init__(self, rgb_widgets, rgb_box, view_pixel_cubes=True, view_coordinates=True, fig_size=(12, 8),
+    @staticmethod
+    def plot_single_pixel(color, ax=None, insides="full"):
+        color = np.array(to_rgb(color))
+        output = d3.pixels_3d(
+            positions=[(0, 0, 0)],
+            pixel_colors=[color],
+            camera_position="x",
+            no_axis=True,
+            linewidths=0.1,
+            ax=ax,
+            insides=insides,
+        )
+        return output
+
+    def __init__(self, view_pixel_cubes=True, view_coordinates=True, fig_size=(12, 8),
                  coordinates_history=False):
-        self.rgb_widgets = rgb_widgets
-        self.rgb_box = rgb_box
+        self._fig_size = fig_size
         self._view_pixel_cubes = view_pixel_cubes
         self._view_coordinates = view_coordinates
         self._coordinates_history = coordinates_history
+
+        # Fields
+        self.fig = self.canvas = self.axes = None
+
+        # Make widgets
+        rgb_widgets = []
+        for text in ["Red", "Green", "Blue"]:
+            rgb_widgets.append(FloatSlider(
+                value=1.0,
+                min=0,
+                max=1.0,
+                step=0.01,
+                description='{}:'.format(text),
+                disabled=False,
+                continuous_update=False,
+                orientation='horizontal',
+                readout=True,
+                readout_format='.2f',
+            ))
+        self.rgb_widgets = rgb_widgets
+
+        # Make widget box
+        self.rgb_box = VBox(rgb_widgets)
 
         # Assign pixel-viewer to sliders events
         for val in self.rgb_box.children:
@@ -183,12 +185,22 @@ class PixelViewer:
         # Get RGB-values
         self.rgb = [val.value for val in self.rgb_widgets]
 
+        # Start when widgets are displayed
+        self.rgb_box.on_displayed(self.show_pixel)
+
+    def start(self):
+        return self.rgb_box
+
+    def _title_text(self):
+        return "RGB = {}".format(self.rgb)
+
+    def _init_figure(self):
         # Make figure
-        self.fig = plt.figure(self._title_text(), figsize=fig_size)
+        self.fig = plt.figure(self._title_text(), figsize=self._fig_size)
         self.canvas = self.fig.canvas
 
         # Number of axes
-        n_axes = sum([view_pixel_cubes, view_coordinates])
+        n_axes = sum([self._view_pixel_cubes, self._view_coordinates])
 
         # Prepare axes
         self.axes = dict()
@@ -200,12 +212,6 @@ class PixelViewer:
             self.axes["coordinate_axes"] = self.fig.add_subplot(1, n_axes, ax_nr, projection='3d')
             self.axes["coordinate_axes"].view_init(elev=20, azim=35)
             ax_nr += 1
-
-        # Show now
-        self.show_pixel()
-
-    def _title_text(self):
-        return "RGB = {}".format(self.rgb)
 
     def _update_coordinates(self):
         # Get axes
@@ -254,7 +260,7 @@ class PixelViewer:
         elev = cubes_axes.elev
 
         # Visualize pixel
-        output = plot_single_pixel(self.rgb, cubes_axes)
+        output = PixelViewer.plot_single_pixel(self.rgb, cubes_axes)
         cubes_axes = output[0]
 
         # Set angle
@@ -264,6 +270,10 @@ class PixelViewer:
         self.axes["cubes_axes"] = cubes_axes
 
     def show_pixel(self, _=None):
+        # Check if figure is initialized
+        if self.fig is None:
+            self._init_figure()
+
         # Update RGB-values
         self.rgb = [val.value for val in self.rgb_widgets]
 

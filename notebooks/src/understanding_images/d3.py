@@ -12,7 +12,7 @@ _default_rgb_to_white = False
 
 def plot_cubes(cube_definitions,
                ax=None, linewidths=1.0, edgecolors="k", face_colors=(0, 0, 1),
-               set_axis_limits=True, auto_center=True, alpha=None, mark_points=None):
+               axis_limits="equal", auto_center=True, alpha=None, mark_points=None, aspect="equal"):
     # Ensure type
     cube_definitions = np.array(cube_definitions).astype(np.float32)
 
@@ -82,12 +82,19 @@ def plot_cubes(cube_definitions,
         ax.add_collection3d(face_plot)
 
     # Plot the points themselves to force the scaling of the axes
-    if set_axis_limits:
+    if "equal" in axis_limits:
         global_max = all_points.max()
         global_min = all_points.min()
         ax.set_xlim(*[global_min, global_max])
         ax.set_ylim(*[global_min, global_max])
         ax.set_zlim(*[global_min, global_max])
+    elif "set" in axis_limits:
+        mins = all_points.min(0)
+        maxs = all_points.max(0)
+        ax.set_xlim(*[mins[0], maxs[0]])
+        ax.set_ylim(*[mins[1], maxs[1]])
+        ax.set_zlim(*[mins[2], maxs[2]])
+
 
     # Check if points are wanted
     if mark_points is not None:
@@ -102,7 +109,8 @@ def plot_cubes(cube_definitions,
             points_plot = list(zip(points_plot))
             ax.scatter(*points_plot)
 
-    ax.set_aspect('equal')
+    if aspect is not None:
+        ax.set_aspect(aspect)
 
     return ax, face_plots,
 
@@ -162,7 +170,7 @@ def _fix_color_tensor(face_colors=(0.5, 0.5, 0.5), alpha=None, n_cubes=1):
 
 def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None, mask=None,
                     linewidths=0.0, insides="cmyk",
-                    show_means=0, ax=None):
+                    show_means=0, ax=None, auto_center=True, axis_limits="equal", aspect="equal"):
     positions = []
     pixel_colors = []
     new_mask = None if mask is None else []
@@ -204,11 +212,15 @@ def pixels_image_3d(rgb_image, rgb_to_white=_default_rgb_to_white, no_axis=True,
         linewidths=linewidths,
         insides=insides,
         ax=ax,
+        auto_center=auto_center,
+        axis_limits=axis_limits,
+        aspect=aspect,
     )
 
 
 def pixels_3d(positions, pixel_colors, rgb_to_white=_default_rgb_to_white, no_axis=True, camera_position=None,
-              mask=None, linewidths=0.0, ax=None, insides="cmyk"):
+              mask=None, linewidths=0.0, ax=None, insides="cmyk", auto_center=True, axis_limits="equal",
+              aspect="equal"):
     # Cube building blocks
     move_x = np.array([[1, 0, 0]])
     move_y = np.array([[0, 1, 0]])
@@ -307,9 +319,11 @@ def pixels_3d(positions, pixel_colors, rgb_to_white=_default_rgb_to_white, no_ax
     output = plot_cubes(
         cubes,
         face_colors=cube_colors,
-        auto_center=True,
+        auto_center=auto_center,
+        axis_limits=axis_limits,
         linewidths=linewidths,
-        ax=ax
+        ax=ax,
+        aspect=aspect,
     )
 
     # Axes settings

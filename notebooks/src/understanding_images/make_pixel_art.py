@@ -284,11 +284,70 @@ wkkkwwwwwwwkkkwwww
 """)
 
 
+#####
+# Deadpool
+
+# Define colors
+color_specs.append(dict(
+    w=(1., 1., 1.),
+    k=(0., 0., 0.),
+    g=(0.5, 0.5, 0.5),
+    b=(0.6, 0.27, 0.),
+    r=(1.0, 0.0, 0.),
+))
+
+# Make art
+splitters.append("")
+arts.append("""
+wwwwwwwwwwkkkkkkwwwwwww
+wwwwwwwwkkrrrrrrkkwwwww
+wwwwwwwkrrrrrrrrrrkwwww
+wwwwwwkrrrrrrrrrrrrkwww
+wwwwwwkrrrrrrrrrrrrkwww
+wwwwwkrrrrrrrrrrrrrrkww
+wwwwwkrrrrrrrrrrrrrrkww
+wwwwwkrrrrrrrrrrrrrrkww
+wwwwwkrrrrrgggrrrrrgkww
+wwwwwkrrrrggggggrrggkww
+kkwwwwkrrrggwwggrrggkww
+kbkwwwkrrrggwwwgrrgkwww
+wkbkwwwkrrrgggggrrgkwww
+wwkbkwwwkrrrgggrrrrkwww
+wwwkbkwkgkrrrrrrrrkwwww
+wwwwkkkgggkkrrrrrkwwwww
+wwwwwkggggggkkkkkrkwwww
+wwwwwkggggkgrrrrrrgkwww
+wwwwkgkgggkgrrrrrrgkwww
+wwwwkrgggkgkkrrrrrkkwww
+wwwkgrrgkggggrrrrrgkkww
+wwwkggrrkkgggrrrrrgkkww
+wwwkrggkwwkggrrrrrgkkww
+wwkrrrkwwwkkgrrkkkgkgkw
+wwkrrrkwwwkgkgkwrwkkrkw
+wwkgggkwwkggggkwrwkkrkw
+wwkrrrrkwkggrrrkkkgkgkw
+wwkrrrrkkggrrrrrrrgkrrk
+wwkrrrkrkgrrrrkrkrgkkrk
+wwwkrrkkkrrrrrkkrrrkkrk
+wwwwkkkkrrrrrrkrrrrkkkk
+wwwwwwkrrrrrrkkrrrrkwww
+wwwwwwkrkrkrrkkrrkrkwww
+wwwwwwkrkkrrkwkrrkkkwww
+wwwwwkrrrrrkwwkrrrrkwww
+wwwwwkgggggkwwkggggkwww
+wwwwwkggggkwwwkggggkwww
+wwwwkgggggkwwwkggggrkww
+wwwwkrrrgkwwwwwkggrrrkw
+wwwwkrrrrkwwwwwwkkkkkkw
+wwwwkkkkkkwwwwwwwwwwwww
+""")
+
+
 #########
 # Store artf
 for nr, (art, splitter, colors) in enumerate(zip(arts, splitters, color_specs)):
     _save_art(
-        art_str=art, splitter_str=splitter, colors_map=colors, art_name="art{}".format(nr)
+        art_str=art, splitter_str=splitter, colors_map=colors, art_name="art{}".format(nr+1)
     )
 
 

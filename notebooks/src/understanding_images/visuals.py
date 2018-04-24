@@ -8,133 +8,11 @@ from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, 
 from matplotlib.colors import to_rgb
 
 from notebooks.src.understanding_images import d3
+from notebooks.src.understanding_images.d3 import pixels_3d
 from notebooks.src.understanding_images.make_pixel_art import storage_dir
+from src.utility.numpy_util import temporary_seed
 
 importlib.reload(d3)
-
-
-def plot_color_scales(
-        scales="red,lime,blue,yellow,magenta,cyan,white",
-        n_shapes=20, x_spread=3, y_spread=0, z_spread=3.5, fig_size=(12, 8)):
-    if isinstance(scales, str):
-        scales = scales.split(",")
-
-    # Bases of each scale
-    color_bases = np.array([to_rgb(val) for val in scales])
-
-    # Make pixels and set positions
-    positions = []
-    pixel_colors = []
-    for color_nr, color_base in enumerate(color_bases):
-        for val_nr, val in enumerate(np.linspace(1, 0, n_shapes)):
-            positions.append((color_nr * x_spread, color_nr * y_spread + val_nr, color_nr * z_spread))
-            pixel_colors.append(color_base * val)
-
-    # Plot 3D pixels
-    plt.figure(figsize=fig_size)
-    _ = d3.pixels_3d(
-        positions=positions,
-        pixel_colors=pixel_colors,
-        camera_position="xy",
-        no_axis=True,
-        linewidths=0.1,
-        insides="full",
-    )
-
-    ax = plt.gca()
-    ax.format_coord = lambda x, y: ''
-
-
-class ArtViewer:
-    def __init__(self, fig_size=(10, 6)):
-        self.fig_size = fig_size
-        files = list(sorted(list(storage_dir.glob("*.npy"))))
-        file_names = [val.name for val in files]
-
-        self.start_button = Button(
-            value=False,
-            description='Show!',
-            disabled=False,
-            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
-            icon=''
-        )
-
-        self.w_dropdown = Dropdown(
-            options=file_names,
-            value=file_names[0],
-            description='File:',
-            disabled=False,
-            layout={"margin": "10px"}
-        )
-
-        style = {'description_width': 'initial'}
-        self.w_camera_position = RadioButtons(
-            options=['xyz', 'x', 'y', "z"],
-            description='Camera viewpoint:',
-            disabled=False,
-            style=style,
-        )
-
-        self.w_show_mean = Checkbox(
-            value=False,
-            description='Show Means/Averages',
-            disabled=False,
-            # button_style='',  # 'success', 'info', 'warning', 'danger' or ''
-            # icon='check',
-            layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
-        )
-
-        self.fig = None
-        self.ax = None
-
-        self.container = VBox(
-            (
-                HBox([self.w_dropdown, self.start_button]),
-                HBox([self.w_show_mean, self.w_camera_position],
-                     layout=Layout(justify_content="space-around", width="100%"),
-                    ),
-            ),
-        )
-
-        # Assign viewer to events
-        self.start_button.on_click(self.update)
-
-    def start(self):
-        return self.container
-
-    def update(self, _=None):
-        self.start_button.disabled = True
-
-        # Get settings
-        name = self.w_dropdown.value
-        show_means = self.w_show_mean.value
-        camera_position = self.w_camera_position.value
-
-        # Make figure
-        if self.fig is None:
-            self.fig = plt.figure(figsize=self.fig_size)
-            self.ax = self.fig.add_subplot(111, projection='3d')
-            self.ax.format_coord = lambda x, y: ''
-
-        # Clear axes
-        self.ax.cla()
-
-        # Open image
-        rgb_image = np.load(str(Path(storage_dir, name)))
-
-        # Plot image
-        d3.pixels_image_3d(
-            rgb_image=rgb_image,
-            no_axis=True,
-            insides="full",
-            show_means=show_means,
-            camera_position=camera_position,
-            ax=self.ax
-        )
-
-        # Show and enable button
-        plt.show()
-        self.start_button.disabled = False
 
 
 class PixelViewer:
@@ -293,6 +171,290 @@ class PixelViewer:
 
         # Update angle
         plt.draw()
+
+
+def plot_color_scales(
+        scales="red,lime,blue,yellow,magenta,cyan,white",
+        n_shapes=20, x_spread=3, y_spread=0, z_spread=3.5, fig_size=(12, 8)):
+    if isinstance(scales, str):
+        scales = scales.split(",")
+
+    # Bases of each scale
+    color_bases = np.array([to_rgb(val) for val in scales])
+
+    # Make pixels and set positions
+    positions = []
+    pixel_colors = []
+    for color_nr, color_base in enumerate(color_bases):
+        for val_nr, val in enumerate(np.linspace(1, 0, n_shapes)):
+            positions.append((color_nr * x_spread, color_nr * y_spread + val_nr, color_nr * z_spread))
+            pixel_colors.append(color_base * val)
+
+    # Plot 3D pixels
+    plt.figure(figsize=fig_size)
+    _ = d3.pixels_3d(
+        positions=positions,
+        pixel_colors=pixel_colors,
+        camera_position="xy",
+        no_axis=True,
+        linewidths=0.1,
+        insides="full",
+    )
+
+    ax = plt.gca()
+    ax.format_coord = lambda x, y: ''
+
+
+class ArtViewer:
+    def __init__(self, fig_size=(10, 6)):
+        self.fig_size = fig_size
+        files = list(sorted(list(storage_dir.glob("*.npy"))))
+        file_names = [val.name for val in files]
+
+        self.start_button = Button(
+            value=False,
+            description='Show!',
+            disabled=False,
+            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
+            icon=''
+        )
+
+        self.w_dropdown = Dropdown(
+            options=file_names,
+            value=file_names[0],
+            description='File:',
+            disabled=False,
+            layout={"margin": "10px"}
+        )
+
+        style = {'description_width': 'initial'}
+        self.w_camera_position = RadioButtons(
+            options=['xyz', 'x', 'y', "z"],
+            description='Camera viewpoint:',
+            disabled=False,
+            style=style,
+        )
+
+        self.w_show_mean = Checkbox(
+            value=False,
+            description='Show Means/Averages',
+            disabled=False,
+            # button_style='',  # 'success', 'info', 'warning', 'danger' or ''
+            # icon='check',
+            layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
+        )
+
+        self.fig = None
+        self.ax = None
+
+        self.container = VBox(
+            (
+                HBox([self.w_dropdown, self.start_button]),
+                HBox([self.w_show_mean, self.w_camera_position],
+                     layout=Layout(justify_content="space-around", width="100%"),
+                    ),
+            ),
+        )
+
+        # Assign viewer to events
+        self.start_button.on_click(self.update)
+
+    def start(self):
+        return self.container
+
+    def update(self, _=None):
+        self.start_button.disabled = True
+
+        # Get settings
+        name = self.w_dropdown.value
+        show_means = self.w_show_mean.value
+        camera_position = self.w_camera_position.value
+
+        # Make figure
+        if self.fig is None:
+            self.fig = plt.figure(figsize=self.fig_size)
+            self.ax = self.fig.add_subplot(111, projection='3d')
+            self.ax.format_coord = lambda x, y: ''
+
+        # Clear axes
+        self.ax.cla()
+
+        # Open image
+        rgb_image = np.load(str(Path(storage_dir, name)))
+
+        # Plot image
+        d3.pixels_image_3d(
+            rgb_image=rgb_image,
+            no_axis=True,
+            insides="full",
+            show_means=show_means,
+            camera_position=camera_position,
+            ax=self.ax
+        )
+
+        # Show and enable button
+        plt.show()
+        self.start_button.disabled = False
+
+
+def view_art_features(fig_size=(12, 6)):
+    # Get files
+    files = list(sorted(list(storage_dir.glob("*.npy"))))
+    file_names = [val.name for val in files]
+
+    # Get images
+    images = []
+    feature_space_sizes = []
+    for name in file_names:
+        rgb_image = np.load(str(Path(storage_dir, name)))
+        images.append(rgb_image)
+        feature_space_sizes.append(sum(rgb_image.shape))
+
+    # Determine number of features and images
+    n_features = max(feature_space_sizes)
+    n_images = len(images)
+
+    # Make proper image
+    plotting_image = np.ones((n_images * 2 - 1, n_features, 3))
+
+    # Shuffle images
+    with temporary_seed(321):
+        np.random.shuffle(images)
+
+    # Go through images
+    for image_nr, rgb_image in enumerate(images):
+        shape = rgb_image.shape
+
+        # Compute means
+        row_mean = rgb_image.mean(0)
+        col_mean = rgb_image.mean(1)
+
+        # Make feature vector
+        vector = np.ones((n_features, 3))
+        vector[0:shape[1], :] = row_mean
+        vector[shape[1]:shape[1]+shape[0], :] = col_mean
+
+        # Set colors in image
+        plotting_image[image_nr * 2, :] = vector
+
+    # Make figure
+    plt.figure(figsize=fig_size)
+
+    # Show image
+    plt.imshow(plotting_image)
+    ax = plt.gca()
+    ax.set_title("Image Features\n")
+
+    # Labelling
+    ax.set_xticks([])
+    y_ticks = np.array(range(n_images)) * 2
+    ax.set_yticks(y_ticks)
+    ax.set_yticklabels(np.array(range(n_images)) + 1)
+
+    # Hide axes lines and coordinates
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.format_coord = lambda x, y, z: ''
+
+    # Plot dividers
+    for image_nr, rgb_image in enumerate(images):
+        plt.plot([rgb_image.shape[1] - 0.5] * 2, [image_nr*2 - 0.5, image_nr*2 + 0.5], color="k")
+
+
+class ArtFeaturesViewer:
+    def __init__(self, fig_size=(10, 6)):
+        self.fig_size = fig_size
+        files = list(sorted(list(storage_dir.glob("*.npy"))))
+        file_names = [val.name for val in files]
+
+        self.start_button = Button(
+            value=False,
+            description='Show!',
+            disabled=False,
+            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
+            icon=''
+        )
+
+        self.w_dropdown = Dropdown(
+            options=file_names,
+            value=file_names[0],
+            description='File:',
+            disabled=False,
+            layout={"margin": "10px"}
+        )
+
+        style = {'description_width': 'initial'}
+        self.w_camera_position = RadioButtons(
+            options=['xyz', 'x', 'y', "z"],
+            description='Camera viewpoint:',
+            disabled=False,
+            style=style,
+        )
+
+        self.w_show_mean = Checkbox(
+            value=False,
+            description='Show Averages',
+            disabled=False,
+            # button_style='',  # 'success', 'info', 'warning', 'danger' or ''
+            # icon='check',
+            layout={"justify_content": "space-around", 'width': '250px', "margin": "10px"}
+        )
+
+        self.fig = None
+        self.ax = None
+
+        self.container = VBox(
+            (
+                HBox([self.w_dropdown, self.start_button]),
+                HBox([self.w_show_mean, self.w_camera_position],
+                     layout=Layout(justify_content="space-around", width="100%"),
+                    ),
+            ),
+        )
+
+        # Assign viewer to events
+        self.start_button.on_click(self.update)
+
+    def start(self):
+        return self.container
+
+    def update(self, _=None):
+        self.start_button.disabled = True
+
+        # Get settings
+        name = self.w_dropdown.value
+        show_means = self.w_show_mean.value
+        camera_position = self.w_camera_position.value
+
+        # Make figure
+        if self.fig is None:
+            self.fig = plt.figure(figsize=self.fig_size)
+            self.ax = self.fig.add_subplot(111, projection='3d')
+            self.ax.format_coord = lambda x, y: ''
+
+        # Clear axes
+        self.ax.cla()
+
+        # Open image
+        rgb_image = np.load(str(Path(storage_dir, name)))
+
+        # Plot image
+        d3.pixels_image_3d(
+            rgb_image=rgb_image,
+            no_axis=True,
+            insides="full",
+            show_means=show_means,
+            camera_position=camera_position,
+            ax=self.ax
+        )
+
+        # Show and enable button
+        plt.show()
+        self.start_button.disabled = False
+
+
 
 
 if __name__ == "__main__":

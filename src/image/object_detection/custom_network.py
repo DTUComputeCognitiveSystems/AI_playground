@@ -9,24 +9,28 @@ from matplotlib import pyplot as plt
 import keras
 from keras.models import Sequential
 from keras.layers import Dense, Input, Flatten, Dropout, Conv2D
-from keras.layers.pooling import MaxPooling2D
-from keras.losses import categorical_crossentropy
+from keras.layers.pooling import MaxPooling2D, AveragePooling2D
+from keras.layers import Activation
+from keras.losses import categorical_crossentropy, binary_crossentropy
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.labelled import LabelledVideo
 class Classifier:
     def __init__(self):
         self.model= Sequential()
-        self.model.add(MaxPooling2D(pool_size=(4, 4),input_shape=(224, 224, 3)))
-        self.model.add(Conv2D(1, (9,9)))
+        self.model.add(AveragePooling2D(pool_size=(4, 4),input_shape=(224, 224, 3)))
+        self.model.add(Conv2D(16, (9,9)))
+        self.model.add(Activation('relu'))
+        self.model.add(MaxPooling2D(pool_size=(2, 2)))
+        self.model.add(Conv2D(16, (5,5)))
+        self.model.add(Activation('relu'))
         self.model.add(MaxPooling2D(pool_size=(2, 2)))
         self.model.add(Flatten( ))
+        self.model.add(Dropout(0.5))
         
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(20, activation='relu'))
-        self.model.add(Dropout(0.5))
-        self.model.add(Dense(2, activation='softmax'))
-        self.model.compile(loss=categorical_crossentropy,
-                      optimizer=keras.optimizers.Adagrad(),
+
+        self.model.add(Dense(1, activation='sigmoid'))
+        self.model.compile(loss=binary_crossentropy,
+                      optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy'])
         
     def train(self,train_data, num_epochs = 5 , verbose = 0, callbacks = []):

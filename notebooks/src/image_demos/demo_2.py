@@ -28,7 +28,7 @@ class DatasetAquisitionDashboard:
 #TODO select image size
 
         self.save_path = Text(
-            value="C:\\Users\\lauri\\Documents\\test_folder",
+            value="FILEPATH",
             description='Save path',
             disabled=True
         )
@@ -71,9 +71,12 @@ class DatasetAquisitionDashboard:
         return self.widget_box
     def _save_images(self, _):
         
+        self.text.value = "Saving images ..."
         use_augmentation = self.use_augmentation.value
         save_path = os.path.normpath(self.save_path.value)
         self.collector.save_images(save_path, use_augmentation=use_augmentation)
+        
+        self.text.value = "Done!"
     def _start_video(self, _):
         # Reset start-button and notify
         self.start_button.value = False
@@ -97,4 +100,6 @@ class DatasetAquisitionDashboard:
         self.save_button.disabled = False
         self.use_augmentation.disabled = False
         self.save_path.disabled = False
+        
+        self.text.value = ""
         # Clear output

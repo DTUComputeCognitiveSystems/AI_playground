@@ -52,7 +52,7 @@ class KerasDetector(ResizingImageLabeller):
             self._model = model
             self._input_size = model.input_shape[1]
             self._preprocessing = lambda x: sqnet_preprocessing(x, mode = 'tf')
-            self._prediction_decoding = lambda x: [[[-1, "True" if x[0][0] < x[0][1] else "False",x[0][0]if x[0][0] > x[0][1] else x[0][1]]]]
+            self._prediction_decoding = lambda x: [[["", "True" if x[0][0] > 0.5 else "False",x[0][0] if x[0][0] >0.5 else 1- x[0][0]]]]
         else:
             if model_name in model_modules:
                 _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
@@ -95,6 +95,7 @@ class KerasDetector(ResizingImageLabeller):
         # Get labels and probabilities
         labels = [val[1] for val in decoded]
         probabilities = [val[2] for val in decoded]
+       
 
         return labels, probabilities
 def configure_simple_model():

@@ -35,7 +35,7 @@ class Image_Collector:
         self.labels = []
         self.net = None
         self.net_name = ""
-    def run_collector(self, use_binary = False):
+    def run_collector(self, use_binary = False, list_of_labels = None):
         if use_binary:
             self.num_objects =2
             instructions = ["Hold object before camera to take picture and press enter", 
@@ -45,9 +45,10 @@ class Image_Collector:
         for i in range(self.num_objects):
             if use_binary:
                 label_name = str(bool(1-i))
-            else:
+            elif list_of_labels==None:
                 label_name = input("Object label: ")
-            
+            else:
+                label_name = list_of_labels[i]
             
             back_end = MatplotlibLoop()
             my_camera = VideoCamera(n_photos = self.num_pictures, backend=back_end, title = instructions[i],crosshair_size = self.picture_size)
@@ -71,7 +72,7 @@ class Image_Collector:
             return
         if self.net == None or model_name != self.net_name:
             self.net_name = model_name
-            self.net = KerasDetector(model_name="mobilenet",exlude_animals=  True)
+            self.net = KerasDetector(model_name=self.net_name,exlude_animals=  True)
     
     def save_images(self,filepath,use_augmentation = False):
         if len(self.labels)==0:

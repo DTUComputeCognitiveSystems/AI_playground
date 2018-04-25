@@ -1,19 +1,11 @@
-from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox, HBox
+from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox, HBox,IntText, Text
 from matplotlib import pyplot as plt
-import sys
-sys.path.insert(0,'..')
-import os
-from pathlib import Path
-if Path.cwd().name == "notebooks":
-    os.chdir(Path.cwd().parent.resolve())
-    
-#%%    
 
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.labelled import LabelledVideo
-#%%
 
-class VideoRecognitionDashboard:
+from src.image.image_collection import Image_Collector, load_data
+class VideoTakeDashboard:
     # TODO: Perhaps this could be automated to take any of the video classes and use interact() from IPython to
     # TODO:     generate widgets?
 
@@ -27,7 +19,6 @@ class VideoRecognitionDashboard:
             tooltip='Start the camera and the recognition algorithm.',
             icon=''
         )
-
         self.select_network = Dropdown(
             options=KerasDetector.available_models,
             value=KerasDetector.available_models[0],
@@ -35,12 +26,27 @@ class VideoRecognitionDashboard:
             disabled=False,
         )
 
-        self.video_length = FloatText(
-            value=12.0,
-            description='Video length:',
-            disabled=False
-        )
 
+        self.num_objects = IntText(
+            value=3.0,
+            description='#objects',
+            disabled=False,
+            layout=Layout(width='18%')
+        )
+        
+        self.label_names = Text(
+            value='',
+            placeholder='separated by commas',
+            description='Labels',
+            disabled=False,
+        )
+        
+        self.num_pictures = IntText(
+            value=2.0,
+            description='#pictures',
+            disabled=False,
+            layout=Layout(width='18%')
+        )
         self.text = Label(
             value='',
             layout=Layout(
@@ -51,7 +57,7 @@ class VideoRecognitionDashboard:
         self.widget_box = VBox(
             (
                 HBox(
-                    (self.start_button, self.video_length, self.select_network),
+                    ( self.start_button,self.num_objects, self.label_names,self.num_pictures,  self.select_network),
                     layout=Layout(justify_content="space-around")
                 ),
                 self.text
@@ -72,26 +78,20 @@ class VideoRecognitionDashboard:
         # Disable controls
         self.start_button.disabled = True
         self.select_network.disabled = True
-        self.video_length.disabled = True
 
         # Get settings
-        model_name = self.select_network.value
-        video_length = self.video_length.value
 
-        # Make network
-        net = KerasDetector(model_name=model_name, exlude_animals=True)
-
-        # Start network
-        the_video = LabelledVideo(net, video_length=video_length)
-        the_video.start()
-        plt.show()
-        while not the_video.real_time_backend.stop_now:
-            plt.pause(.5)
-
+        num_pictures = self.num_pictures.value
+        num_objects = self.num_objects.value
+        
+        self.collector= Image_Collector(num_pictures=num_pictures, num_objects=num_objects)
+        self.collector.run_collector( list_of_labels = self.label_names.value.split(','))
         # Re-enable controls
+        
         self.start_button.disabled = False
         self.select_network.disabled = False
-        self.video_length.disabled = False
+
 
         # Clear output
-        self.text.value = "Done."
+        self.text.value = ""
+

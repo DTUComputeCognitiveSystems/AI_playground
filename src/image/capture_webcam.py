@@ -98,15 +98,15 @@ class _CameraStreamer:
 
 class SimpleStream(_CameraStreamer):
     def __init__(self):
-        pass
+        self.capturer = AutoClosingCapturer()
 
     @property
     def current_frame(self):
-        capturer = AutoClosingCapturer()
-        return capturer.get_photo()
+
+        return self.capturer.get_photo()
 
     def stop(self):
-        pass
+        self.capturer.release()
 
 
 class CameraStream(Thread, _CameraStreamer):
@@ -165,6 +165,8 @@ class CameraStream(Thread, _CameraStreamer):
         except KeyboardInterrupt:
             pass
 
+        cam.release()
+
 
 class _CameraStreamProcess(Process):
     def __init__(self, frame_manager, frame_rate=5):
@@ -197,6 +199,8 @@ class _CameraStreamProcess(Process):
 
         except KeyboardInterrupt:
             pass
+
+        cam.release()
 
 
 class CameraStreamProcess(_CameraStreamer):

@@ -1,13 +1,13 @@
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from time import time, sleep
+from time import time
 
 import numpy as np
 from imageio import imsave
 from matplotlib import pyplot as plt
 
-from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream
+from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream, AutoClosingCapturer
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
@@ -63,6 +63,8 @@ class _Video:
         :param blit:
         """
         # Settings
+        self.frame_rate = frame_rate
+        self.stream_type = stream_type
         self._store_frames = record_frames
         self._frame_rate = frame_rate
         self._frame_time = int(1000 * 1. / frame_rate)
@@ -116,26 +118,12 @@ class _Video:
         else:
             self._n_frames = (video_length if length_is_nframes else int(frame_rate * video_length)) + 1
 
-        # Open up a camera-stram
-        if "process" in stream_type:
-            self.camera_stream = CameraStreamProcess(frame_rate=frame_rate)
-            if self.verbose:
-                print("Video: Multiprocessing.")
-        elif "thread" in stream_type:
-            self.camera_stream = CameraStream(frame_rate=frame_rate)
-            if self.verbose:
-                print("Video: Multithreaded.")
-        else:
-            self.camera_stream = SimpleStream()
-            if self.verbose:
-                print("Video: Simple.")
+        # Set fields
+        self._current_frame_time = None
+        self.camera_stream = None
 
-        # Test getting frame and get size of that frame
-        self._current_frame = self._current_frame_time = None
-        while self._current_frame is None:
-            self._current_frame_time = time()
-            self._current_frame = self.camera_stream.current_frame
-            sleep(0.05)
+        # Set frame size
+        self._current_frame = AutoClosingCapturer().get_photo()
         self._frame_size = self._current_frame.shape
 
     def _initialize_video_extensions(self):
@@ -226,6 +214,20 @@ class _Video:
         return None
 
     def _loop_initialization(self):
+        # Open up a camera-stram
+        if "process" in self.stream_type:
+            self.camera_stream = CameraStreamProcess(frame_rate=self.frame_rate)
+            if self.verbose:
+                print("Video: Multiprocessing.")
+        elif "thread" in self.stream_type:
+            self.camera_stream = CameraStream(frame_rate=self.frame_rate)
+            if self.verbose:
+                print("Video: Multithreaded.")
+        else:
+            self.camera_stream = SimpleStream()
+            if self.verbose:
+                print("Video: Simple.")
+
         # For storage
         self.frame_times = []
         if self._store_frames:
@@ -272,7 +274,8 @@ class _Video:
         self._initialize_video_extensions()
 
     def _step_print(self):
-        self.dprint("\tVideo frame {:4d} at time {:8.2}s.".format(self.frame_nr, time() - self.real_time_backend.start_time))
+        self.dprint("\tVideo frame {:4d} at time {:8.2}s.".format(
+            self.frame_nr, time() - self.real_time_backend.start_time))
 
     def _loop_step(self):
         # Get photo
@@ -377,37 +380,37 @@ if __name__ == "__main__":
     plt.ion()
 
     # Run a visible video recording
-    backend = MatplotlibLoop()
-    backend.block = True
+    used_backend = MatplotlibLoop()
+    used_backend.block = True
     SimpleVideo(
         video_length=3,
-        backend=backend,
+        backend=used_backend,
         title="Visible Video!"
     )
-    backend.start()
+    used_backend.start()
 
     # Run video in background
     print("\n\nNon-visible video with prints:")
-    backend = BackgroundLoop()
-    video = SimpleVideo(
+    used_backend = BackgroundLoop()
+    the_video = SimpleVideo(
         video_length=2,
         record_frames=True,
-        backend=backend,
+        backend=used_backend,
         verbose=True,
         print_step=10,
         frame_rate=30
     )
-    backend.start()
+    used_backend.start()
 
     # Print times for background video
-    frame_times = np.array(video.frame_times)
-    time_range = frame_times[-1] - frame_times[0]
-    avg_frame_time = (frame_times[1:] - frame_times[:-1]).mean()
-    print("Frames recored with non-visible video: {}".format(len(video.video_frames)))
-    print("Average frame-time: {:.4f}s".format(avg_frame_time))
-    print("Average frame-rate: {:.2f}".format(1 / avg_frame_time))
+    the_frame_times = np.array(the_video.frame_times)
+    time_range = the_frame_times[-1] - the_frame_times[0]
+    the_avg_frame_time = (the_frame_times[1:] - the_frame_times[:-1]).mean()
+    print("Frames recored with non-visible video: {}".format(len(the_video.video_frames)))
+    print("Average frame-time: {:.4f}s".format(the_avg_frame_time))
+    print("Average frame-rate: {:.2f}".format(1 / the_avg_frame_time))
 
     # Save frames to video-file
-    destination = Path("delete.mp4").resolve()
-    print("Saving video to: {}".format(destination))
-    video.save_recording_to_video(destination=destination)
+    video_destination = Path("delete.mp4").resolve()
+    print("Saving video to: {}".format(video_destination))
+    the_video.save_recording_to_video(destination=video_destination)

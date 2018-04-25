@@ -38,8 +38,8 @@
 #
 # If you omit this parameter, it will always default to "Agg", which is a
 # non-interactive backend.
-# backend      : qt5agg
-backend      : TkAgg
+# backend      : qt5agg, TkAgg
+backend      : qt5agg
 
 # If you are using the Qt4Agg backend, you can choose here
 # to use the PyQt4 bindings or the newer PySide bindings to

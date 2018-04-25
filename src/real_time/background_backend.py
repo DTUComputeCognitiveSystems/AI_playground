@@ -53,9 +53,6 @@ class BackgroundLoop(BackendLoop):
     def _loop_step(self):
         self._current_loop_nr += 1
 
-        # Run animation step
-        self.interface_loop_step()
-
         # Check for end
         if self.interface_loop_stop_check() or self.stop_now:
             self.interface_finalize()
@@ -68,6 +65,9 @@ class BackgroundLoop(BackendLoop):
                 priority=1,
                 action=self._loop_step,
             )
+
+        # Run animation step
+        self.interface_loop_step()
 
     ######
 

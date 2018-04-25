@@ -1,13 +1,18 @@
+import subprocess
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from time import time, sleep
 
+import numpy as np
+from imageio import imsave
 from matplotlib import pyplot as plt
+
 from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
 from src.real_time.ipython_backend import IPythonLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
-
 
 _matplotlib_based = (MatplotlibLoop, IPythonLoop)
 
@@ -62,7 +67,7 @@ class _Video:
         self._frame_rate = frame_rate
         self._frame_time = int(1000 * 1. / frame_rate)
         self._title = title
-        self._verbose = verbose
+        self.verbose = verbose
         self._print_step = print_step
 
         # Make real-time interface
@@ -114,15 +119,15 @@ class _Video:
         # Open up a camera-stram
         if "process" in stream_type:
             self.camera_stream = CameraStreamProcess(frame_rate=frame_rate)
-            if self._verbose:
+            if self.verbose:
                 print("Video: Multiprocessing.")
         elif "thread" in stream_type:
             self.camera_stream = CameraStream(frame_rate=frame_rate)
-            if self._verbose:
+            if self.verbose:
                 print("Video: Multithreaded.")
         else:
             self.camera_stream = SimpleStream()
-            if self._verbose:
+            if self.verbose:
                 print("Video: Simple.")
 
         # Test getting frame and get size of that frame
@@ -150,11 +155,65 @@ class _Video:
     def frame_size(self):
         return self._frame_size
 
+    @property
+    def avg_frame_rate(self):
+        frame_times = np.array(self.frame_times)
+        avg_frame_time = (frame_times[1:] - frame_times[:-1]).mean()
+        return 1 / avg_frame_time
+
+    def save_recording_to_video(self, destination, temp_im_format="jpeg", print_step=10,
+                                pix_fmt="yuv420p"):
+        if len(self.video_frames) < 1:
+            raise ValueError("No video was recorded.")
+
+        # Resolve path
+        destination = Path(destination).resolve()
+        self.dprint("Saving video to: {}".format(destination))
+
+        # Delete video if it exists
+        if destination.is_file():
+            destination.unlink()
+
+        # Make temporary directory for frame-images
+        with TemporaryDirectory() as tempdir:
+            self.dprint("Temporary directory: {}".format(tempdir))
+
+            # Go through images
+            for i, frame in enumerate(self.video_frames):
+                # Print
+                if (i + 1) % print_step == 0 or i == 0:
+                    self.dprint("\tFrame {} / {}".format(i + 1, len(self.video_frames)))
+
+                # Write image as .png in temporary directory
+                f_path = Path(tempdir, "frame_{:010d}.".format(i) + temp_im_format)
+                imsave(str(f_path), frame)
+
+            # Command for FFMPEG for turning images into video
+            self.dprint("Combining into video.")
+            command = [
+                '/home/jepno/anaconda3/bin/ffmpeg',
+                '-r', str(int(round(self.avg_frame_rate))),
+                '-i', str(Path(tempdir, 'frame_%010d.' + temp_im_format)),
+                "-pix_fmt", pix_fmt,
+                str(destination),
+            ]
+
+            # Make video from images
+            self.dprint(" ".join(command))
+            subprocess.call(
+                " ".join(command),
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            self.dprint("Done!")
+
     ##################################################################
     # Real-time API
 
     def dprint(self, *args, **kwargs):
-        if self._verbose:
+        if self.verbose:
             print(*args, **kwargs)
 
     def start(self):
@@ -230,10 +289,10 @@ class _Video:
             for flair in self.flairs:  # type: VideoFlair
                 flair.update(self)
 
-            # Frame storage
-            self.frame_times.append(time())
-            if self._store_frames:
-                self.video_frames.append(self._current_frame)
+        # Frame storage
+        self.frame_times.append(time())
+        if self._store_frames:
+            self.video_frames.append(self._current_frame)
 
         # Allow updating additional artists from child classes
         self._step_video_extensions()
@@ -317,25 +376,38 @@ if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    back_end = MatplotlibLoop()
-    back_end.block = True
-
+    # Run a visible video recording
+    backend = MatplotlibLoop()
+    backend.block = True
     SimpleVideo(
         video_length=3,
-        backend=back_end,
+        backend=backend,
         title="Visible Video!"
     )
-    back_end.start()
+    backend.start()
 
+    # Run video in background
     print("\n\nNon-visible video with prints:")
     backend = BackgroundLoop()
     video = SimpleVideo(
-        video_length=3,
+        video_length=2,
         record_frames=True,
         backend=backend,
-        title="Visible Video!",
         verbose=True,
-        print_step=2
+        print_step=10,
+        frame_rate=30
     )
     backend.start()
+
+    # Print times for background video
+    frame_times = np.array(video.frame_times)
+    time_range = frame_times[-1] - frame_times[0]
+    avg_frame_time = (frame_times[1:] - frame_times[:-1]).mean()
     print("Frames recored with non-visible video: {}".format(len(video.video_frames)))
+    print("Average frame-time: {:.4f}s".format(avg_frame_time))
+    print("Average frame-rate: {:.2f}".format(1 / avg_frame_time))
+
+    # Save frames to video-file
+    destination = Path("delete.mp4").resolve()
+    print("Saving video to: {}".format(destination))
+    video.save_recording_to_video(destination=destination)

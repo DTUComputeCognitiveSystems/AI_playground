@@ -90,12 +90,12 @@ class Image_Collector:
             
      
 
-        num_augmentations = 30 if use_augmentation else 1
+        num_augmentations = 50 if use_augmentation else 1
         if use_augmentation:
             datagen = ImageDataGenerator(
             rotation_range=20,
-            width_shift_range=0,
-            height_shift_range=0,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
             shear_range=0.2,
             zoom_range=0.2,
             horizontal_flip=True,
@@ -121,6 +121,7 @@ class Image_Collector:
     def show_augmented(self):
         
         datagen = ImageDataGenerator(
+        rescale=1/255,
             rotation_range=20,
             width_shift_range=0,
             height_shift_range=0,
@@ -139,7 +140,7 @@ class Image_Collector:
             img_iterator = datagen.flow(self.frames[i][0][np.newaxis, :])
             #TODO image type not correct
             for j in range(num_augments):
-                augmented_frames[i].append(img_iterator.next()[0].astype(np.int32))
+                augmented_frames[i].append(img_iterator.next()[0]
 
 
         for i in range (num_objects):
@@ -179,7 +180,7 @@ def load_data(filepath):
     positive_imgs = np.stack (mpimg.imread(join(filepath, file_name)).astype(np.float64) for file_name in positive_img_files)
     neg_imgs = np.stack (mpimg.imread(join(filepath, file_name)).astype(np.float64) for file_name in negative_img_files)
     x = np.vstack([positive_imgs, neg_imgs])
-    y = to_categorical(np.hstack([np.ones((len(positive_imgs))), np.zeros((len(neg_imgs)))]), num_classes= 2)
+    y = np.hstack([np.ones((len(positive_imgs))), np.zeros((len(neg_imgs)))])
     random_permuation = np.random.permutation(len(y))
     x = x[random_permuation]
     y= y[random_permuation]

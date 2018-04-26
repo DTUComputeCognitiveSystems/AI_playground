@@ -1,10 +1,9 @@
-from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox, HBox,IntText, Text
-from matplotlib import pyplot as plt
+from ipywidgets.widgets import Button, Dropdown, Layout, Label, VBox, HBox, IntText, Text
 
+from src.image.image_collection import Image_Collector
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled import LabelledVideo
 
-from src.image.image_collection import Image_Collector, load_data
+
 class VideoTakeDashboard:
     # TODO: Perhaps this could be automated to take any of the video classes and use interact() from IPython to
     # TODO:     generate widgets?
@@ -24,14 +23,6 @@ class VideoTakeDashboard:
             value=KerasDetector.available_models[0],
             description='Algorithm:',
             disabled=False,
-        )
-
-
-        self.num_objects = IntText(
-            value=3.0,
-            description='#objects',
-            disabled=False,
-            layout=Layout(width='18%')
         )
         
         self.label_names = Text(
@@ -57,7 +48,7 @@ class VideoTakeDashboard:
         self.widget_box = VBox(
             (
                 HBox(
-                    ( self.start_button,self.num_objects, self.label_names,self.num_pictures,  self.select_network),
+                    ( self.start_button, self.label_names,self.num_pictures, self.select_network),
                     layout=Layout(justify_content="space-around")
                 ),
                 self.text
@@ -80,18 +71,16 @@ class VideoTakeDashboard:
         self.select_network.disabled = True
 
         # Get settings
-
         num_pictures = self.num_pictures.value
-        num_objects = self.num_objects.value
-        
+        labels = self.label_names.value.split(',')
+        num_objects = len(labels)
+
         self.collector= Image_Collector(num_pictures=num_pictures, num_objects=num_objects)
-        self.collector.run_collector( list_of_labels = self.label_names.value.split(','))
+        self.collector.run_collector( list_of_labels=labels)
+
         # Re-enable controls
-        
         self.start_button.disabled = False
         self.select_network.disabled = False
 
-
         # Clear output
         self.text.value = ""
-

@@ -8,13 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-class _CameraHolder:
-    camera = None
-    n_users = 0
-    close_wait = 20.0
+class Camera:
+    camera_access = None
+    timer = Timer(1, lambda: print(""))
+    close_wait = 5.0
 
     def __init__(self):
-        raise NotImplementedError("_CameraHolder is a singleton class-object and shall not be initialized.")
+        raise NotImplementedError("_Camera is a singleton class-object and should not be initialized.")
 
     @staticmethod
     def _get_capturer():
@@ -24,10 +24,12 @@ class _CameraHolder:
             """
         cam = cv2.VideoCapture(0)
 
+        # Check access
         if not cam.isOpened():
             raise IOError("Camera could not be opened. Probably already in use.")
-        _, out = cam.read()
 
+        # Test output
+        _, out = cam.read()
         if np.mean(out) < 0.5:
             raise IOError(
                 "Camera could not be opened (based on output). Probably already in use. "
@@ -36,55 +38,43 @@ class _CameraHolder:
         return cam
 
     @staticmethod
-    def get_camera():
-        if _CameraHolder.camera is None:
-            _CameraHolder.camera = _CameraHolder._get_capturer()
-
-        _CameraHolder.n_users += 1
-        return _CameraHolder.camera
+    def close():
+        if Camera.camera_access is not None:
+            Camera.camera_access.release()
+            Camera.camera_access = None
 
     @staticmethod
-    def _try_closing():
-        if _CameraHolder.n_users < 1 and _CameraHolder.camera is not None:
-            _CameraHolder.camera.release()
-            _CameraHolder.camera = None
+    def _ensure_camera():
+        if Camera.camera_access is None:
+            Camera.camera_access = Camera._get_capturer()
 
     @staticmethod
-    def release():
-        _CameraHolder.n_users -= 1
+    def raw_read():
+        # Stop timer
+        Camera.timer.cancel()
 
-        # If no one is using the camera, then consider closing it in 30 seconds
-        if _CameraHolder.n_users < 1:
-            timer = Timer(_CameraHolder.close_wait, _CameraHolder._try_closing)
-            timer.start()
+        # Make sure camera is accessed and read
+        Camera._ensure_camera()
+        output = Camera.camera_access.read()
 
+        # Reset timer
+        Camera.timer = Timer(Camera.close_wait, Camera.close)
+        Camera.timer.start()
 
-class AutoClosingCapturer:
-    def __init__(self):
-        self._cam = _CameraHolder.get_camera()
+        return output
 
-    def raw_read(self):
-        return self._cam.read()
-
-    def get_photo(self):
+    @staticmethod
+    def get_photo():
         # Read and wait
-        _, out = self.raw_read()
+        _, out = Camera.raw_read()
 
         while out is None:
             pass
 
-        # Reverse last dimension (CV2 and plotting libraries apparently work differently with images)
+        # Reverse last dimension (CV2 apparently loads images in BGR format)
         out = out[:, :, ::-1]
 
         return out
-
-    def release(self):
-        if self._cam is not None:
-            self._cam = None
-            _CameraHolder.release()
-
-    def __del__(self):
-        self.release()
 
 
 class _CameraStreamer:
@@ -97,16 +87,13 @@ class _CameraStreamer:
 
 
 class SimpleStream(_CameraStreamer):
-    def __init__(self):
-        self.capturer = AutoClosingCapturer()
-
     @property
     def current_frame(self):
 
-        return self.capturer.get_photo()
+        return Camera.get_photo()
 
     def stop(self):
-        self.capturer.release()
+        pass
 
 
 class CameraStream(Thread, _CameraStreamer):
@@ -147,7 +134,6 @@ class CameraStream(Thread, _CameraStreamer):
         return count
 
     def run(self):
-        cam = AutoClosingCapturer()
         next_time = time()
 
         try:
@@ -159,13 +145,13 @@ class CameraStream(Thread, _CameraStreamer):
                 if c_time > next_time:
                     next_time = c_time + self._frame_time
                     with self.lock:
-                        self._current_frame = cam.get_photo()
+                        self._current_frame = Camera.get_photo()
                         self._frame_count += 1
 
         except KeyboardInterrupt:
             pass
 
-        cam.release()
+        Camera.close()
 
 
 class _CameraStreamProcess(Process):
@@ -183,7 +169,6 @@ class _CameraStreamProcess(Process):
         self._stop_event.set()
 
     def run(self):
-        cam = AutoClosingCapturer()
         next_time = time()
 
         try:
@@ -194,19 +179,18 @@ class _CameraStreamProcess(Process):
                 c_time = time()
                 if c_time > next_time:
                     next_time = c_time + self._frame_time
-                    c_photo = cam.get_photo()  # type: np.ndarray
+                    c_photo = Camera.get_photo()  # type: np.ndarray
                     self._current_frame[:] = c_photo[:]
 
         except KeyboardInterrupt:
             pass
 
-        cam.release()
+        Camera.close()
 
 
 class CameraStreamProcess(_CameraStreamer):
     def __init__(self, frame_rate=5):
-        temp = AutoClosingCapturer()
-        test_frame = temp.get_photo()
+        test_frame = Camera.get_photo()
         self._frame_shape = test_frame.shape
 
         self._current_frame_base = Array(ctypes.c_uint8, int(np.product(self._frame_shape)))
@@ -234,11 +218,13 @@ class CameraStreamProcess(_CameraStreamer):
 if __name__ == "__main__":
     plt.ion()
 
-    a_photo = AutoClosingCapturer().get_photo()
+    a_photo = Camera.get_photo()
     plt.imshow(a_photo)
     plt.draw()
     plt.show()
 
-    for i in range(int(_CameraHolder.close_wait + 5)):
-        print("{}: {}".format(i, _CameraHolder.camera))
-        sleep(1)
+    last_i = 0
+    for i in np.linspace(0, Camera.close_wait + 2, 20):
+        print("{:.2}s: {}".format(i, Camera.camera_access))
+        sleep(i - last_i)
+        last_i = i

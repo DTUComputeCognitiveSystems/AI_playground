@@ -7,14 +7,14 @@ import numpy as np
 from imageio import imsave
 from matplotlib import pyplot as plt
 
-from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream, AutoClosingCapturer
+from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream, Camera
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
 from src.real_time.ipython_backend import IPythonLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
 
-_matplotlib_based = (MatplotlibLoop, IPythonLoop)
+MATPLOTLIB_BASED_BACKENDS = (MatplotlibLoop, IPythonLoop)
 
 
 class VideoFlair:
@@ -123,7 +123,7 @@ class _Video:
         self.camera_stream = None
 
         # Set frame size
-        self._current_frame = AutoClosingCapturer().get_photo()
+        self._current_frame = Camera.get_photo()
         self._frame_size = self._current_frame.shape
 
     def _initialize_video_extensions(self):
@@ -209,7 +209,7 @@ class _Video:
 
     @property
     def artists(self):
-        if isinstance(self.real_time_backend, _matplotlib_based):
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
             return self.real_time_backend.artists
         return None
 
@@ -241,7 +241,7 @@ class _Video:
         self.dprint("Initializing video.")
 
         # Plotting if using Matplotlib backend
-        if isinstance(self.real_time_backend, _matplotlib_based):
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
 
             # Get and set axes
             self.ax = plt.gca() if self.ax is None else self.ax
@@ -255,7 +255,7 @@ class _Video:
 
             # Title and axis settings
             self.ax.set_title(self._title)
-            if isinstance(self.real_time_backend, _matplotlib_based):
+            if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
                 self.ax.xaxis.set_ticks([])
                 self.ax.yaxis.set_ticks([])
 
@@ -283,7 +283,7 @@ class _Video:
         self._current_frame_time = time()
 
         # Plotting if using Matplotlib backend
-        if isinstance(self.real_time_backend, _matplotlib_based):
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
 
             # Update image plot
             self._image_plot.set_data(self._current_frame)

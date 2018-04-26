@@ -9,8 +9,44 @@ from src.image.video.texter import VideoTexter
 from src.real_time.matplotlib_backend import MatplotlibLoop
 
 
+class FrameCutout:
+    def __init__(self, frame_size, size=None, width_ratio=0.5, height_ratio=None):
+        # Check if specific size is wanted
+        if size is not None:
+            height, width = size
+
+        # Otherwise compute size from ratios
+        else:
+            # Ensure two ratios
+            if width_ratio is None and height_ratio is not None:
+                width_ratio = height_ratio
+            if height_ratio is None and width_ratio is not None:
+                height_ratio = width_ratio
+            assert isinstance(width_ratio, float) and 0 < width_ratio <= 1
+            assert isinstance(height_ratio, float) and 0 < height_ratio <= 1
+
+            # Determine cutout-size
+            width = int(frame_size[1] * width_ratio)
+            height = int(frame_size[0] * height_ratio)
+
+        # Determine space around cutout
+        horizontal_space = frame_size[1] - width
+        vertical_space = frame_size[0] - height
+
+        # Determine coordinates
+        coordinates = (int(horizontal_space / 2), int(vertical_space / 2), width, height)
+
+        # Set fields
+        self.coordinates = coordinates
+        self.horizontal_space = horizontal_space
+        self.vertical_space = vertical_space
+        self.width = width
+        self.height = height
+
+
 class CrossHair(VideoFlair):
-    def __init__(self, frame_size, ch_type="box", edgecolor="r", width_ratio=0.5, height_ratio=None, linewidth=1, size = None):
+    def __init__(self, frame_size, ch_type="box", edgecolor="r", width_ratio=0.5, height_ratio=None, linewidth=1,
+                 size=None):
         """
 
         :param tuple | list frame_size:
@@ -23,74 +59,58 @@ class CrossHair(VideoFlair):
         super().__init__([])
         self.ch_type = ch_type
         self.linewidth = linewidth
-        self.width_ratio = width_ratio
-        self.height_ratio = height_ratio
         self.frame_size = frame_size
         self.edgecolor = edgecolor
-        self.size= size
 
-    def initialize(self):
-        
-        if self.ch_type is not None:
+        # Make cutout of frame
+        self.frame_cutout = FrameCutout(
+            frame_size=self.frame_size,
+            size=size,
+            width_ratio=width_ratio,
+            height_ratio=height_ratio
+        )
 
-            ax = plt.gca()
+    def initialize(self, **kwargs):
+        fc = self.frame_cutout
 
-            # Default ratios
-            if self.size == None:
-                if self.width_ratio is None and self.height_ratio is not None:
-                    self.width_ratio = self.height_ratio
-                if self.height_ratio is None and self.width_ratio is not None:
-                    self.height_ratio = self.width_ratio
-                assert isinstance(self.width_ratio, float) and 0 < self.width_ratio <= 1
-                assert isinstance(self.height_ratio, float) and 0 < self.height_ratio <= 1
-    
-                # Determine coordinates
-                width = int(self.frame_size[1] * self.width_ratio)
-                height = int(self.frame_size[0] * self.height_ratio)
-
-            else:
-                height, width = self.size
-                
-            w_space = self.frame_size[1] - width
-            h_space = self.frame_size[0] - height
-
-            # Make cross-hair
-            if "box" in self.ch_type:
-                ch = patches.Rectangle(
-                    xy=(int(w_space / 2), int(h_space / 2)),
-                    width=width,
-                    height=height,
-                    fill=False,
-                    edgecolor=self.edgecolor,
-                    linewidth=self.linewidth,
-                )
-            elif "circ" in self.ch_type:
-                ch = patches.Circle(
-                    xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
-                    radius=int(min(width, height) / 2),
-                    fill=False,
-                    edgecolor=self.edgecolor,
-                    linewidth=self.linewidth,
-                )
-            elif "ellip" in self.ch_type:
-                ch = patches.Ellipse(
-                    xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
-                    width=width,
-                    height=height,
-                    fill=False,
-                    edgecolor=self.edgecolor,
-                    linewidth=self.linewidth,
-                )
-            else:
-                raise ValueError("Unknown cross-hair type: {}.".format(self.ch_type))
-
-            # Add to axes
-            ax.add_patch(
-                ch
+        # Make cross-hair
+        if self.ch_type is None or "box" in self.ch_type:
+            ch = patches.Rectangle(
+                xy=(int(fc.horizontal_space / 2), int(fc.vertical_space / 2)),
+                width=fc.width,
+                height=fc.height,
+                fill=False,
+                edgecolor=self.edgecolor,
+                linewidth=self.linewidth,
             )
-            self.coordinates = ((int(w_space / 2), int(h_space / 2)), (width, height))
-            # Append to artists
-            self.artists.append(ch)
+        elif "circ" in self.ch_type:
+            ch = patches.Circle(
+                xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
+                radius=int(min(fc.width, fc.height) / 2),
+                fill=False,
+                edgecolor=self.edgecolor,
+                linewidth=self.linewidth,
+            )
+        elif "ellip" in self.ch_type:
+            ch = patches.Ellipse(
+                xy=(int(self.frame_size[1] / 2), int(self.frame_size[0] / 2)),
+                width=fc.width,
+                height=fc.height,
+                fill=False,
+                edgecolor=self.edgecolor,
+                linewidth=self.linewidth,
+            )
+        else:
+            raise ValueError("Unknown cross-hair type: {}.".format(self.ch_type))
+
+        # Add to axes
+        ax = plt.gca()
+        ax.add_patch(
+            ch
+        )
+
+        # Append to artists
+        self.artists.append(ch)
 
     def update(self, video):
         pass
@@ -102,7 +122,7 @@ class VideoCamera(_Video):
                  record_frames=False,
                  n_photos=5, backgroundcolor="darkblue", color="white",
                  crosshair_type="box",
-                 crosshair_size = (224, 224),
+                 crosshair_size=(224, 224),
                  title="Camera", ax=None, fig=None, block=True,
                  verbose=False, print_step=1,
                  backend="matplotlib"):
@@ -136,7 +156,8 @@ class VideoCamera(_Video):
         )
 
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)
-        self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size = crosshair_size)
+        self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size=crosshair_size)
+        self.cutout_coordinates = self._cross_hair.frame_cutout.coordinates
         self.flairs.extend([self._texter, self._cross_hair])
         self.photos = []
         self.photos_info = []
@@ -196,4 +217,4 @@ if __name__ == "__main__":
     the_video = VideoCamera(n_photos=5, stream_type="process", verbose=True)
     the_video.start()
 
-    print("Number of picutres taken: {}".format(len(the_video.photos)))
+    print("Number of pictures taken: {}".format(len(the_video.photos)))

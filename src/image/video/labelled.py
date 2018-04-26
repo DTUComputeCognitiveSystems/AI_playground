@@ -2,7 +2,7 @@ from time import time
 
 from src.image.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.base import _Video
+from src.image.video.base import _Video, MATPLOTLIB_BASED_BACKENDS
 import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 import numpy as np
@@ -10,7 +10,8 @@ import numpy as np
 from src.image.video.texter import VideoTexter
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
-from src.image.video.snapshot import CrossHair
+from src.image.video.snapshot import CrossHair, FrameCutout
+
 
 class LabelledVideo(_Video):
     def __init__(self,
@@ -19,9 +20,9 @@ class LabelledVideo(_Video):
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
                  title="Video", ax=None, fig=None, block=True,
-                 verbose=False, print_step=1, 
+                 verbose=False, print_step=1,
                  crosshair_type='box',
-                 crosshair_size = (224, 224),
+                 crosshair_size=(224, 224),
                  backend="matplotlib"):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
@@ -63,23 +64,37 @@ class LabelledVideo(_Video):
         self._model = model
         self._colors = self._make_colormap()
 
-        # Flair
+        # Default fields
         self._cross_hair = None
-        if crosshair_type!= None:
-            self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size = crosshair_size)
-            self.flairs.extend([self._cross_hair])
-        self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
-        self.flairs.extend([self._text])
+        self._text = None
+
+        # If we are running matplotlib
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
+
+            # Cross hair
+            if crosshair_type is not None:
+                self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size=crosshair_size)
+                self.flairs.extend([self._cross_hair])
+
+            # Label text
+            self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
+            self.flairs.extend([self._text])
+
+            # Cutout coordinates
+            self.cutout_coord = self._cross_hair.frame_cutout.coordinates
+
+        else:
+            self.cutout_coord = FrameCutout(frame_size=self.frame_size, size=crosshair_size).coordinates
 
     def _make_colormap(self):
         cpick = None
 
-        if isinstance(self.real_time_backend, MatplotlibLoop):
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
             # Make a user-defined colormap.
             cm1 = colors.LinearSegmentedColormap.from_list("MyCmapName", ["r", "b"])
 
             # Make a normalizer that will map the time values from
-            # [start_time,end_time+1] -> [0,1].
+            # [start_time ,end_time+1] -> [0,1].
             cnorm = colors.Normalize(vmin=0.0, vmax=1.0)
 
             # Turn these into an object that can be used to map time values to colors and
@@ -102,15 +117,14 @@ class LabelledVideo(_Video):
             self.predictions = []
 
     def _step_video_extensions(self):
-        # Get labels and probabilities
-        if self._cross_hair !=None:
-            (start_y, start_x), _ =self._cross_hair.coordinates
-            (end_x, end_y) = (start_x + 224, start_y + 224)
-            self.picture_coordinates =((start_x, start_y), (end_x, end_y))
-            ((x, y), (end_x, end_y)) = self.picture_coordinates
-            labels, probabilities = self._model.label_frame(frame=self._current_frame[x:end_x, y:end_y])
-        else:
-            labels, probabilities = self._model.label_frame(frame=self._current_frame)
+        # Determine coordinates of cutout for grapping part of frame
+        start_x, start_y, width, height = self.cutout_coord
+        end_x, end_y = start_x + width, start_y + height
+
+        # Get labels and probabilities from frame-cutout
+        labels, probabilities = self._model.label_frame(frame=self._current_frame[start_x:end_x, start_y:end_y])
+
+        # Set analysis
         self._current_label = labels[0]
         self._current_label_probability = probabilities[0]
 
@@ -121,7 +135,7 @@ class LabelledVideo(_Video):
             ))
 
         # Visual
-        if isinstance(self.real_time_backend, MatplotlibLoop):
+        if isinstance(self.real_time_backend, MATPLOTLIB_BASED_BACKENDS):
             # Write some text
             self._text.set_text(labels[0])
             self._text.set_background_color(self._colors.to_rgba(probabilities[0]))
@@ -131,16 +145,17 @@ if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    back_end = BackgroundLoop()  # BackgroundLoop, MatplotlibLoop
+    backends = [MatplotlibLoop(block=True), BackgroundLoop()]
+    the_backend = backends[0]
 
     labelling_model = KerasDetector(model_name="mobilenet")
     the_video = LabelledVideo(
         model=labelling_model,
         video_length=10,
-        backend=back_end,
+        backend=the_backend,
         verbose=True,
         store_predictions=True
     )
-    back_end.start()
+    the_backend.start()
 
     print("{} predictions made".format(len(the_video.predictions)))

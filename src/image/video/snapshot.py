@@ -125,7 +125,8 @@ class VideoCamera(_Video):
                  crosshair_size=(224, 224),
                  title="Camera", ax=None, fig=None, block=True,
                  verbose=False, print_step=1,
-                 backend="matplotlib"):
+                 backend="matplotlib", 
+                 video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param fig: Matplotlib figure for video. Creates a new figure as default.
@@ -138,6 +139,7 @@ class VideoCamera(_Video):
 
         :param str backgroundcolor: Color of background of camera-text.
         :param str color: Face color of camera-text.
+        :param video_path: if this parameter is set, camera will use video instead of webcam
         """
         super().__init__(
             frame_rate=frame_rate,
@@ -152,7 +154,8 @@ class VideoCamera(_Video):
             blit=False,
             backend=backend,
             verbose=verbose,
-            print_step=print_step
+            print_step=print_step,
+            video_path = video_path
         )
 
         self._texter = VideoTexter(backgroundcolor=backgroundcolor, color=color)

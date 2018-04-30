@@ -23,7 +23,7 @@ class LabelledVideo(_Video):
                  verbose=False, print_step=1,
                  crosshair_type='box',
                  crosshair_size=(224, 224),
-                 backend="matplotlib"):
+                 backend="matplotlib",video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
         model.
@@ -53,7 +53,8 @@ class LabelledVideo(_Video):
             blit=False,
             backend=backend,
             verbose=verbose,
-            print_step=print_step
+            print_step=print_step,
+            video_path = video_path
         )
 
         # Model

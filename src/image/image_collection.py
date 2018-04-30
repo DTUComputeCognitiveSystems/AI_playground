@@ -20,6 +20,11 @@ from keras.applications.imagenet_utils import preprocess_input
 
 
 def run_video_recognition(model_name="mobilenet", video_length=10):
+    """
+
+    :param model_name: model to use for object recognition. Different models have different performances and run times
+    :param video_length: length of video in seconds
+    """
     net = KerasDetector(model_name=model_name, exlude_animals=True)
     the_video = LabelledVideo(net, video_length=video_length)
     the_video.start()
@@ -29,6 +34,10 @@ def run_video_recognition(model_name="mobilenet", video_length=10):
 
 class Image_Collector:
     def __init__(self, num_pictures=2, num_objects=2, picture_size=(224, 224)):
+        """
+        Used to collect images to form a dataset for ML training
+
+        """
         self.num_pictures = num_pictures
         self.num_objects = num_objects
         self.picture_size = picture_size

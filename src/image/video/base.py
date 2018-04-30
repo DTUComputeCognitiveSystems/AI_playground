@@ -8,6 +8,7 @@ from imageio import imsave
 from matplotlib import pyplot as plt
 
 from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream, Camera
+from src.image.capture_video import VCR, VCRStream
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
@@ -41,7 +42,8 @@ class _Video:
                  record_frames,
                  title, ax, fig, block, blit,
                  verbose, print_step,
-                 backend):
+                 backend,
+                 video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         :param int frame_rate: The number of frames per second.
@@ -61,6 +63,7 @@ class _Video:
         :param fig: Matplotlib figure for video. Creates a new figure as default.
         :param bool block: Whether to wait for video to finish (recommended).
         :param blit:
+        :param video_path: if this parameter is set, the video given will be opened instead of a webcam
         """
         # Settings
         self.frame_rate = frame_rate
@@ -119,12 +122,17 @@ class _Video:
             self._n_frames = (video_length if length_is_nframes else int(frame_rate * video_length)) + 1
 
         # Set fields
+        self.video_path = video_path
         self._current_frame_time = None
         self.camera_stream = None
 
         # Set frame size
-        self._current_frame = Camera.get_photo()
-        self._frame_size = self._current_frame.shape
+        if not video_path == None:
+            dummy_video = VCR(video_path) 
+            self._frame_size = dummy_video.get_frame_size_only()
+        else:
+            self._current_frame = Camera.get_photo()
+            self._frame_size = self._current_frame.shape
 
     def _initialize_video_extensions(self):
         pass
@@ -215,18 +223,21 @@ class _Video:
 
     def _loop_initialization(self):
         # Open up a camera-stram
-        if "process" in self.stream_type:
-            self.camera_stream = CameraStreamProcess(frame_rate=self.frame_rate)
-            if self.verbose:
-                print("Video: Multiprocessing.")
-        elif "thread" in self.stream_type:
-            self.camera_stream = CameraStream(frame_rate=self.frame_rate)
-            if self.verbose:
-                print("Video: Multithreaded.")
+        if self.video_path==None:
+            if "process" in self.stream_type:
+                self.camera_stream = CameraStreamProcess(frame_rate=self.frame_rate)
+                if self.verbose:
+                    print("Video: Multiprocessing.")
+            elif "thread" in self.stream_type:
+                self.camera_stream = CameraStream(frame_rate=self.frame_rate)
+                if self.verbose:
+                    print("Video: Multithreaded.")
+            else:
+                self.camera_stream = SimpleStream()
+                if self.verbose:
+                    print("Video: Simple.")
         else:
-            self.camera_stream = SimpleStream()
-            if self.verbose:
-                print("Video: Simple.")
+            self.camera_stream = VCRStream(self.video_path)
 
         # For storage
         self.frame_times = []
@@ -336,7 +347,7 @@ class SimpleVideo(_Video):
                  record_frames=False,
                  title="Video", ax=None, fig=None, block=True, blit=False,
                  verbose=False, print_step=1,
-                 backend="matplotlib"):
+                 backend="matplotlib", video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
         Do not extend this class. Instead extend _Video.
@@ -371,7 +382,8 @@ class SimpleVideo(_Video):
             blit=blit,
             backend=backend,
             verbose=verbose,
-            print_step=print_step
+            print_step=print_step,
+            video_path = video_path
         )
 
 

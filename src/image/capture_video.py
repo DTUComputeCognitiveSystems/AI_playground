@@ -62,10 +62,12 @@ class VCR:
                 return False, None
         else:
             is_valid, out = self.cam.read()
+            if is_valid:
             # Reverse last dimension (CV2 apparently loads images in BGR format)
-            out = out[:, :, ::-1]
-    
-            return is_valid,out
+                out = out[:, :, ::-1]
+                return is_valid,out
+            else:
+                return False, None
 
 
 

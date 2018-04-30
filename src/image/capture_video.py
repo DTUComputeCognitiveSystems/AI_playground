@@ -14,34 +14,58 @@ class VCR:
     
     close_wait = 5.0
 
-    def __init__(self, filepath):
-        if not isfile(filepath):
-            raise OSError("File not found or is not a file. Please check path")
-        self.filepath = filepath
-        
-        self.cam = cv2.VideoCapture(self.filepath)
-        if not self.cam.isOpened():
-            raise IOError("Camera could not be opened. Probably already in use.")
+    def __init__(self, file_source):
+        """ can be used to iterate over an iterable or open a video"""
+        self.is_iterable= False
+        if type(file_source) == str:
+            
+            if not isfile(file_source) :
+                raise OSError("File not found or is not a file. Please check path")
+            self.file_source = file_source
+            self.cam = cv2.VideoCapture(self.file_source)
+            if not self.cam.isOpened():
+                raise IOError("Camera could not be opened. Probably already in use.")
+        else:
+            #assume n iterator was given
+
+            self.cam = iter(file_source)
+            self.is_iterable = True
+
+
+            
+
     def get_frame_size_only(self):
-        shape = self.get_frame()[1].shape
-        self.close()
+        #if this is a python object, we just assume there is enough frames that it doesn't really matter
+        if self.is_iterable:
+            shape =next(self.cam).shape
+        else:
+            shape = self.get_frame()[1].shape
+            self.close()
         return shape
  
 
 
 
     def close(self):
-        self.cam.release()
+        if not self.is_iterable:
+            self.cam.release()
 
 
     
     def get_frame(self):
         # Read and wait
-        is_valid, out = self.cam.read()
-        # Reverse last dimension (CV2 apparently loads images in BGR format)
-        out = out[:, :, ::-1]
-
-        return is_valid,out
+        if self.is_iterable:
+            try:
+                frame = next(self.cam)
+                return True, frame
+            except StopIteration:
+                return False, None
+        else:
+            is_valid, out = self.cam.read()
+            # Reverse last dimension (CV2 apparently loads images in BGR format)
+            out = out[:, :, ::-1]
+    
+            return is_valid,out
 
 
 
@@ -110,7 +134,8 @@ class VCRStream(Thread):
 
 if __name__ == "__main__":
     plt.ion()
-    my_vcr = VCR("C:\\Users\\lauri\\Documents\\test.mp4")
+    test = (np.minimum(np.maximum(np.random.normal(loc = 0.5, size = (224,224,3)),0),1) for i in range(200))
+    my_vcr = VCR(test)
 
     _,a_photo = my_vcr.get_frame()
     plt.imshow(a_photo)

@@ -1,6 +1,7 @@
 import warnings
 
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from IPython.display import display
 from ipywidgets import Layout, FloatText, Box, VBox, FloatSlider, HBox
@@ -185,10 +186,15 @@ class exercise_2_4:
         self.ax.plot(self.x1[:, 0], self.x1[:, 1], 'b.')
         self.ax.plot(self.x2[:, 0], self.x2[:, 1], 'r.')
         self.ax.plot(x, y, '-k')
+        self.ax.axis([-5, 5, -5, 5])
         self.ax.axis('equal')
         self.ax.grid()
-        normalize = (alpha ** 2 + beta ** 2)
-        self.ax.arrow(np.mean(x), np.mean(y), -alpha / normalize, beta / normalize,
+        normalize = 0.5*(alpha ** 2 + beta ** 2)
+        if beta != 0:
+            self.ax.arrow(np.mean(x), np.mean(y), (alpha/beta)/normalize, (-1/beta)/normalize,
+                      head_width=0.5, head_length=0.5, fc='k', ec='k')
+        else:
+            self.ax.arrow(np.mean(x), np.mean(y), -alpha/normalize, 1/normalize,
                       head_width=0.5, head_length=0.5, fc='k', ec='k')
         plt.draw()
 
@@ -215,6 +221,7 @@ def plot_data(X, Y):
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.grid()
+    ax.axis('equal')
     plt.show()
 
 
@@ -398,11 +405,10 @@ class plot3d_space:
         n = 10
         X2 = np.concatenate([self.X, np.ones((self.X.shape[0], 1))], axis=1)
         H = np.tanh(W.dot(X2.T))
-        x, y = np.meshgrid(np.linspace(-1.5, 1, n), np.linspace(-1.5, 1, n))
+        x, y = np.meshgrid(np.linspace(-1, 0, n), np.linspace(-1, 0, n))
         z = -(N[0] * x + N[1] * y + N[3]) / N[2]
 
         self.point_act = N.dot(np.concatenate([H, np.ones((1, H.shape[1]))], axis=0))
-
         self.ax1.set_aspect('equal')
         self.ax1.scatter(H[0, self.Y == 0], H[1, self.Y == 0], H[2, self.Y == 0], c='b', label='class 1')
         self.ax1.scatter(H[0, self.Y == 1], H[1, self.Y == 1], H[2, self.Y == 1], c='r', label='class 2')

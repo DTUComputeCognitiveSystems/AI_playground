@@ -147,4 +147,4 @@ class TwoClassCameraDashboard:
         self.use_augmentation.disabled = False
         self.save_path.disabled = False
 
-        self.progress_text.value = ""
+        self.progress_text.value = "Video done."

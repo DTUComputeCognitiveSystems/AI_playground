@@ -4,8 +4,10 @@ from keras.layers.pooling import MaxPooling2D, AveragePooling2D
 from keras.losses import binary_crossentropy
 from keras.models import Sequential
 from matplotlib import pyplot as plt
+import numpy as np
 
 from src.image.object_detection.keras_detector import KerasDetector
+from keras.applications.imagenet_utils import preprocess_input
 from src.image.video.labelled import LabelledVideo
 
 
@@ -13,9 +15,7 @@ class Classifier:
     def __init__(self):
         """
         Simple class to wrap a predefined neural network
-
         """
-
         self.model = Sequential()
         self.model.add(AveragePooling2D(pool_size=(4, 4), input_shape=(224, 224, 3)))
         self.model.add(Conv2D(16, (9, 9)))
@@ -31,9 +31,16 @@ class Classifier:
                            optimizer=keras.optimizers.Adadelta(),
                            metrics=['accuracy'])
 
+    def _decoding(self, x):
+        # Get probability of first label
+        prob = x[0][0]
+
+        return [[[
+            "", "True" if prob > 0.5 else "False", prob if prob > 0.5 else 1 - prob
+        ]]]
+
     def train(self, train_data, num_epochs=5, verbose=0, callbacks=None):
         """
-
         :param train_data:
         :param num_epochs:
         :param verbose:
@@ -41,7 +48,9 @@ class Classifier:
         """
         if callbacks is None:
             callbacks = []
-        x_train, y_train = train_data
+        x_train, y_train = train_data  # type: np.ndarray, np.ndarray
+        x_train = preprocess_input(x_train)
+
         self.model.fit(x_train, y_train,
                        batch_size=512,
                        epochs=num_epochs,
@@ -54,8 +63,16 @@ class Classifier:
         print("Accuracy on the validation set is {:}%.".format(100 * acc))
 
     def run_live(self, video_length=10):
-        the_video = LabelledVideo(KerasDetector(model=self.model), video_length=video_length, crosshair_type='box',
-                                  crosshair_size=(224, 224))
+        the_video = LabelledVideo(
+            KerasDetector(
+                model_specification=self.model,
+                preprocessing=preprocess_input,
+                decoding=self._decoding
+            ),
+            video_length=video_length,
+            crosshair_type='box',
+            crosshair_size=(224, 224),
+        )
         the_video.start()
         while not the_video.real_time_backend.stop_now:
             plt.pause(.5)

@@ -103,7 +103,7 @@ class VideoRecognitionDashboard:
         video_length = self.video_length.value
 
         # Make network
-        net = KerasDetector(model_name=model_name, exlude_animals=True)
+        net = KerasDetector(model_specification=model_name, exlude_animals=True)
 
         # Start network
         video_path = None

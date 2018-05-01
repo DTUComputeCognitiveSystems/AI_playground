@@ -1,19 +1,18 @@
 from collections import namedtuple
 from time import time
 
+import keras
 import keras_squeezenet
 import numpy as np
 import pandas as pd
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
-from keras.applications import mobilenet, resnet50, vgg16
+from keras.applications import mobilenet, resnet50
 from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
     decode_predictions as sqnet_decode
-from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout
-from keras.layers.pooling import GlobalAveragePooling2D
+from keras.models import Model
 
-import keras
 from src.image.models_base import ResizingImageLabeller
 from src.image.video import SimpleVideo
 
@@ -21,7 +20,6 @@ _model_specification = namedtuple(
     "model_specification",
     "name, net, model, input_size, preprocessing, prediction_decoding"
 )
-
 
 _keras_models = [
     _model_specification("mobilenet", mobilenet, mobilenet.MobileNet,
@@ -36,7 +34,6 @@ _keras_models = [
                          227, sqnet_preprocessing, sqnet_decode),
 ]
 
-
 model_modules = {
     specification.name: specification for specification in _keras_models
 }
@@ -45,28 +42,40 @@ model_modules = {
 class KerasDetector(ResizingImageLabeller):
     available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
 
-    def __init__(self, model =None, model_name='resnet50', resizing_method="sci_resize", verbose=False,
-                 n_labels_returned=1, exlude_animals = False):
-        if model != None:
+    def __init__(self,
+                 model_specification='resnet50', resizing_method="sci_resize",
+                 preprocessing=None, decoding=lambda x: [x],
+                 n_labels_returned=1, exlude_animals=False, verbose=False):
+        self._preprocessing = preprocessing
+        self._prediction_decoding = decoding
+        self.vegetarian = exlude_animals
 
-            self._model = model
-            self._input_size = model.input_shape[1]
-            self._preprocessing = lambda x: sqnet_preprocessing(x, mode = 'tf')
-            self._prediction_decoding = lambda x: [[["", "True" if x[0][0] > 0.5 else "False",x[0][0] if x[0][0] >0.5 else 1- x[0][0]]]]
-        else:
+        # Get model by name
+        if isinstance(model_specification, str):
+            model_name = model_specification
+
+            # Go through models to find the matching one
             if model_name in model_modules:
                 _, self._net, model, self._input_size, self._preprocessing, self._prediction_decoding = \
                     model_modules[model_name]
-                self._model = model()
-                
-    
+                self._model = model()  # type: resnet50.ResNet50
+
                 if self._preprocessing is None:
                     self._preprocessing = self._net.preprocess_input
                 if self._prediction_decoding is None:
                     self._prediction_decoding = self._net.decode_predictions
             else:
                 raise ValueError("Does not know model of name: {}".format(model_name))
-        self.vegetarian = exlude_animals
+
+        # Otherwise set to specifications in arguments
+        else:
+            self._model = model_specification  # type: resnet50.ResNet50
+            self._input_size = self._model.input_shape[1]
+
+            # Ensure that all parts are given
+            assert self._prediction_decoding is not None and self._preprocessing is not None, \
+                "You must specify a preprocessing and prediction_decoding step for this model."
+
         # Parameters for reshaping
         self._model_input_shape = (self._input_size, self._input_size, 3)
         super().__init__(model_input_shape=self._model_input_shape, resizing_method=resizing_method,
@@ -95,27 +104,28 @@ class KerasDetector(ResizingImageLabeller):
         # Get labels and probabilities
         labels = [val[1] for val in decoded]
         probabilities = [val[2] for val in decoded]
-       
 
         return labels, probabilities
+
+
 def configure_simple_model():
     """ loads a pretrained model and replaces the last layer with a layer to finetune"""
-    base_model = densenet.DenseNet121(input_shape=(224, 224,3),include_top = False)
-    
+    base_model = densenet.DenseNet121(input_shape=(224, 224, 3), include_top=False)
+
     x = Flatten()(base_model.output)
     x = Dense(1024, activation='relu')(x)
     x = Dropout(0.5)(x)
-    
-    predictions = Dense(1, activation = 'softmax')(x)
-    
-    #create graph of your new model
-    head_model = Model(input = base_model.input, output = predictions)
-    
-    
+
+    predictions = Dense(1, activation='softmax')(x)
+
+    # create graph of your new model
+    head_model = Model(input=base_model.input, output=predictions)
+
     head_model.compile(loss=keras.losses.binary_crossentropy,
-                  optimizer=keras.optimizers.Adadelta(),
-                  metrics=['accuracy'])
+                       optimizer=keras.optimizers.Adadelta(),
+                       metrics=['accuracy'])
     return head_model
+
 
 if __name__ == "__main__":
     print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
@@ -133,13 +143,13 @@ if __name__ == "__main__":
     # Go through models and time performance
     n_models = len(KerasDetector.available_models)
     times = []
-    for model_nr, model_name in enumerate(KerasDetector.available_models):
+    for model_nr, a_model_name in enumerate(KerasDetector.available_models):
 
-        print("\n" + "-" * 40 + "\n{} / {}: {}".format(model_nr+1, n_models, model_name))
+        print("\n" + "-" * 40 + "\n{} / {}: {}".format(model_nr + 1, n_models, a_model_name))
 
         # Make model
         model = KerasDetector(
-            model_name=model_name,
+            model_specification=a_model_name,
             verbose=False,
             n_labels_returned=2
         )

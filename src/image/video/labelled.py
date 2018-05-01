@@ -156,7 +156,7 @@ if __name__ == "__main__":
     backends = [MatplotlibLoop(block=True), BackgroundLoop()]
     the_backend = backends[0]
 
-    labelling_model = KerasDetector(model_name="mobilenet")
+    labelling_model = KerasDetector(model_specification="mobilenet")
     the_video = LabelledVideo(
         model=labelling_model,
         video_length=10,

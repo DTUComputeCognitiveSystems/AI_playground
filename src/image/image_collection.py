@@ -22,7 +22,7 @@ def run_video_recognition(model_name="mobilenet", video_length=10):
     :param model_name: model to use for object recognition. Different models have different performances and run times
     :param video_length: length of video in seconds
     """
-    net = KerasDetector(model_name=model_name, exlude_animals=True)
+    net = KerasDetector(model_specification=model_name, exlude_animals=True)
     the_video = LabelledVideo(net, video_length=video_length)
     the_video.start()
     while not the_video.real_time_backend.stop_now:
@@ -51,7 +51,7 @@ class ImageCollector:
 
             # Get label name
             if use_binary:
-                label_name = str(bool(1 - i))
+                label_name = str(bool(i))
             elif list_of_labels is None:
                 label_name = input("Enter label of object {}: ".format(i + 1))
                 label_name = label_name.strip()
@@ -89,12 +89,12 @@ class ImageCollector:
 
     def load_network(self, model_name="mobilenet", net=None):
         if net is not None:
-            self.net = KerasDetector(model=net)
+            self.net = KerasDetector(model_specification=net)
             self.net_name = "Custom"
             return
         if self.net is None or model_name != self.net_name:
             self.net_name = model_name
-            self.net = KerasDetector(model_name=self.net_name, exlude_animals=True)
+            self.net = KerasDetector(model_specification=self.net_name, exlude_animals=True)
 
     def save_images(self, file_path, use_augmentation=False):
         file_path = Path(file_path)
@@ -277,7 +277,8 @@ class ImageCollector:
             y = y[permutation]
 
         # Preprocess inputs for keras
-        x_proc = preprocess_input(x)
+        # x_proc = preprocess_input(x)
+        x_proc = x
 
         # Split into training and validation
         n_train = int(train_split * len(x))

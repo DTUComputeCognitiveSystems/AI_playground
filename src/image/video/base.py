@@ -68,7 +68,7 @@ class _Video:
         # Settings
         self.frame_rate = frame_rate
         self.stream_type = stream_type
-        self._store_frames = record_frames
+        self._record_frames = record_frames
         self._frame_rate = frame_rate
         self._frame_time = int(1000 * 1. / frame_rate)
         self._title = title
@@ -241,7 +241,7 @@ class _Video:
 
         # For storage
         self.frame_times = []
-        if self._store_frames:
+        if self._record_frames:
             self.video_frames = []
 
         # Get photo
@@ -305,7 +305,7 @@ class _Video:
 
         # Frame storage
         self.frame_times.append(time())
-        if self._store_frames:
+        if self._record_frames:
             self.video_frames.append(self._current_frame)
 
         # Allow updating additional artists from child classes

@@ -1,15 +1,10 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 23 12:02:54 2018
-
-@author: lauri
-"""
 import keras
-from keras.layers import Dense, Input, Flatten, Dropout, Conv2D, Activation
+from keras.layers import Dense, Flatten, Dropout, Conv2D, Activation
 from keras.layers.pooling import MaxPooling2D, AveragePooling2D
-from keras.losses import categorical_crossentropy, binary_crossentropy
+from keras.losses import binary_crossentropy
 from keras.models import Sequential
 from matplotlib import pyplot as plt
+
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.labelled import LabelledVideo
 
@@ -62,5 +57,5 @@ class Classifier:
         the_video = LabelledVideo(KerasDetector(model=self.model), video_length=video_length, crosshair_type='box',
                                   crosshair_size=(224, 224))
         the_video.start()
-        while (not the_video.real_time_backend.stop_now):
+        while not the_video.real_time_backend.stop_now:
             plt.pause(.5)

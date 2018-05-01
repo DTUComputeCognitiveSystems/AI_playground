@@ -1,3 +1,4 @@
+import random
 from time import time
 
 from src.image.models_base import ImageLabeller
@@ -59,6 +60,7 @@ class LabelledVideo(_Video):
 
         # Model
         self.predictions = None  # type: list
+        self.cut_frames = []
         self._current_label = None
         self._current_label_probability = 0.0
         self.store_predictions = store_predictions
@@ -121,9 +123,14 @@ class LabelledVideo(_Video):
         # Determine coordinates of cutout for grapping part of frame
         start_x, start_y, width, height = self.cutout_coord
         end_x, end_y = start_x + width, start_y + height
+        frame_cut = self._current_frame[start_x:end_x, start_y:end_y]
+
+        # Store cut frames if wated
+        if self._record_frames:
+            self.cut_frames.append(frame_cut)
 
         # Get labels and probabilities from frame-cutout
-        labels, probabilities = self._model.label_frame(frame=self._current_frame[start_x:end_x, start_y:end_y])
+        labels, probabilities = self._model.label_frame(frame=frame_cut)
 
         # Set analysis
         self._current_label = labels[0]
@@ -155,8 +162,22 @@ if __name__ == "__main__":
         video_length=10,
         backend=the_backend,
         verbose=True,
-        store_predictions=True
+        store_predictions=True,
+        record_frames=True,
     )
     the_backend.start()
 
     print("{} predictions made".format(len(the_video.predictions)))
+
+    # Get a random frame number
+    nr = random.randint(0, len(the_video.video_frames)-1)
+    frame = the_video.video_frames[nr]
+    cut_frame = the_video.cut_frames[nr]
+
+    plt.close("all")
+    plt.figure()
+    ax1 = plt.subplot(2, 1, 1)
+    ax1.imshow(frame)
+    ax2 = plt.subplot(2, 1, 2)
+    ax2.imshow(cut_frame)
+

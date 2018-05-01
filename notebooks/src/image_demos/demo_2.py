@@ -1,7 +1,7 @@
 from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox, HBox, ToggleButton,Text, Checkbox
 from matplotlib import pyplot as plt
 
-from src.image.image_collection import Image_Collector, load_data,run_video_recognition
+from src.image.image_collection import ImageCollector, load_data,run_video_recognition
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.labelled import LabelledVideo
 import os
@@ -92,7 +92,7 @@ class DatasetAquisitionDashboard:
         num_pictures = int(self.num_pictures.value)
 
         # Start video
-        self.collector= Image_Collector(num_pictures)
+        self.collector= ImageCollector(num_pictures)
         self.collector.run_collector(use_binary = True)
         # Re-enable controls
         self.start_button.disabled = False

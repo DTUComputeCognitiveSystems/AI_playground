@@ -1,42 +1,35 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 23 09:33:12 2018
-
-@author: lauri
-"""
-from src.image.video.labelled import LabelledVideo
-from src.real_time.matplotlib_backend import MatplotlibLoop
-from src.image.video.snapshot import VideoCamera
-from matplotlib import pyplot as plt
-from src.image.object_detection.keras_detector import KerasDetector
-import numpy as np
 import os
-from keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
-from os.path import isfile, join
-import matplotlib.image as mpimg
 from os import listdir
-from keras.utils import to_categorical
+from os.path import isfile, join
+
+import matplotlib.image as mpimg
+import numpy as np
 from keras.applications.imagenet_utils import preprocess_input
+from keras.preprocessing.image import ImageDataGenerator
+from matplotlib import pyplot as plt
+
+from src.image.object_detection.keras_detector import KerasDetector
+from src.image.video.labelled import LabelledVideo
+from src.image.video.snapshot import VideoCamera
+from src.real_time.matplotlib_backend import MatplotlibLoop
 
 
 def run_video_recognition(model_name="mobilenet", video_length=10):
     """
-
     :param model_name: model to use for object recognition. Different models have different performances and run times
     :param video_length: length of video in seconds
     """
     net = KerasDetector(model_name=model_name, exlude_animals=True)
     the_video = LabelledVideo(net, video_length=video_length)
     the_video.start()
-    while (not the_video.real_time_backend.stop_now):
+    while not the_video.real_time_backend.stop_now:
         plt.pause(.5)
 
 
-class Image_Collector:
+class ImageCollector:
     def __init__(self, num_pictures=2, num_objects=2, picture_size=(224, 224)):
         """
         Used to collect images to form a dataset for ML training
-
         """
         self.num_pictures = num_pictures
         self.num_objects = num_objects
@@ -53,7 +46,7 @@ class Image_Collector:
             instructions = ["Hold object before camera to take picture and press enter",
                             "Take pictures without the object by pressing enter"]
         else:
-            instructions = ["Hold object before camera to take picture and press enter" for i in
+            instructions = ["Hold object before camera to take picture and press enter" for _ in
                             range(self.num_objects)]
         for i in range(self.num_objects):
             if use_binary:
@@ -121,7 +114,7 @@ class Image_Collector:
                 fill_mode='nearest')
         for prefix, cur_list in zip(self.labels, self.frames):
             i = 0
-            for batch in datagen.flow(np.stack(cur_list), save_to_dir=newpath, save_prefix=prefix, save_format='jpg'):
+            for _ in datagen.flow(np.stack(cur_list), save_to_dir=newpath, save_prefix=prefix, save_format='jpg'):
                 i += 1
                 if i >= num_augmentations:
                     break

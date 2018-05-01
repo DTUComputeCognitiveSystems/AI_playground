@@ -1,13 +1,10 @@
 from ipywidgets.widgets import Button, Dropdown, Layout, Label, VBox, HBox, IntText, Text
 
-from src.image.image_collection import Image_Collector
+from src.image.image_collection import ImageCollector
 from src.image.object_detection.keras_detector import KerasDetector
 
 
 class VideoTakeDashboard:
-    # TODO: Perhaps this could be automated to take any of the video classes and use interact() from IPython to
-    # TODO:     generate widgets?
-
     def __init__(self):
 
         self.start_button = Button(
@@ -18,26 +15,28 @@ class VideoTakeDashboard:
             tooltip='Start the camera and the recognition algorithm.',
             icon=''
         )
+
         self.select_network = Dropdown(
             options=KerasDetector.available_models,
             value=KerasDetector.available_models[0],
             description='Algorithm:',
             disabled=False,
         )
-        
+
         self.label_names = Text(
             value='',
             placeholder='separated by commas',
             description='Labels',
             disabled=False,
         )
-        
+
         self.num_pictures = IntText(
             value=2.0,
             description='#pictures',
             disabled=False,
             layout=Layout(width='18%')
         )
+
         self.text = Label(
             value='',
             layout=Layout(
@@ -48,12 +47,15 @@ class VideoTakeDashboard:
         self.widget_box = VBox(
             (
                 HBox(
-                    ( self.start_button, self.label_names,self.num_pictures, self.select_network),
+                    (self.start_button, self.label_names, self.num_pictures, self.select_network),
                     layout=Layout(justify_content="space-around")
                 ),
                 self.text
             )
         )
+
+        # Initialize field
+        self.collector = None
 
         self.start_button.on_click(self._start_video)
 
@@ -75,8 +77,8 @@ class VideoTakeDashboard:
         labels = self.label_names.value.split(',')
         num_objects = len(labels)
 
-        self.collector= Image_Collector(num_pictures=num_pictures, num_objects=num_objects)
-        self.collector.run_collector( list_of_labels=labels)
+        self.collector = ImageCollector(num_pictures=num_pictures, num_objects=num_objects)
+        self.collector.run_collector(list_of_labels=labels)
 
         # Re-enable controls
         self.start_button.disabled = False

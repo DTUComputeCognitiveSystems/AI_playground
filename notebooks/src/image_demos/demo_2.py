@@ -1,67 +1,73 @@
-from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox, HBox, ToggleButton,Text, Checkbox
-from matplotlib import pyplot as plt
-
-from src.image.image_collection import ImageCollector, load_data,run_video_recognition
-from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled import LabelledVideo
 import os
+from pathlib import Path
 
-class DatasetAquisitionDashboard:
+from ipywidgets.widgets import Button, FloatText, Layout, Label, VBox, HBox, Text, Checkbox
+
+from src.image.image_collection import ImageCollector
+
+
+class TwoClassCameraDashboard:
     def __init__(self):
-
         self.start_button = Button(
             value=False,
             description='Start Camera',
             disabled=False,
             button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
             tooltip='Start the camera to take pictures for classifier ',
-            icon=''
+            icon='',
+            layout=Layout(width='25%'),
         )
+
         self.save_button = Button(
             value=False,
             description='Save images',
             disabled=True,
             button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
             tooltip='Save images to folder ',
-            icon=''
+            icon='',
+            layout=Layout(width='18%', margin="2px 0px 0px 20px"),
         )
-#TODO select image size
 
         self.save_path = Text(
-            value="FILEPATH",
-            description='Save path',
-            disabled=True
+            value=str(Path("path", "to", "directory")),
+            description='Save path:',
+            disabled=False,
         )
+
         self.num_pictures = FloatText(
             value=12,
-            description='#pictures',
-            disabled=False
+            description='#pictures:',
+            disabled=False,
+            layout=Layout(width='15%'),
         )
+
         self.use_augmentation = Checkbox(
-        value=False,
-        description='Augmentation',
-        disabled=False,
-        button_style='info', # 'success', 'info', 'warning', 'danger' or ''
-        tooltip='Use Augmentation',
-        icon='check'
-    )
+            value=False,
+            description='Augmentation',
+            disabled=False,
+            tooltip='Use Augmentation',
+            icon='check',
+        )
 
-        self.text = Label(
+        self.progress_text = Label(
             value='',
-            layout=Layout(
-                justify_content='space-around',
-            )
+            layout=Layout(margin="5px 0px 5px 20px"),
         )
 
-        self.widget_box = VBox(
-            (
-                HBox(
-                    (self.start_button, self.num_pictures,  self.use_augmentation,self.save_path, self.save_button),
-                    layout=Layout(justify_content="space-around")
-                ),
-                self.text
-            )
-        )
+        self.widget_box = VBox((
+            HBox(
+                (self.num_pictures, self.use_augmentation, self.start_button),
+                layout=Layout(align_content="flex-start"),
+            ),
+            HBox(
+                (self.progress_text,),
+                layout=Layout(align_content="flex-start"),
+            ),
+            HBox(
+                (self.save_path,self.save_button),
+                layout=Layout(align_content="flex-start"),
+            ),
+        ))
 
         self.start_button.on_click(self._start_video)
         self.save_button.on_click(self._save_images)
@@ -69,18 +75,24 @@ class DatasetAquisitionDashboard:
     @property
     def start(self):
         return self.widget_box
+
     def _save_images(self, _):
-        
-        self.text.value = "Saving images ..."
+        # Get values from widgets
         use_augmentation = self.use_augmentation.value
-        save_path = os.path.normpath(self.save_path.value)
+        save_path = Path(self.save_path.value)
+
+        self.progress_text.value = "Saving images to: {}".format(save_path)
+
+        # Use collector to save images
         self.collector.save_images(save_path, use_augmentation=use_augmentation)
-        
-        self.text.value = "Done!"
+
+        self.progress_text.value = "Images saved to {}".format(save_path)
+
     def _start_video(self, _):
         # Reset start-button and notify
         self.start_button.value = False
-        self.text.value = "Starting Video! (please wait)"
+        self.progress_text.value = "Starting camera! (please wait)"
+
         # Disable controls
         self.start_button.disabled = True
         self.num_pictures.disabled = True
@@ -88,18 +100,17 @@ class DatasetAquisitionDashboard:
         self.save_path.disabled = True
 
         # Get settings
-        
         num_pictures = int(self.num_pictures.value)
 
         # Start video
-        self.collector= ImageCollector(num_pictures)
-        self.collector.run_collector(use_binary = True)
+        self.collector = ImageCollector(num_pictures)
+        self.collector.run_collector(use_binary=True)
+
         # Re-enable controls
         self.start_button.disabled = False
         self.num_pictures.disabled = False
         self.save_button.disabled = False
         self.use_augmentation.disabled = False
         self.save_path.disabled = False
-        
-        self.text.value = ""
-        # Clear output
+
+        self.progress_text.value = ""

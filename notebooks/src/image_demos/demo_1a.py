@@ -57,7 +57,6 @@ class VideoRecognitionDashboard:
         )
         self.text_box = VBox(
             (self.static_text, self.progress_text),
-            layout=Layout(justify_content="space-around")
         )
 
         self.widget_box = VBox(

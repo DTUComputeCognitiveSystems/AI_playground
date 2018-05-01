@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ipywidgets.widgets import Button, FloatText, Layout, Label, VBox, HBox, Text, Checkbox
 
-from src.image.image_collection import ImageCollector
+from src.image.image_collection import ImageCollector, images_dir_name
 
 
 class TwoClassCameraDashboard:
@@ -22,8 +22,17 @@ class TwoClassCameraDashboard:
             value=False,
             description='Save images',
             disabled=True,
-            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
+            button_style='danger',  # 'success', 'info', 'warning', 'danger' or ''
             tooltip='Save images to folder ',
+            icon='',
+            layout=Layout(width='18%', margin="2px 0px 0px 20px"),
+        )
+        self.load_button = Button(
+            value=False,
+            description='Load images',
+            disabled=False,
+            button_style='success',  # 'success', 'info', 'warning', 'danger' or ''
+            tooltip='Load images from folder ',
             icon='',
             layout=Layout(width='18%', margin="2px 0px 0px 20px"),
         )
@@ -64,29 +73,51 @@ class TwoClassCameraDashboard:
                 layout=Layout(align_content="flex-start"),
             ),
             HBox(
-                (self.save_path,self.save_button),
+                (self.save_path, self.save_button, self.load_button),
                 layout=Layout(align_content="flex-start"),
             ),
         ))
 
         self.start_button.on_click(self._start_video)
         self.save_button.on_click(self._save_images)
+        self.load_button.on_click(self._load_images)
+
+        self.collector = ImageCollector()
+
+    def load_ml_data(self, random_permutation=True, train_split=0.9):
+        return self.collector.load_ml_data(random_permutation=random_permutation, train_split=train_split)
 
     @property
     def start(self):
         return self.widget_box
 
-    def _save_images(self, _):
+    def _load_images(self, _=None):
+        # Get path from widget
+        load_path = Path(self.save_path.value)
+        if load_path.name != images_dir_name:
+            load_path = Path(load_path, images_dir_name)
+
+        # Load data
+        self.progress_text.value = "Loading images from: {}".format(load_path.resolve())
+        self.collector.load_data_from_files(file_path=load_path)
+
+        if self.collector.loaded:
+            self.progress_text.value = "Images loaded from: {}".format(load_path.resolve())
+        else:
+            self.progress_text.value = "This directory does not seem to contain jpg-files: {}"\
+                .format(load_path.resolve())
+
+    def _save_images(self, _=None):
         # Get values from widgets
         use_augmentation = self.use_augmentation.value
         save_path = Path(self.save_path.value)
 
-        self.progress_text.value = "Saving images to: {}".format(save_path)
+        self.progress_text.value = "Saving images to: {}".format(save_path.resolve())
 
         # Use collector to save images
         self.collector.save_images(save_path, use_augmentation=use_augmentation)
 
-        self.progress_text.value = "Images saved to {}".format(save_path)
+        self.progress_text.value = "Images saved to: {}".format(save_path.resolve())
 
     def _start_video(self, _):
         # Reset start-button and notify
@@ -100,10 +131,9 @@ class TwoClassCameraDashboard:
         self.save_path.disabled = True
 
         # Get settings
-        num_pictures = int(self.num_pictures.value)
+        self.collector.num_pictures = int(self.num_pictures.value)
 
         # Start video
-        self.collector = ImageCollector(num_pictures)
         self.collector.run_collector(use_binary=True)
 
         # Re-enable controls

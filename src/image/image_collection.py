@@ -1,20 +1,18 @@
 import random
-from os import listdir
-from os.path import isfile, join
+import re
 from pathlib import Path
 from shutil import rmtree
 
-import matplotlib.image as mpimg
 import numpy as np
 from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing.image import ImageDataGenerator
 from matplotlib import pyplot as plt
+from scipy.misc import imsave, imread
 
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.labelled import LabelledVideo
 from src.image.video.snapshot import VideoCamera
 from src.real_time.matplotlib_backend import MatplotlibLoop
-
 
 images_dir_name = "ml_images"
 
@@ -45,7 +43,6 @@ class ImageCollector:
         self.net = None
         self.net_name = ""
 
-        self.x = self.y = None
         self.loaded = False
 
     def run_collector(self, use_binary=False, list_of_labels=None):
@@ -57,19 +54,21 @@ class ImageCollector:
                 label_name = str(bool(1 - i))
             elif list_of_labels is None:
                 label_name = input("Enter label of object {}: ".format(i + 1))
+                label_name = label_name.strip()
             else:
                 label_name = list_of_labels[i]
 
             # Make title
             if use_binary:
                 if i:
-                    title = "Images WITHOUT object"
-                else:
                     title = "Images WITH object"
+                else:
+                    title = "Images WITHOUT object"
             else:
                 title = "Object {}: {}".format(i + 1, label_name)
 
             # Start up the camera
+            plt.close("all")
             back_end = MatplotlibLoop()
             my_camera = VideoCamera(n_photos=self.num_pictures, backend=back_end, title=title,
                                     crosshair_size=self.picture_size)
@@ -114,8 +113,8 @@ class ImageCollector:
         # Go through labels and images
         for prefix, frame_list in zip(self.labels, self.frames):
             for i in range(len(frame_list)):
-                mpimg.imsave(
-                    fname=str(Path(unaugmented_path, "{}_{}.jpg".format(prefix, i))),
+                imsave(
+                    name=str(Path(unaugmented_path, "{}_{}.jpg".format(prefix, i))),
                     arr=frame_list[i]
                 )
 
@@ -146,9 +145,6 @@ class ImageCollector:
                 i += 1
                 if i >= num_augmentations:
                     break
-
-        # Load images for machine learning purposes
-        self.load_data_from_files(file_path=new_path)
 
     def show_augmented(self, num_augments=4):
         """
@@ -193,6 +189,7 @@ class ImageCollector:
                 # Set labelling
                 if j == 0 and i == 0:
                     ax_array[i, j].set_title("True image")
+                elif j == 0:
                     ax_array[i, j].set_ylabel(self.labels[i])
                 elif i == 0:
                     ax_array[i, j].set_title("Augmented")
@@ -236,32 +233,42 @@ class ImageCollector:
         # Ensure format
         file_path = Path(file_path)
 
-        # Get files and split into categories
+        # Get all files
         files = sorted(list(file_path.glob("*.jpg")))
-        positive_img_files = [f for f in files if "True" in f.name]
-        negative_img_files = [f for f in files if "False" in f.name]
 
-        # Load images
-        try:
-            pos_imgs = np.stack(mpimg.imread(str(file_name)).astype(np.float64) for file_name in positive_img_files)
-            neg_imgs = np.stack(mpimg.imread(str(file_name)).astype(np.float64) for file_name in negative_img_files)
+        # Get all labels
+        pattern = re.compile("([^_]+)_")
+        labels = [pattern.search(val.name).group(1) for val in files]
 
-            # Stack images and labels
-            self.x = np.vstack([pos_imgs, neg_imgs])
-            self.y = np.hstack([np.ones((len(pos_imgs))), np.zeros((len(neg_imgs)))])
+        # Get unique labels
+        self.labels = list(sorted(list(set(labels))))
 
-            self.loaded = True
+        # Split files amongst labels
+        label_files = dict()
+        for file, label in zip(files, labels):
+            label_files.setdefault(label, []).append(file)
 
-        except ValueError:
-            self.loaded = False
+        # Go through labels and append frames
+        self.frames = []
+        for label_nr, label in enumerate(self.labels):
+            c_frames = []
+            for file in label_files[label]:
+                c_frames.append(imread(name=str(file)).astype(np.uint8))
+
+            self.frames.append(c_frames)
+
+        self.loaded = True
 
     def load_ml_data(self, random_permutation=True, train_split=0.9):
-        if self.x is None:
-            raise ValueError("No test-data has been loaded. Either load from file or take some photos.")
 
         # Get data
-        x = self.x
-        y = self.y
+        x = np.stack(
+            frame
+            for frame_list in self.frames
+            for frame in frame_list,
+        ).astype(np.float32)
+        y = np.hstack([np.ones((len(label_frames))) * nr
+                       for nr, label_frames in enumerate(self.frames)])
 
         # Do a random permutation of data
         if random_permutation:
@@ -280,38 +287,3 @@ class ImageCollector:
         y_val = y[n_train:]
 
         return (x_train, y_train), (x_val, y_val)
-
-
-# def load_data(file_path, random_permutation=True, train_split=0.9):
-#     file_path = Path(file_path)
-#
-#     # Get files and split into categories
-#     files = sorted(list(file_path.glob("*.jpg")))
-#     positive_img_files = [f for f in files if "True" in f.name]
-#     negative_img_files = [f for f in files if "False" in f.name]
-#
-#     # Load images
-#     pos_imgs = np.stack(mpimg.imread(str(file_name)).astype(np.float64) for file_name in positive_img_files)
-#     neg_imgs = np.stack(mpimg.imread(str(file_name)).astype(np.float64) for file_name in negative_img_files)
-#
-#     # Stack images and labels
-#     x = np.vstack([pos_imgs, neg_imgs])
-#     y = np.hstack([np.ones((len(pos_imgs))), np.zeros((len(neg_imgs)))])
-#
-#     # Do a random permutation of data
-#     if random_permutation:
-#         permutation = np.random.permutation(len(y))
-#         x = x[permutation]
-#         y = y[permutation]
-#
-#     # Preprocess inputs for keras
-#     x_proc = preprocess_input(x)
-#
-#     # Split into training and validation
-#     n_train = int(train_split * len(x))
-#     x_train = x_proc[:n_train]
-#     y_train = y[:n_train]
-#     x_val = x_proc[n_train:]
-#     y_val = y[n_train:]
-#
-#     return (x_train, y_train), (x_val, y_val)

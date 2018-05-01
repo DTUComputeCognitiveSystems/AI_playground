@@ -47,7 +47,7 @@ class TwoClassCameraDashboard:
             value=12,
             description='#pictures:',
             disabled=False,
-            layout=Layout(width='15%'),
+            layout=Layout(width='20%'),
         )
 
         self.use_augmentation = Checkbox(
@@ -92,6 +92,10 @@ class TwoClassCameraDashboard:
         return self.widget_box
 
     def _load_images(self, _=None):
+        # Can no longer use camera or save images
+        self.save_button.disabled = True
+        self.start_button.disabled = True
+
         # Get path from widget
         load_path = Path(self.save_path.value)
         if load_path.name != images_dir_name:

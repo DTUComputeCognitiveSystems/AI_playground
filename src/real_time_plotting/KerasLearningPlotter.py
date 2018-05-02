@@ -1,13 +1,16 @@
 import keras
 import matplotlib.pyplot as plt
-plt.rcParams["figure.figsize"] = (10,5)
+plt.rcParams["figure.figsize"] = (10, 5)
 from IPython.display import clear_output
+
 
 class KerasLearningPlotter(keras.callbacks.Callback):
     def __init__(self):
         super(KerasLearningPlotter, self).__init__()
+        self.i = self.e  = self.x_batch = self.x_epoch = self.losses = self.acc = self.validation = self.val_losses = \
+            self.val_acc = self.fig = self.logs = None
 
-    def on_train_begin(self, logs={}):
+    def on_train_begin(self, logs=None):
         # Initialize structures
         self.i = 0
         self.e = 0
@@ -23,7 +26,9 @@ class KerasLearningPlotter(keras.callbacks.Callback):
         self.fig = plt.figure()
         self.logs = []
 
-    def on_batch_end(self, batch, logs={}):
+    def on_batch_end(self, batch, logs=None):
+        logs = {} if logs is None else logs
+
         # Save current metrics
         self.logs.append(logs)
         self.x_batch.append(self.i)
@@ -32,8 +37,8 @@ class KerasLearningPlotter(keras.callbacks.Callback):
         self.i += 1
 
         clear_output(wait=True)
-        f, (ax1, ax2) = plt.subplots(1, 2, sharex=True,figsize=(20,10))
-        f.suptitle('Epoch ' + str(self.e), fontsize=20)
+        f, (ax1, ax2) = plt.subplots(1, 2, sharex=True, figsize=(20,10))
+        f.suptitle('Epoch ' + str(self.e + 1), fontsize=20)
 
         # Plot training curves
         ax1.plot(self.x_batch, self.losses, label="loss")
@@ -52,7 +57,9 @@ class KerasLearningPlotter(keras.callbacks.Callback):
         plt.pause(0.1)
         plt.show()
 
-    def on_epoch_end(self, epoch, logs={ }):
+    def on_epoch_end(self, epoch, logs=None):
+        logs = {} if logs is None else logs
+
         self.x_epoch.append(self.i)
         if self.validation:
             self.val_losses.append(logs.get('val_loss'))

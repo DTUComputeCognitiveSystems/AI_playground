@@ -4,7 +4,6 @@ from pathlib import Path
 from shutil import rmtree
 
 import numpy as np
-from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing.image import ImageDataGenerator
 from matplotlib import pyplot as plt
 from scipy.misc import imsave, imread
@@ -107,7 +106,7 @@ class ImageCollector:
             rmtree(str(new_path))
 
         unaugmented_path = Path(new_path, "original_imgs")
-        new_path.mkdir()
+        new_path.mkdir(parents=True)
         unaugmented_path.mkdir()
 
         # Go through labels and images
@@ -145,6 +144,9 @@ class ImageCollector:
                 i += 1
                 if i >= num_augmentations:
                     break
+
+        # Reload images (to include augmentation)
+        self.load_data_from_files(file_path=new_path)
 
     def show_augmented(self, num_augments=4):
         """

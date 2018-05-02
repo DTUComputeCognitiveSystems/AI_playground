@@ -36,7 +36,8 @@ class Classifier:
         prob = x[0][0]
 
         return [[[
-            "", "True" if prob > 0.5 else "False", prob if prob > 0.5 else 1 - prob
+            "", "True {:.4f}".format(prob) if prob > 0.5 else "False {:.4f}".format(prob),
+            prob if prob > 0.5 else 1 - prob
         ]]]
 
     def train(self, train_data, num_epochs=5, verbose=0, callbacks=None):
@@ -49,7 +50,7 @@ class Classifier:
         if callbacks is None:
             callbacks = []
         x_train, y_train = train_data  # type: np.ndarray, np.ndarray
-        x_train = preprocess_input(x_train)
+        x_train = preprocess_input(np.copy(x_train))
 
         self.model.fit(x_train, y_train,
                        batch_size=512,
@@ -59,6 +60,7 @@ class Classifier:
 
     def evaluate(self, test_data):
         x_val, y_val = test_data
+        x_val = preprocess_input(np.copy(x_val))
         loss, acc = self.model.evaluate(x_val, y_val)
         print("Accuracy on the validation set is {:}%.".format(100 * acc))
 
@@ -66,7 +68,7 @@ class Classifier:
         the_video = LabelledVideo(
             KerasDetector(
                 model_specification=self.model,
-                preprocessing=preprocess_input,
+                preprocessing=lambda x: preprocess_input(np.copy(x).astype(np.float32)),
                 decoding=self._decoding
             ),
             video_length=video_length,

@@ -1,57 +1,47 @@
-import ctypes
-from multiprocessing import Process, Array, Event as MEvent
-from threading import Thread, Lock, Event, Timer
+from os.path import isfile
+from threading import Thread, Lock, Event
 from time import time, sleep
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from os.path import isfile
 
 
 class VCR:
     camera_access = None
-    
+
     close_wait = 5.0
 
     def __init__(self, file_source):
         """ can be used to iterate over an iterable or open a video"""
-        self.is_iterable= False
+        self.is_iterable = False
         if type(file_source) == str:
-            
-            if not isfile(file_source) :
+
+            if not isfile(file_source):
                 raise OSError("File not found or is not a file. Please check path")
             self.file_source = file_source
             self.cam = cv2.VideoCapture(self.file_source)
             if not self.cam.isOpened():
                 raise IOError("Camera could not be opened. Probably already in use.")
         else:
-            #assume n iterator was given
+            # assume n iterator was given
 
             self.cam = iter(file_source)
             self.is_iterable = True
 
-
-            
-
     def get_frame_size_only(self):
-        #if this is a python object, we just assume there is enough frames that it doesn't really matter
+        # if this is a python object, we just assume there is enough frames that it doesn't really matter
         if self.is_iterable:
-            shape =next(self.cam).shape
+            shape = next(self.cam).shape
         else:
             shape = self.get_frame()[1].shape
             self.close()
         return shape
- 
-
-
 
     def close(self):
         if not self.is_iterable:
             self.cam.release()
 
-
-    
     def get_frame(self):
         # Read and wait
         if self.is_iterable:
@@ -63,17 +53,15 @@ class VCR:
         else:
             is_valid, out = self.cam.read()
             if is_valid:
-            # Reverse last dimension (CV2 apparently loads images in BGR format)
+                # Reverse last dimension (CV2 apparently loads images in BGR format)
                 out = out[:, :, ::-1]
-                return is_valid,out
+                return is_valid, out
             else:
                 return False, None
 
 
-
-
 class VCRStream(Thread):
-    def __init__(self,video_path, frame_rate=5):
+    def __init__(self, video_path, frame_rate=5):
         super().__init__()
         self.frame_rate = frame_rate
         self._frame_time = 1. / frame_rate
@@ -133,15 +121,13 @@ class VCRStream(Thread):
         self.vcr.close()
 
 
-
 if __name__ == "__main__":
     plt.ion()
-    test = (np.minimum(np.maximum(np.random.normal(loc = 0.5, size = (224,224,3)),0),1) for i in range(200))
+    test = (np.minimum(np.maximum(np.random.normal(loc=0.5, size=(224, 224, 3)), 0), 1) for i in range(200))
     my_vcr = VCR(test)
 
-    _,a_photo = my_vcr.get_frame()
+    _, a_photo = my_vcr.get_frame()
     plt.imshow(a_photo)
     plt.draw()
     plt.show()
     my_vcr.close()
-

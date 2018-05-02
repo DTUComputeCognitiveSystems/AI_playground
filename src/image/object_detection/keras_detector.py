@@ -13,7 +13,7 @@ from keras.applications.imagenet_utils import preprocess_input as sqnet_preproce
 from keras.layers import Dense, Flatten, Dropout
 from keras.models import Model
 
-from src.image.models_base import ResizingImageLabeller
+from src.image.object_detection.models_base import ResizingImageLabeller
 from src.image.video import SimpleVideo
 
 _model_specification = namedtuple(

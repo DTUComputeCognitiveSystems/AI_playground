@@ -1,3 +1,5 @@
 from notebooks.experiments.src.image_demos.demo_1a import VideoRecognitionDashboard
 from notebooks.experiments.src.image_demos.demo_1b import VideoTakeDashboard
 from notebooks.experiments.src.image_demos.demo_2 import TwoClassCameraDashboard
+from notebooks.experiments.src.image_demos.simple_binary_classifier import SimpleBinaryClassifier
+from notebooks.experiments.src.image_demos.image_collection import ImageCollector

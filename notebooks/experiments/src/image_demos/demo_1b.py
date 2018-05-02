@@ -1,6 +1,6 @@
 from ipywidgets.widgets import Button, Dropdown, Layout, Label, VBox, HBox, IntText, Text
 
-from src.image.image_collection import ImageCollector
+from notebooks.experiments.src.image_demos.image_collection import ImageCollector
 from src.image.object_detection.keras_detector import KerasDetector
 
 

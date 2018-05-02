@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ipywidgets.widgets import Button, FloatText, Layout, Label, VBox, HBox, Text, Checkbox
 
-from src.image.image_collection import ImageCollector, images_dir_name
+from notebooks.experiments.src.image_demos.image_collection import ImageCollector, images_dir_name
 
 
 class TwoClassCameraDashboard:

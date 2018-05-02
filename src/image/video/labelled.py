@@ -1,7 +1,7 @@
 import random
 from time import time
 
-from src.image.models_base import ImageLabeller
+from src.image.object_detection.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
 from src.image.video.base import _Video, MATPLOTLIB_BASED_BACKENDS
 import matplotlib.pyplot as plt

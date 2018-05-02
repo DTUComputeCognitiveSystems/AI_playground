@@ -11,7 +11,7 @@ from keras.applications.imagenet_utils import preprocess_input
 from src.image.video.labelled import LabelledVideo
 
 
-class Classifier:
+class SimpleBinaryClassifier:
     def __init__(self):
         """
         Simple class to wrap a predefined neural network

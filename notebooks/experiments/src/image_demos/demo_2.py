@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from ipywidgets.widgets import Button, FloatText, Layout, Label, VBox, HBox, Text, Checkbox

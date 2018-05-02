@@ -5,7 +5,7 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
-from notebooks.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
+from notebooks.exercises.src.understanding_images.colors import rgb_to_cmyk, cmyk_to_rgb
 
 _default_rgb_to_white = False
 

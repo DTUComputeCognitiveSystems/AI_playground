@@ -4,12 +4,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from ipywidgets import Layout, Button, Checkbox
-from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons, ToggleButton
+from ipywidgets.widgets import VBox, HBox, FloatSlider, Dropdown, RadioButtons
 from matplotlib.colors import to_rgb
 
-from notebooks.src.understanding_images import d3
-from notebooks.src.understanding_images.d3 import pixels_3d
-from notebooks.src.understanding_images.make_pixel_art import storage_dir
+from notebooks.exercises.src.understanding_images import d3
+from notebooks.exercises.src.understanding_images.make_pixel_art import storage_dir
 from src.utility.numpy_util import temporary_seed
 
 importlib.reload(d3)

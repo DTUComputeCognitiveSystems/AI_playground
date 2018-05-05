@@ -1,3 +1,4 @@
+import re
 import textwrap
 from copy import deepcopy
 
@@ -216,6 +217,9 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
     if verbose:
         print(skip_lines)
 
+    # Pattern for detecting white-space at beginning of each line
+    ws_pattern = re.compile("^\s*")
+
     # Plot lines
     line_start = 0
     skips = 0
@@ -229,8 +233,17 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
             skips += 1
             next_newline = skip_lines.pop() if skip_lines else np.infty
 
+        # Detect white-space at start of line
+        ws = ws_pattern.search(line)
+        n_ws = 0
+        if ws is not None:
+            n_ws = ws.end() - ws.start()
+
+        # Strip whitespace
+        line = line.strip()
+
         # Find relevant modifiers
-        relevant_modifiers = [modifier.offset(-line_start + skips) for modifier in modifiers
+        relevant_modifiers = [modifier.offset(-line_start + skips - n_ws) for modifier in modifiers
                               if line_start <= modifier.end and modifier.start <= line_end]
 
         # Compute y-location

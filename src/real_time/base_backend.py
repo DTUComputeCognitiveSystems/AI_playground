@@ -1,5 +1,3 @@
-from collections import Callable
-
 # noinspection PyUnusedLocal
 def noop(*args, **kwargs):
     pass
@@ -24,6 +22,47 @@ class BackendInterface:
         self.finalize = finalize
         self.interrupt_handler = interrupt_handler
         self.loop_time_milliseconds = loop_time_milliseconds
+
+
+class BackendInterfaceClass:
+    def _loop_initialization(self):
+        raise NotImplementedError
+
+    @property
+    def loop_initialization(self):
+        return self._loop_initialization
+
+    def _loop_step(self):
+        raise NotImplementedError
+
+    @property
+    def loop_step(self):
+        return self._loop_step
+
+    def _loop_stop_check(self):
+        raise NotImplementedError
+
+    @property
+    def loop_stop_check(self):
+        return self._loop_stop_check
+
+    def _finalize(self):
+        raise NotImplementedError
+
+    @property
+    def finalize(self):
+        return self._finalize
+
+    def _interrupt_handler(self):
+        raise NotImplementedError
+
+    @property
+    def interrupt_handler(self):
+        return self._interrupt_handler
+
+    @property
+    def loop_time_milliseconds(self):
+        raise NotImplementedError
 
 
 class BackendMultiInterface:

@@ -1,4 +1,3 @@
-from _tkinter import TclError
 from collections import Iterable
 from time import time
 
@@ -42,8 +41,8 @@ class ConsoleInputBackend(BackendLoop):
         print(text_indent + "\t{}".format(quit_flat))
         print("-" * 100)
 
-        while True:
-            line = ""
+        running = True
+        while running:
             try:
                 line = input()
             except (EOFError, KeyboardInterrupt):
@@ -56,11 +55,14 @@ class ConsoleInputBackend(BackendLoop):
             # Store line
             self._input_lines.append(line)
             self._current_str = line
+            self._current_loop_nr += 1
 
             # Update through interface
             self.interface_loop_step()
 
-            # TODO: Consider using interface_loop_stop_check()
+            # Check for end
+            if self.interface_loop_stop_check():
+                running = False
 
         # Finalize interfaces
         self.interface_finalize()
@@ -82,3 +84,20 @@ class ConsoleInputBackend(BackendLoop):
     @property
     def start_time(self) -> float:
         return self._start_time
+
+
+class _TestInterface(BackendInterface):
+    def __init__(self, backend, n_lines=3):
+        super().__init__()
+        self.n_lines = n_lines
+        self.backend = backend
+        self.loop_step = lambda: print("Received: {}".format(backend.current_str))
+
+        self.loop_stop_check = lambda: backend.current_loop_nr >= self.n_lines
+
+
+if __name__ == "__main__":
+
+    the_backend = ConsoleInputBackend()
+    the_backend.add_interface(_TestInterface(the_backend))
+    the_backend.start()

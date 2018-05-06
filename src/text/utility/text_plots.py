@@ -1,4 +1,3 @@
-import re
 import textwrap
 from copy import deepcopy
 
@@ -50,15 +49,13 @@ def plot_modified_line(x, y, text, modifiers, ax=None, fig=None):
     # Split text into sections
     sections = [text[start:end] for start, end in zip([0] + splits, splits + [None])]
 
-    # Get axes transform and figure
-    ax = plt.gca() if ax is None else ax
-    fig = plt.gcf() if fig is None else fig
+    # Get axes transform
     t = ax.transData
 
     # Go through sections
     for section, section_mod in zip(sections, section_mods):
         # Write string
-        text = plt.text(
+        text = ax.text(
             x=x,
             y=y,
             s=section,
@@ -170,7 +167,7 @@ def break_up_text_for_axes(text, x=None, y=None, fontsize=15, fontname="serif", 
 
 
 def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", line_spacing=1.1,
-                        right_relative_margin=0.075, ax=None, modifiers=None, verbose=False):
+                        right_relative_margin=0.075, ax=None, fig=None, modifiers=None, verbose=False):
     """
     Flows some text into a set of axes.
     Font-size will be reduced if text does not fit.
@@ -217,9 +214,6 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
     if verbose:
         print(skip_lines)
 
-    # Pattern for detecting white-space at beginning of each line
-    ws_pattern = re.compile("^\s*")
-
     # Plot lines
     line_start = 0
     skips = 0
@@ -233,17 +227,8 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
             skips += 1
             next_newline = skip_lines.pop() if skip_lines else np.infty
 
-        # Detect white-space at start of line
-        ws = ws_pattern.search(line)
-        n_ws = 0
-        if ws is not None:
-            n_ws = ws.end() - ws.start()
-
-        # Strip whitespace
-        line = line.strip()
-
         # Find relevant modifiers
-        relevant_modifiers = [modifier.offset(-line_start + skips - n_ws) for modifier in modifiers
+        relevant_modifiers = [modifier.offset(-line_start + skips) for modifier in modifiers
                               if line_start <= modifier.end and modifier.start <= line_end]
 
         # Compute y-location
@@ -263,6 +248,7 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
             text=line,
             modifiers=relevant_modifiers,
             ax=ax,
+            fig=fig,
         )
 
         # Next line

@@ -1,3 +1,5 @@
+from time import sleep
+
 from matplotlib.figure import Figure
 
 from src.real_time.base_backend import BackendInterfaceClass

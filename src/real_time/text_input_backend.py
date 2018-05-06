@@ -1,5 +1,6 @@
 from collections import Iterable
-from queue import Queue
+from queue import Queue, Empty
+from threading import Thread, Event, Timer
 from time import time
 
 from ipywidgets import widgets
@@ -7,9 +8,47 @@ from ipywidgets import widgets
 from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
+class UpdateChecker(Thread):
+    def __init__(self, in_queue, out_queue, main_thread_ready, queue_timout):
+        super().__init__()
+        self.queue_timout = queue_timout
+
+        # Events and queues
+        self.main_thread_ready = main_thread_ready  # type: Event
+        self.in_queue = in_queue  # type: Queue
+        self.out_queue = out_queue  # type: Queue
+
+        # For holding the current value
+        self.value = None
+
+        # Timer and and flag for sending data
+        self.timer = None
+        self.needs_updating = False
+
+    def run(self):
+        while True:
+            try:
+                # Get data and set flag for updating if data is accessible
+                self.value = self.in_queue.get(timeout=self.queue_timout)
+                self.needs_updating = True
+            except Empty:
+                pass
+
+            # Check if there is data to process and whether the main-process is ready
+            if self.needs_updating and self.main_thread_ready.is_set():
+                # Send data
+                self.out_queue.put(self.value)
+
+                # Notify main thread
+                self.main_thread_ready.clear()
+
+                # No longer needs updating
+                self.needs_updating = False
+
+
 class ConsoleInputBackend(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
-                 widget_name="Input:"):
+                 widget_name="Input:", check_delay=.15):
         """
         :param BackendInterface backend_interface:
         """
@@ -28,6 +67,27 @@ class ConsoleInputBackend(BackendLoop):
 
         # If we are doing widgets
         if use_widget:
+            self.check_delay = check_delay
+
+            # Event for whether the main thread is ready to process data
+            self.main_thread_ready = Event()
+            self.main_thread_ready.set()
+
+            # Make queues for sending and receiving data
+            self.ch_in_queue = Queue()
+            self.ch_out_queue = Queue()
+
+            # Make checker for ensuring what data is processed
+            self.checker = UpdateChecker(in_queue=self.ch_in_queue, out_queue=self.ch_out_queue,
+                                         main_thread_ready=self.main_thread_ready,
+                                         queue_timout=self.check_delay)
+            self.checker.daemon = True
+            self.checker.start()
+
+            # Set a timer for checking output
+            self.timer = Timer(check_delay, self.check_output)
+            self.timer.start()
+
             self._widget = widgets.Textarea(
                 value='',
                 placeholder='',
@@ -36,6 +96,35 @@ class ConsoleInputBackend(BackendLoop):
                 layout=dict(width="80%")
             )
             self._widget.observe(self._widget_update, )
+
+    def check_output(self):
+        # If main-thread has been asked to process data
+        if not self.main_thread_ready.is_set():
+            # Get data
+            text = self.ch_out_queue.get()
+
+            # Check if text has changed (some event does not change the text)
+            if text != self.current_str:
+
+                # Break into lines and pass onto storage
+                self._str_lines = []
+                for line in text.split("\n"):
+                    self._str_lines.append(line)
+
+                # Loop nr
+                self._current_loop_nr += 1
+
+                # Update through interface
+                self.interface_loop_step()
+
+            # TODO: Stop-checks and finalizing missing
+
+            # Main thread is once again ready for data
+            self.main_thread_ready.set()
+
+        # Set a time for checking for data
+        self.timer = Timer(self.check_delay, self.check_output)
+        self.timer.start()
 
     def _start(self):
         # Initialize
@@ -57,26 +146,12 @@ class ConsoleInputBackend(BackendLoop):
         else:
             self._console_run()
 
-    def _widget_update(self, event=None):
-
+    def _widget_update(self, _=None):
         # Get text from widget
         text = self._widget.value
 
-        # Check if text has changed (some event does not change the text)
-        if text != self.current_str:
-
-            # Break into lines and pass onto storage
-            self._str_lines = []
-            for line in text.split("\n"):
-                self._str_lines.append(line)
-
-            # Loop nr
-            self._current_loop_nr += 1
-
-            # Update through interface
-            self.interface_loop_step()
-
-        # TODO: Stop-checks and finalizing missing
+        # Send to thread
+        self.ch_in_queue.put(text)
 
     def _console_run(self):
         quit_flat = "$quit"

@@ -27,7 +27,7 @@ class TabularQAgent:
         if len(self.A[tuple(s)]) == 0:
             a = env.action_space.sample()
         else:
-            qs = {actions: self.Q[tuple(s), actions] for actions in self.A[tuple(s)]}
+            qs = {action: self.Q[tuple(s), action] for action in self.A[tuple(s)]}
             a = max(qs, key=qs.get)
         return a
 

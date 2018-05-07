@@ -10,3 +10,7 @@ def temporary_seed(seed):
         yield
     finally:
         np.random.set_state(state)
+
+
+def np_contains(l: list, a: np.array) -> bool:
+    return any(np.array_equal(a, s) for s in l)

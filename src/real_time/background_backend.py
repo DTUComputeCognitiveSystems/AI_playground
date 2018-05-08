@@ -2,7 +2,7 @@ import sched
 from collections import Iterable
 from time import time
 
-from src.real_time.base_backend import BackendLoop, BackendInterface
+from src.real_time.base_backend import BackendLoop, BackendInterface, BackendInterfaceObject
 
 
 class BackgroundLoop(BackendLoop):
@@ -66,8 +66,8 @@ class BackgroundLoop(BackendLoop):
                 action=self._loop_step,
             )
 
-        # Run animation step
-        self.interface_loop_step()
+            # Run animation step
+            self.interface_loop_step()
 
     ######
 
@@ -81,6 +81,32 @@ class BackgroundLoop(BackendLoop):
 
 
 if __name__ == "__main__":
+
+    ###
+    # Example 1
+
+    print("Example 1\n" + "-" * 30 + "\n")
+
+    # Make backend
+    backend = BackgroundLoop()
+
+    # Make interface object
+    stop_flags = [True] + [False for _ in range(5)]
+    interface = BackendInterfaceObject(
+        loop_initialization=lambda: print("before"),
+        loop_step=lambda: print("iteration {}".format(backend.current_loop_nr)),
+        loop_stop_check=lambda: stop_flags.pop(),
+        finalize=lambda: print("after")
+    )
+
+    # Add interface adn run
+    backend.add_interface(interface=interface)
+    backend.start()
+
+    ###
+    # Example 2
+
+    print("\n\nExample 2\n" + "-" * 30 + "\n")
 
     # This is a class that can do work at each real time iteration
     class ExampleInterface(BackendInterface):
@@ -100,7 +126,7 @@ if __name__ == "__main__":
         # Here I check whether my job is done (after which the real time loop will also stop)
         def _loop_stop_check(self):
             print("\tChecking for stop")
-            if self.counter > 10:
+            if self.counter >= 10:
                 print("\tStop!")
                 return True
             return False

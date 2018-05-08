@@ -1,30 +1,8 @@
-# noinspection PyUnusedLocal
-def noop(*args, **kwargs):
-    pass
-
-
 class BackendInterface:
-    def __init__(self, loop_initialization=noop, loop_step=noop, loop_stop_check=noop, finalize=noop,
-                 interrupt_handler=noop, loop_time_milliseconds=200):
-        """
-        Interface for a backend. 5 Functions can be set for performing tasks at various relevant times.
-        Also the loop-time can be set.
-        :param Callable loop_initialization:
-        :param Callable loop_step:
-        :param Callable loop_stop_check:
-        :param Callable finalize:
-        :param Callable interrupt_handler:
-        :param int loop_time_milliseconds:
-        """
-        self.loop_initialization = loop_initialization
-        self.loop_step = loop_step
-        self.loop_stop_check = loop_stop_check
-        self.finalize = finalize
-        self.interrupt_handler = interrupt_handler
-        self.loop_time_milliseconds = loop_time_milliseconds
-
-
-class BackendInterfaceClass:
+    """
+    Interface for a backend. 5 Functions can be set for performing tasks at various relevant times.
+    The wanted loop-time can also be set.
+    """
     def _loop_initialization(self):
         raise NotImplementedError
 
@@ -63,6 +41,50 @@ class BackendInterfaceClass:
     @property
     def loop_time_milliseconds(self):
         raise NotImplementedError
+
+
+# noinspection PyUnusedLocal
+def noop(*args, **kwargs):
+    pass
+
+
+class BackendInterfaceObject(BackendInterface):
+    def __init__(self, loop_initialization=noop, loop_step=noop, loop_stop_check=noop, finalize=noop,
+                 interrupt_handler=noop, loop_time_milliseconds=200):
+        """
+        Dynamic version of the backend interface.
+        :param Callable loop_initialization:
+        :param Callable loop_step:
+        :param Callable loop_stop_check:
+        :param Callable finalize:
+        :param Callable interrupt_handler:
+        :param int loop_time_milliseconds:
+        """
+        self._loop_initialization = loop_initialization
+        self._loop_step = loop_step
+        self._loop_stop_check = loop_stop_check
+        self._finalize = finalize
+        self._interrupt_handler = interrupt_handler
+        self._loop_time_milliseconds = loop_time_milliseconds
+
+    @property
+    def loop_time_milliseconds(self):
+        return self._loop_time_milliseconds
+
+    def _loop_initialization(self):
+        pass
+
+    def _loop_step(self):
+        pass
+
+    def _loop_stop_check(self):
+        pass
+
+    def _finalize(self):
+        pass
+
+    def _interrupt_handler(self):
+        pass
 
 
 class BackendMultiInterface:

@@ -5,7 +5,7 @@ from time import time
 
 from ipywidgets import widgets
 
-from src.real_time.base_backend import BackendLoop, BackendInterface
+from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
 
 
 class UpdateChecker(Thread):
@@ -50,7 +50,7 @@ class ConsoleInputBackend(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
                  widget_name="Input:", check_delay=.15):
         """
-        :param BackendInterface backend_interface:
+        :param BackendInterfaceObject backend_interface:
         """
         self.n_lines = n_lines
         self.use_widget = use_widget
@@ -232,18 +232,18 @@ class ConsoleInputBackend(BackendLoop):
         return self._start_time
 
 
-class _TestInterface(BackendInterface):
+class _TestInterfaceOLD(BackendInterfaceObject):
     def __init__(self, backend, n_lines=3):
         super().__init__()
         self.n_lines = n_lines
         self.backend = backend
-        self.loop_step = lambda: print("Received: {}".format(backend.current_str))
+        self._loop_step = lambda: print("Received: {}".format(backend.current_str))
 
-        self.loop_stop_check = lambda: backend.current_loop_nr >= self.n_lines
+        self._loop_stop_check = lambda: backend.current_loop_nr >= self.n_lines
 
 
 if __name__ == "__main__":
 
     the_backend = ConsoleInputBackend()
-    the_backend.add_interface(_TestInterface(the_backend))
+    the_backend.add_interface(_TestInterfaceOLD(the_backend))
     the_backend.start()

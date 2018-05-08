@@ -1,20 +1,14 @@
-from time import sleep
-
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.figure import Figure
 
-from src.real_time.base_backend import BackendInterfaceClass
+from src.real_time.base_backend import BackendInterface
 from src.real_time.text_input_backend import ConsoleInputBackend
-import matplotlib.pyplot as plt
-
 from src.text.utility.text_modifiers import TextModifier
 from src.text.utility.text_plots import flow_text_into_axes
 
 
-# TODO: Make the system use a thread for maintaining the figure and ignore consequtive events (just grab the slast one)
-# TODO:     I'm thinking some kind of event-queue.
-
-
-class HighlightCharacters(BackendInterfaceClass):
+class HighlightCharacters(BackendInterface):
     def __init__(self, backend, lines_in_view=20, letter_modifiers=None):
         super().__init__()
         self.n_lines = lines_in_view
@@ -73,7 +67,7 @@ class HighlightCharacters(BackendInterfaceClass):
         pass
 
     def _finalize(self):
-        pass
+        plt.close(self.fig.number)
 
     def _interrupt_handler(self):
         pass
@@ -90,10 +84,10 @@ if __name__ == "__main__":
     the_backend.add_interface(HighlightCharacters(
         the_backend,
         letter_modifiers=dict(
-            e="blue",
-            a="red",
-            t="orange",
-            s="green",
+            e=np.array((0., 0., 1.)),
+            # a="red",
+            # t="orange",
+            # s="green",
         )
     ))
     the_backend.start()

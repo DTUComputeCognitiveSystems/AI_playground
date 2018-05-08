@@ -2,14 +2,14 @@ import sched
 from collections import Iterable
 from time import time
 
-from src.real_time.base_backend import BackendLoop, BackendInterface
+from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
 
 
 class BackgroundLoop(BackendLoop):
     def __init__(self, backend_interface=(),
                  block=True):
         """
-        :param BackendInterface backend_interface:
+        :param BackendInterfaceObject backend_interface:
         :param bool block:
         """
         # Settings
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             return True
         return False
 
-    interface = BackendInterface(
+    interface = BackendInterfaceObject(
         loop_initialization=lambda: print("Initializing interfaces."),
         loop_step=print_step,
         loop_stop_check=stop_checker,

@@ -1,18 +1,18 @@
 import sched
 from collections import Iterable
-from time import time, sleep
-import matplotlib.pyplot as plt
+from time import time
 
-from src.real_time.base_backend import BackendLoop, BackendInterface
+import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
-import ipywidgets as widgets
+
+from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
 
 
 class IPythonLoop(BackendLoop):
     def __init__(self, backend_interface=(), fig=None, title="Real time animation",
                  block=True):
         """
-        :param BackendInterface backend_interface:
+        :param BackendInterfaceObject backend_interface:
         :param bool block:
         """
         # Settings
@@ -114,7 +114,3 @@ class IPythonLoop(BackendLoop):
     @property
     def start_time(self) -> float:
         return self._start_time
-
-
-
-

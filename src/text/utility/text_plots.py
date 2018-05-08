@@ -124,30 +124,42 @@ def break_up_text_for_axes(text, x=None, y=None, fontsize=15, fontname="serif", 
         height = font_size2height(fontsize=fontsize, fontname=fontname)
 
         # Compute characters per line
-        width = len(text.replace("\n", "")) * mean_char_width(fontname=fontname, fontsize=fontsize, ax=ax)
-        width_per_character = width / len(text)
-        characters_per_line = int((1 - right_relative_margin) * (x_max - x) / width_per_character)
+        # TODO: Could be compute exactly as well
+        characters_per_line = int((1 - right_relative_margin) * (x_max - x) /
+                                  mean_char_width(fontname=fontname, fontsize=fontsize, ax=ax))
 
         # Wrap text
         original_newlines = []
         additional_newlines = []
         wrapped_text = []
         c_length = 0
-        sequences = [val for val in text.split("\n") if val]
-        for sequence in sequences:
+        # sequences = [val for val in text.split("\n") if val]
+        sequences = list(text.split("\n"))
+        for sequence_nr, sequence in enumerate(sequences):
             # Note original newline
-            if c_length != 0:
+            if sequence_nr != 0:
                 original_newlines.append(c_length)
 
                 # This character counts as well
                 c_length += 1
 
             # Wrap text
-            wrap = textwrap.wrap(text=sequence, width=characters_per_line,
-                                 replace_whitespace=False, drop_whitespace=False)
+            if sequence:
+                wrap = textwrap.wrap(
+                    text=sequence,
+                    width=characters_per_line,
+                    replace_whitespace=False,
+                    drop_whitespace=False,
+                    expand_tabs=False,
+                    initial_indent="",
+                    subsequent_indent="",
+                )
+            else:
+                wrap = [""]
 
             # Add new lines
             for nr, line in enumerate(wrap):
+
                 # Note added newline
                 if nr != 0:
                     additional_newlines.append(c_length)
@@ -179,6 +191,9 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
     :param float line_spacing: Relative spacing between lines.
     :param float right_relative_margin: Relative margin on the left. Used to avoid text-overflow.
     :param ax: The axis for plotting. Defaults to plt.gca().
+    :param fig:
+    :param list[TextModifier] modifiers:  Modifiers for text.
+    :param bool verbose: Want prints?
     """
     # Ensure format and copy of list
     if modifiers is not None:
@@ -253,3 +268,32 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
 
         # Next line
         line_start = line_end + 1
+
+
+if __name__ == "__main__":
+    text_lines = [
+        "",
+        "\nhey there",
+        "how are you?",
+        "why are you asking me?!?",
+        "dude I was just being polite, take a chill pill",
+    ]
+
+    the_text = "\n".join(text_lines)
+
+    letter_modifiers = dict(
+        e="blue",
+        a="red",
+        t="orange",
+        s="green",
+    )
+
+    the_modifiers = []
+    for letter, color in letter_modifiers.items():
+        the_modifiers.extend([
+            TextModifier(val, val + 1, "color", color) for val, char in enumerate(the_text) if char == letter
+        ])
+
+    plt.close("all")
+    plt.figure()
+    flow_text_into_axes(text=the_text, modifiers=the_modifiers)

@@ -1,0 +1,1 @@
+from src.text.sentiment.sentiment_highlighter import SentimentHighlighter

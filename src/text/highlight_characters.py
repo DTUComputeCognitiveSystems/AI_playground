@@ -1,8 +1,10 @@
+from time import time, sleep
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-from src.real_time.base_backend import BackendInterface
+from src.real_time.base_backend import BackendInterface, BackendLoop
 from src.real_time.text_input_backend import TextInputLoop
 from src.text.utility.text_modifiers import TextModifier
 from src.text.utility.text_plots import flow_text_into_axes
@@ -43,7 +45,6 @@ class HighlightCharacters(BackendInterface):
 
         # Check if there is any text
         if text:
-
             # Make modifiers
             modifiers = []
             for letter, color in self.letter_modifiers.items():
@@ -77,17 +78,58 @@ class HighlightCharacters(BackendInterface):
         return None
 
 
+class _TextExampleBackend(BackendLoop):
+    def __init__(self, lines, delay=1.0, do_finalize=False, *args):
+        super().__init__(*args)
+        self.do_finalize = do_finalize
+        self.delay = delay
+        self.lines = lines
+        self.line_nr = None
+        self.line = None
+        self.current_str = None
+
+    def _start(self):
+        self.interface_loop_initialization()
+        self._start_time = time()
+        self.current_str = ""
+
+        for self.line_nr, self.line in enumerate(self.lines):
+            self.current_str += "\n" + self.line
+            self.interface_loop_step()
+
+            sleep(self.delay)
+
+        if self.do_finalize:
+            self.interface_finalize()
+
+    @property
+    def current_loop_nr(self) -> int:
+        return self.line_nr
+
+    @property
+    def start_time(self) -> float:
+        return self._start_time
+
+
 if __name__ == "__main__":
 
+    text_lines = [
+        "hey there",
+        "how are you doing?",
+        "why are you asking me?!?",
+        "dude I was just being polite, take a chill pill",
+    ]
+
+    the_backend = _TextExampleBackend(lines=text_lines)
+
     plt.close("all")
-    the_backend = TextInputLoop()
     the_backend.add_interface(HighlightCharacters(
         the_backend,
         letter_modifiers=dict(
-            e=np.array((0., 0., 1.)),
-            # a="red",
-            # t="orange",
-            # s="green",
+            e="blue",
+            a="red",
+            t="orange",
+            s="green",
         )
     ))
     the_backend.start()

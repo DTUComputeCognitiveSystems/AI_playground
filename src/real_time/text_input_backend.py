@@ -46,7 +46,7 @@ class UpdateChecker(Thread):
                 self.needs_updating = False
 
 
-class ConsoleInputBackend(BackendLoop):
+class TextInputLoop(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
                  widget_name="Input:", check_delay=.15):
         """
@@ -244,6 +244,6 @@ class _TestInterfaceOLD(BackendInterfaceObject):
 
 if __name__ == "__main__":
 
-    the_backend = ConsoleInputBackend()
+    the_backend = TextInputLoop()
     the_backend.add_interface(_TestInterfaceOLD(the_backend))
     the_backend.start()

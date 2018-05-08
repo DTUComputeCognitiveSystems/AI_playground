@@ -2,14 +2,14 @@ import sched
 from collections import Iterable
 from time import time
 
-from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
+from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
 class BackgroundLoop(BackendLoop):
     def __init__(self, backend_interface=(),
                  block=True):
         """
-        :param BackendInterfaceObject backend_interface:
+        :param BackendInterface backend_interface:
         :param bool block:
         """
         # Settings
@@ -81,30 +81,45 @@ class BackgroundLoop(BackendLoop):
 
 
 if __name__ == "__main__":
-    counter = 0
 
-    def print_step():
-        global counter
-        counter += 1
-        print("Step: {}".format(counter))
+    # This is a class that can do work at each real time iteration
+    class ExampleInterface(BackendInterface):
+        def __init__(self):
+            self.counter = None
 
-    def stop_checker():
-        print("\tChecking for stop")
-        global counter
-        if counter > 10:
-            print("\tStop!")
-            return True
-        return False
+        # Here I initialize all variables, models, plots etc.
+        def _loop_initialization(self):
+            print("Initializing ExampleInterface.")
+            self.counter = 0
 
-    interface = BackendInterfaceObject(
-        loop_initialization=lambda: print("Initializing interfaces."),
-        loop_step=print_step,
-        loop_stop_check=stop_checker,
-        finalize=lambda: print("Finalizing"),
-        interrupt_handler=lambda: print("Interrupted!"),
-        loop_time_milliseconds=400
-    )
+        # Here I do all the work of one iteration
+        def _loop_step(self):
+            self.counter += 1
+            print("Step: {}".format(self.counter))
 
+        # Here I check whether my job is done (after which the real time loop will also stop)
+        def _loop_stop_check(self):
+            print("\tChecking for stop")
+            if self.counter > 10:
+                print("\tStop!")
+                return True
+            return False
+
+        # Here I can finalize my job, like saving results to a file, making a checkpoint etc.
+        def _finalize(self):
+            print("Finalizing")
+
+        # Here I can do things if the loop is interrupted (for example by the user). An idea could be to write a log.
+        def _interrupt_handler(self):
+            print("Interrupted!")
+
+        # Here I say how often I would like to run. The loop will run according to the "slowest" interface (bottleneck).
+        @property
+        def loop_time_milliseconds(self):
+            return 400
+
+    # Making a backend, making an interface, adding the interface and running the loop
     backend = BackgroundLoop()
+    interface = ExampleInterface()
     backend.add_interface(interface=interface)
     backend.start()

@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.figure import Figure
 
 from src.real_time.base_backend import BackendInterface
-from src.real_time.text_input_backend import ConsoleInputBackend
+from src.real_time.text_input_backend import TextInputLoop
 from src.text.utility.text_modifiers import TextModifier
 from src.text.utility.text_plots import flow_text_into_axes
 
@@ -12,7 +12,7 @@ class HighlightCharacters(BackendInterface):
     def __init__(self, backend, lines_in_view=20, letter_modifiers=None):
         super().__init__()
         self.n_lines = lines_in_view
-        self.backend = backend  # type: ConsoleInputBackend
+        self.backend = backend  # type: TextInputLoop
         self.letter_modifiers = dict() if letter_modifiers is None else letter_modifiers
 
     def _loop_initialization(self):
@@ -80,7 +80,7 @@ class HighlightCharacters(BackendInterface):
 if __name__ == "__main__":
 
     plt.close("all")
-    the_backend = ConsoleInputBackend()
+    the_backend = TextInputLoop()
     the_backend.add_interface(HighlightCharacters(
         the_backend,
         letter_modifiers=dict(

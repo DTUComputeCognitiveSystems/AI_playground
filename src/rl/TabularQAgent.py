@@ -18,7 +18,7 @@ class TabularQAgent:
             a = env.action_space.sample()
         return a
 
-    def learn(self, s, a, r, ns):
+    def learn(self, s, a, r, ns, t):
         #print('Learning from ', s, ' -> ', a, ' -> ', ns, ', with reward ', r, '.')
         self.Q[tuple(s), a] += self.alpha * self._td(s, a, r, ns)
         self.A[tuple(s)].add(a)

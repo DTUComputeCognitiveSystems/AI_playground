@@ -43,8 +43,9 @@ def _sentiment_format(sentiment):
 
 
 class SentimentHighlighter(BackendInterface):
-    def __init__(self, backend, lines_in_view=20):
+    def __init__(self, backend, lines_in_view=20, remove_axes=True):
         super().__init__()
+        self.remove_axes = remove_axes
         self.n_lines = lines_in_view
         self.backend = backend  # type: TextInputLoop
         self.afinn = Afinn()
@@ -65,6 +66,9 @@ class SentimentHighlighter(BackendInterface):
         self.ax.set_xticks([])
         self.ax.set_yticks([])
         self.ax.format_coord = lambda x, y: ''
+        plt.tight_layout()
+        if self.remove_axes:
+            self.ax.set_axis_off()
 
         # Draw canvas
         self.canvas.draw()
@@ -82,6 +86,9 @@ class SentimentHighlighter(BackendInterface):
         # Remove ticks
         self.ax.set_xticks([])
         self.ax.set_yticks([])
+        plt.tight_layout()
+        if self.remove_axes:
+            self.ax.set_axis_off()
 
         # Get current text
         text = self.backend.current_str

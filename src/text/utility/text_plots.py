@@ -5,11 +5,11 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt, transforms
 
-from src.text.utility.font_axes import font_size2height, mean_char_width
+from src.text.utility.font_axes import font_size2height, mean_char_width, text2cumul_width
 from src.text.utility.text_modifiers import TextModifier
 
 
-def plot_modified_line(x, y, text, modifiers, ax=None, fig=None):
+def plot_modified_line(x, y, text, modifiers, fontsize=None, ax=None, fig=None):
     """
     Plot a line of text with a set of modifiers assign to it.
     :param float x: x-coordinate of text.
@@ -55,6 +55,9 @@ def plot_modified_line(x, y, text, modifiers, ax=None, fig=None):
 
     # Go through sections
     for section, section_mod in zip(sections, section_mods):
+        if fontsize is not None:
+            section_mod["fontsize"] = fontsize
+
         # Write string
         text = ax.text(
             x=x,
@@ -124,10 +127,10 @@ def break_up_text_for_axes(text, x=None, y=None, fontsize=15, fontname="serif", 
         # Compute height of text
         height = font_size2height(fontsize=fontsize, fontname=fontname)
 
-        # Compute characters per line
-        # TODO: Could be compute exactly as well
-        characters_per_line = int((1 - right_relative_margin) * (x_max - x) /
-                                  mean_char_width(fontname=fontname, fontsize=fontsize, ax=ax))
+        # # Compute characters per line
+        # # TODO: Could be compute exactly as well
+        # characters_per_line = int((1 - right_relative_margin) * (x_max - x) /
+        #                           mean_char_width(fontname=fontname, fontsize=fontsize, ax=ax))
 
         # Wrap text
         original_newlines = []
@@ -146,14 +149,13 @@ def break_up_text_for_axes(text, x=None, y=None, fontsize=15, fontname="serif", 
 
             # Wrap text
             if sequence:
-                wrap = textwrap.wrap(
-                    text=sequence,
-                    width=characters_per_line,
-                    replace_whitespace=False,
-                    drop_whitespace=False,
-                    expand_tabs=False,
-                    initial_indent="",
-                    subsequent_indent="",
+                wrap = wrap_single_line(
+                    line=sequence,
+                    x=x,
+                    fontname=fontname,
+                    fontsize=fontsize,
+                    relative_right_margin=right_relative_margin,
+                    ax=ax
                 )
             else:
                 wrap = [""]
@@ -179,8 +181,85 @@ def break_up_text_for_axes(text, x=None, y=None, fontsize=15, fontname="serif", 
     return fontsize, height, wrapped_text, original_newlines, additional_newlines
 
 
+def wrap_single_line(line, x, fontname, fontsize, relative_right_margin=0.05, ax=None,
+                     simple=False):
+    # Get horizontal limits
+    xmin, xmax = ax.get_xlim()
+    x_range = (xmax - x) * (1 - relative_right_margin)
+
+    # Simple and faster method
+    if simple:
+        characters_per_line = int(x_range / mean_char_width(fontname=fontname, fontsize=fontsize, ax=ax))
+
+        wrap = textwrap.wrap(text=line,
+                             width=characters_per_line,
+                             replace_whitespace=False,
+                             drop_whitespace=False,
+                             expand_tabs=False,
+                             initial_indent="",
+                             subsequent_indent="")
+        return wrap
+
+    # Default axes
+    ax = plt.gca() if ax is None else ax
+    n = len(line)
+
+    # Compute cumulative width of line
+    cumulative_width = text2cumul_width(
+        text=line,
+        fontname=fontname,
+        fontsize=fontsize,
+        ax=ax
+    )
+
+    # Break up line
+    result = []
+    start_idx = 0
+    c_width = 0
+    while start_idx < n:
+
+        # Determine next max break-point
+        end_idx = 0
+        for end_idx in range(start_idx, n + 1):
+            if end_idx == n:
+                break
+            if cumulative_width[end_idx] - c_width > x_range:
+                break
+        end_idx -= 1
+
+        # Get current line snippet and wanted width
+        snippet = line[start_idx:end_idx + 1]
+        wanted_width = end_idx - start_idx
+
+        # Use textwrap to break line
+        if not wanted_width or end_idx >= n - 1:
+            start_idx = n
+            next_line = snippet
+
+        else:
+            wrapped = textwrap.wrap(
+                text=snippet,
+                width=wanted_width,
+                replace_whitespace=False,
+                drop_whitespace=False,
+                expand_tabs=False,
+                initial_indent="",
+                subsequent_indent="",
+            )
+            next_line = wrapped[0]
+
+            # Move marker
+            start_idx = start_idx + len(next_line)
+            c_width = cumulative_width[start_idx]
+
+        # Store next line
+        result.append(next_line)
+
+    return result
+
+
 def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", line_spacing=1.1,
-                        right_relative_margin=0.075, ax=None, fig=None, modifiers=None, verbose=False):
+                        right_relative_margin=0.1, ax=None, fig=None, modifiers=None, verbose=False):
     """
     Flows some text into a set of axes.
     Font-size will be reduced if text does not fit.
@@ -211,7 +290,7 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
 
     # Default x and y
     if x is None:
-        x = (x_max - x_min) * 0.05
+        x = (x_max - x_min) * 0.025
     if y is None:
         y = y_max - (y_max - y_min) * 0.1
 
@@ -226,6 +305,8 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
         right_relative_margin=right_relative_margin,
         ax=ax
     )
+    print(fontsize)
+    print(wrapped_text)
     skip_lines = list(reversed(sorted(set(additional_newlines))))
     if verbose:
         print(skip_lines)
@@ -265,6 +346,7 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
             modifiers=relevant_modifiers,
             ax=ax,
             fig=fig,
+            fontsize=fontsize,
         )
 
         # Next line
@@ -276,7 +358,7 @@ if __name__ == "__main__":
 
     with Path("src", "text", "font_info", "test_text.txt").open("r") as file:
         text_lines = file.readlines()
-        text_lines = text_lines[:4]
+        text_lines = text_lines[:3]
 
     if manual_lines:
         text_lines = [

@@ -93,13 +93,19 @@ def text2cumul_width(text, fontname, fontsize, ax=None, mean_is_default=True):
 
 if __name__ == "__main__":
     plt.close("all")
+
+    fontname = "monospace"
+
+    ###################
+    # Text lengths
+
+    print("\n\nText lengths:\n" + "-" * 30)
     fig = plt.figure(figsize=(14, 10))
     renderer = fig.canvas.get_renderer()
     ax = plt.gca()
     ax.set_xlim(0, 1.4)
     ax.set_aspect("equal")
 
-    fontname = "monospace"
     fontsize = 15
 
     test_lines = [
@@ -114,6 +120,39 @@ if __name__ == "__main__":
 
     for nr, line in enumerate(test_lines):
         y = nr / len(test_lines)
+
+        text = plt.text(0.0, y, line, fontname=fontname, fontsize=fontsize)
+
+        # Get bounding box and determine width and height
+        bb = text.get_window_extent(renderer=renderer)
+
+        # Get axes positions
+        xlim = plt.xlim()
+        ylim = plt.ylim()
+        x_pos, y_pos = ax_units2points((xlim[0], ylim[0]), ax=ax)
+
+        estimated_length = text2cumul_width(text=line, fontname=fontname, fontsize=fontsize)
+        print("{: .4f}, {:.4f}".format(
+            points2ax_units([bb.width + x_pos, bb.height], ax=ax)[0],
+            estimated_length[-1])
+        )
+
+        plt.axvline(x=estimated_length[-1], ymax=y + 0.025)
+
+    ###################
+    # Fontsizes
+
+    fig = plt.figure(figsize=(14, 10))
+    renderer = fig.canvas.get_renderer()
+    ax = plt.gca()
+    ax.set_xlim(0, 1.4)
+    ax.set_aspect("equal")
+
+    print("\n\nFontsizes:\n" + "-" * 30)
+    line = "Suspendisse potenti. Vestibulum vel turpis libero."
+    font_sizes = [5, 8, 10, 12, 15, 18, 24]
+    for nr, fontsize in enumerate(font_sizes):
+        y = nr / len(font_sizes)
 
         text = plt.text(0.0, y, line, fontname=fontname, fontsize=fontsize)
 

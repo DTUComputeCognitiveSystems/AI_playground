@@ -48,7 +48,7 @@ class UpdateChecker(Thread):
 
 class TextInputLoop(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
-                 widget_name="Input:", check_delay=.15):
+                 widget_name="Input:", check_delay=.15, text_height="350px"):
         """
         :param BackendInterfaceObject backend_interface:
         """
@@ -93,7 +93,7 @@ class TextInputLoop(BackendLoop):
                 placeholder='',
                 description=widget_name,
                 disabled=False,
-                layout=dict(width="90%")
+                layout=dict(width="90%", height=text_height)
             )
             self._widget.observe(self._widget_update, )
 

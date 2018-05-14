@@ -2,38 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from src.text.utility.font_specs import Font
-from src.utility.matplotlib_utility import ax_aspect_ratio
-
-
-def height2font_size(y_range, fontname, ax=None):
-    """
-    Takes a range on the y-scale of a set of axes, with a font name, and computes the needed fontsize for making
-    the text exactly that height.
-    :param y_range:
-    :param fontname:
-    :param ax
-    :rtype float
-    """
-    # Get height-fontsize-ratio for font name
-    font = Font.get_font(fontname=fontname)
-
-    # Get current axis
-    ax = plt.gca() if ax is None else ax
-
-    # Get box-corners of axes in figure and y-corners
-    corners = ax.get_window_extent().get_points()
-    y_bottom, y_top = corners[:, 1]
-
-    # Get limits of y-axis
-    y_min, y_max = ax.get_ylim()
-
-    # Get unit scale
-    y_scale = (y_top - y_bottom) / (y_max - y_min)
-
-    # Make font-size
-    fontsize = y_range * y_scale / font.hf_ratio
-
-    return fontsize
+from src.utility.matplotlib_utility import ax_aspect_ratio, points2ax_units, ax_units2points
 
 
 def font_size2height(fontsize, fontname, ax=None):
@@ -89,7 +58,7 @@ def mean_char_width(fontname, fontsize, ax=None):
     return width
 
 
-def text2cumul_width(text, fontname, fontsize, ax=None):
+def text2cumul_width(text, fontname, fontsize, ax=None, mean_is_default=True):
     """
     Computes the cumulative width of the characters.
     :param str text: Text.
@@ -105,7 +74,10 @@ def text2cumul_width(text, fontname, fontsize, ax=None):
     height = font_size2height(fontsize=fontsize, fontname=fontname, ax=ax)
 
     # Get characters height-width ratios
-    ratios = [font.hw_ratios.get(val, font.hw_ratio_mean) for val in text]
+    if mean_is_default:
+        ratios = [font.hw_ratios.get(val, font.hw_ratio_mean) for val in text]
+    else:
+        ratios = [font.hw_ratios[val] for val in text]
 
     # Get aspect
     aspect = ax_aspect_ratio(ax=ax)
@@ -117,3 +89,46 @@ def text2cumul_width(text, fontname, fontsize, ax=None):
     cumulative_widths = np.cumsum(widths)
 
     return cumulative_widths
+
+
+if __name__ == "__main__":
+    plt.close("all")
+    fig = plt.figure(figsize=(14, 10))
+    renderer = fig.canvas.get_renderer()
+    ax = plt.gca()
+    ax.set_xlim(0, 1.4)
+    ax.set_aspect("equal")
+
+    fontname = "monospace"
+    fontsize = 15
+
+    test_lines = [
+        "Suspendisse",
+        "Sus p end i sse",
+        "Suspendisse potenti.",
+        "Suspendisse potenti. Vestibulum vel",
+        "Suspendisse potenti. Vestibulum vel turpis libero.",
+        "Suspendisse potenti. Vestibulum vel turpis libero. Pellentesque elementum",
+        "Suspendisse potenti. Vestibulum vel turpis libero. Pellentesque elementum nisi quam.",
+    ]
+
+    for nr, line in enumerate(test_lines):
+        y = nr / len(test_lines)
+
+        text = plt.text(0.0, y, line, fontname=fontname, fontsize=fontsize)
+
+        # Get bounding box and determine width and height
+        bb = text.get_window_extent(renderer=renderer)
+
+        # Get axes positions
+        xlim = plt.xlim()
+        ylim = plt.ylim()
+        x_pos, y_pos = ax_units2points((xlim[0], ylim[0]), ax=ax)
+
+        estimated_length = text2cumul_width(text=line, fontname=fontname, fontsize=fontsize)
+        print("{: .4f}, {:.4f}".format(
+            points2ax_units([bb.width + x_pos, bb.height], ax=ax)[0],
+            estimated_length[-1])
+        )
+
+        plt.axvline(x=estimated_length[-1], ymax=y + 0.025)

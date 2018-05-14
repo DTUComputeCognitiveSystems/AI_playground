@@ -74,22 +74,38 @@ class Font:
         :param fontname:
         :param font_size
         """
-        # Determine text height
-        text_height, text_width = Font._measure_a_text(text=Font.measured_characters, fontname=fontname,
-                                                       fontsize=font_size)
+        # Determine font_size
+        text_height, _ = Font._measure_a_text(text="em", fontname=fontname,
+                                              fontsize=font_size)
         hf_ratio = text_height / font_size
 
+        # Leave out space for now
+        chars = [char for char in Font.measured_characters if char != " "]
+
         # Go through all measured characters
+        char_widths = dict()
         measurements = []
-        for char in Font.measured_characters:
+        for char in chars:
             # Measure character
             height, width = Font._measure_a_text(text=char, fontname=fontname, fontsize=font_size)
 
             # Determine ratio
             measurements.append((char, text_height / width, height / width))
+            char_widths[char] = width
 
             # Get rid of figure
             plt.close("all")
+
+        # Approximate space between characters
+        _, width = Font._measure_a_text(text="".join(chars), fontname=fontname, fontsize=font_size)
+        est_width = sum([char_widths[char] for char in chars])
+        char_sep = (width - est_width) / (len(chars) - 1)
+
+        # Measure space
+        _, pre_width = Font._measure_a_text(text="".join(chars), fontname=fontname, fontsize=font_size)
+        _, post_width = Font._measure_a_text(text=" ".join(chars), fontname=fontname, fontsize=font_size)
+        width = (post_width - pre_width) / (len(chars) - 1)
+        measurements.append((" ", text_height / width, 0))
 
         # Store ratios of characters
         with Path(Font.font_directory, fontname + ".csv").open("w") as file:
@@ -101,7 +117,8 @@ class Font:
         config = ConfigParser()
         config["FONT"] = dict(
             name=fontname,
-            height_font_ratio=hf_ratio
+            height_font_ratio=hf_ratio,
+            char_sep=char_sep,
         )
         with Path(Font.font_directory, fontname + ".ini").open("w") as configfile:
             config.write(configfile)
@@ -112,3 +129,4 @@ class Font:
         for font in Font.font_families:
             print("\t{}".format(font))
             Font.measure_font(fontname=font)
+        plt.close("all")

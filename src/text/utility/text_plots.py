@@ -1,5 +1,6 @@
 import textwrap
 from copy import deepcopy
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt, transforms
@@ -271,21 +272,28 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
 
 
 if __name__ == "__main__":
-    text_lines = [
-        "",
-        "\nhey there",
-        "how are you?",
-        "why are you asking me?!?",
-        "dude I was just being polite, take a chill pill",
-    ]
+    manual_lines = False
+
+    with Path("src", "text", "font_info", "test_text.txt").open("r") as file:
+        text_lines = file.readlines()
+        text_lines = text_lines[:4]
+
+    if manual_lines:
+        text_lines = [
+            "",
+            "\nhey there",
+            "how are you?",
+            "why are you asking me?!?",
+            "dude I was just being polite, take a chill pill",
+        ]
 
     the_text = "\n".join(text_lines)
 
     letter_modifiers = dict(
         e="blue",
-        a="red",
-        t="orange",
-        s="green",
+        # a="red",
+        # t="orange",
+        # s="green",
     )
 
     the_modifiers = []

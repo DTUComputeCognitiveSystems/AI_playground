@@ -3,6 +3,8 @@ import numpy as np
 from afinn import Afinn
 from matplotlib.figure import Figure
 
+from threading import Timer
+
 from src.real_time.base_backend import BackendInterface
 from src.real_time.text_input_backend import TextInputLoop
 from src.text.utility.text_modifiers import TextModifier
@@ -46,6 +48,13 @@ class SentimentHighlighter(BackendInterface):
         self.n_lines = lines_in_view
         self.backend = backend  # type: TextInputLoop
         self.afinn = Afinn()
+        self.resized_timer = None
+
+    def _note_resize(self, _=None):
+        if self.resized_timer is not None:
+            self.resized_timer.cancel()
+        self.resized_timer = Timer(1.0, self._loop_step)
+        self.resized_timer.start()
 
     def _loop_initialization(self):
         self.fig = plt.figure()  # type: Figure
@@ -61,7 +70,11 @@ class SentimentHighlighter(BackendInterface):
         self.canvas.draw()
         plt.pause(0.05)
 
-    def _loop_step(self):
+        # If canvas is resised - then redraw
+        self.canvas.mpl_connect("resize_event", self._note_resize)
+
+    def _loop_step(self, _=None):
+        self.resized_timer = None
 
         # Clear axes
         self.ax.clear()

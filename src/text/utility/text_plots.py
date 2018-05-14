@@ -244,7 +244,7 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
 
         # Find relevant modifiers
         relevant_modifiers = [modifier.offset(-line_start + skips) for modifier in modifiers
-                              if line_start <= modifier.end and modifier.start <= line_end]
+                              if line_start - skips <= modifier.end and modifier.start <= line_end - skips]
 
         # Compute y-location
         c_y = y - line_nr * height * line_spacing

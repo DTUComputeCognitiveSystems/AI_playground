@@ -1,13 +1,16 @@
 import gym
 import numpy as np
+from time import sleep
 
 
-def run_episode(env: gym.Env, agent, learn=False, render=False, max_length=1000) -> float:
+def run_episode(env: gym.Env, agent, learn=False, render=False, render_delay=None, max_length=1000) -> float:
     s = np.array(env.reset())
     n = 0
     sum_r = 0
     while n < max_length:
         if render:
+            if render_delay:
+                sleep(render_delay)
             env.render()
         a = agent.act(env, s)    #: Take the current state as input and compute an action.
         ns, r, t, _ = env.step(a)   #: Take the action and compute the changed state.

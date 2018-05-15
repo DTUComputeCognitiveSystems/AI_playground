@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from matplotlib import pyplot as plt, ticker as plticker
 
 from src.text.utility.font_axes import font_size2height, text2cumul_width
@@ -92,16 +94,10 @@ if __name__ == "__main__":
     ###
     # Mark all e's in a text
 
-    # Here's some text from online
-    long_text = """
-    A flight linking Singapore and the Malaysian capital Kuala Lumpur has become the busiest international route in the world, research shows.
-    abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz e e e
-    Planes made 30,537 trips between the two airports in the year to February 2018, OAG Aviation said.
-    The route overtook Hong Kong-Taipei in a list dominated by Asian destinations.
-    Flying between Singapore and Kuala Lumpur takes about an hour, and there are plans to build a high-speed rail link between the two.
-    The figures mean an average of 84 flights per day plied the route.
-    The route is operated by a host of budget carriers such as Scoot, Jetstar, Air Asia and Malindo Air as well as the two country's flagship carriers Singapore Airlines and Malaysia Airlines.
-    """
+    with Path("src", "text", "font_info", "test_text.txt").open("r") as file:
+        text_lines = file.readlines()
+        text_lines = text_lines[:3]
+    long_text = "\n".join(text_lines)
 
     # Optionally remove some lines for testing
     long_text = "\n".join(long_text.split("\n")[:])

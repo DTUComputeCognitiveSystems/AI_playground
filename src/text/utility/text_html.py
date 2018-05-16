@@ -69,7 +69,7 @@ def modified_text2html(text: str, modifiers: dict):
     return text
 
 
-def modified_text_to_html(text, modifiers, fontsize=None):
+def modified_text_to_html(text, modifiers, fontsize=None, string=True):
     # Determine all splits for modifiers
     splits = list(sorted(set([
         max(val, 0)
@@ -101,7 +101,11 @@ def modified_text_to_html(text, modifiers, fontsize=None):
 
         html_parts.append(modified_text2html(section, section_mod))
 
-    return _Doc(html_parts)
+    doc = _Doc(html_parts)
+
+    if string:
+        return str(doc)
+    return doc
 
 
 if __name__ == "__main__":
@@ -146,4 +150,4 @@ if __name__ == "__main__":
     )
 
     with Path("src", "text", "font_info", "test_html.html").open("w") as file:
-        file.write(str(html))
+        file.write(html)

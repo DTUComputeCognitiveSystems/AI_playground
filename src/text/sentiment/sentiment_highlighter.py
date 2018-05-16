@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import matplotlib.pyplot as plt
 import numpy as np
 from afinn import Afinn
@@ -43,13 +45,17 @@ def _sentiment_format(sentiment):
 
 
 class SentimentHighlighter(BackendInterface):
-    def __init__(self, backend, lines_in_view=20, remove_axes=True):
+    def __init__(self, backend, lines_in_view=20, remove_axes=True, facecolor='white'):
         super().__init__()
+        self.facecolor = facecolor
         self.remove_axes = remove_axes
         self.n_lines = lines_in_view
         self.backend = backend  # type: TextInputLoop
         self.afinn = Afinn()
         self.resized_timer = None
+
+        self.c_text = None
+        self.c_modifiers = None
 
     def _note_resize(self, _=None):
         if self.resized_timer is not None:
@@ -58,7 +64,7 @@ class SentimentHighlighter(BackendInterface):
         self.resized_timer.start()
 
     def _loop_initialization(self):
-        self.fig = plt.figure()  # type: Figure
+        self.fig = plt.figure(facecolor=self.facecolor)  # type: Figure
         self.canvas = self.fig.canvas
         self.ax = plt.gca()
 
@@ -77,6 +83,37 @@ class SentimentHighlighter(BackendInterface):
         # If canvas is resised - then redraw
         self.canvas.mpl_connect("resize_event", self._note_resize)
 
+    def make_modifiers(self, text):
+        # Get sentiment-words and their sentiments
+        sentiment_words = self.afinn.find_all(text)
+        sentiments = [self.afinn.score(word) for word in sentiment_words]
+
+        # Make modifiers
+        modifiers = []
+        idx = 0
+        for word, sentiment in zip(sentiment_words, sentiments):
+
+            # Next index
+            idx = text[idx:].find(word) + idx
+
+            # End position of word
+            end = idx + len(word)
+
+            # Determine format
+            color, weight, style = _sentiment_format(sentiment=sentiment)
+
+            # Add modifier
+            modifiers.append(TextModifier(idx, end, "color", color))
+            if weight is not None:
+                modifiers.append(TextModifier(idx, end, "weight", weight))
+            if style is not None:
+                modifiers.append(TextModifier(idx, end, "style", style))
+
+            # Next
+            idx = end
+
+        return modifiers
+
     def _loop_step(self, _=None):
         self.resized_timer = None
 
@@ -91,45 +128,20 @@ class SentimentHighlighter(BackendInterface):
             self.ax.set_axis_off()
 
         # Get current text
-        text = self.backend.current_str
+        self.c_text = self.backend.current_str
 
         # Check if there is any text
-        if text:
-
-            # Get sentiment-words and their sentiments
-            sentiment_words = self.afinn.find_all(text)
-            sentiments = [self.afinn.score(word) for word in sentiment_words]
+        if self.c_text:
 
             # Make modifiers
-            modifiers = []
-            idx = 0
-            for word, sentiment in zip(sentiment_words, sentiments):
-
-                # Next index
-                idx = text[idx:].find(word) + idx
-
-                # End position of word
-                end = idx + len(word)
-
-                # Determine format
-                color, weight, style = _sentiment_format(sentiment=sentiment)
-
-                # Add modifier
-                modifiers.append(TextModifier(idx, end, "color", color))
-                if weight is not None:
-                    modifiers.append(TextModifier(idx, end, "weight", weight))
-                if style is not None:
-                    modifiers.append(TextModifier(idx, end, "style", style))
-
-                # Next
-                idx = end
+            self.c_modifiers = self.make_modifiers(text=self.c_text)
 
             # Plots text
             flow_text_into_axes(
                 fig=self.fig,
                 ax=self.ax,
-                text=text,
-                modifiers=modifiers
+                text=self.c_text,
+                modifiers=deepcopy(self.c_modifiers),
             )
 
         # Draw canvas
@@ -156,5 +168,6 @@ if __name__ == "__main__":
     the_backend = TextInputLoop()
     the_backend.add_interface(SentimentHighlighter(
         the_backend,
+        facecolor="blue",
     ))
     the_backend.start()

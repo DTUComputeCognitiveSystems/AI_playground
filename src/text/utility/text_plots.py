@@ -258,7 +258,7 @@ def wrap_single_line(line, x, fontname, fontsize, relative_right_margin=0.05, ax
     return result
 
 
-def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", line_spacing=1.1,
+def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", line_spacing=1.4,
                         right_relative_margin=0.1, ax=None, fig=None, modifiers=None, verbose=False):
     """
     Flows some text into a set of axes.
@@ -305,8 +305,6 @@ def flow_text_into_axes(text, x=None, y=None, fontsize=15, fontname="serif", lin
         right_relative_margin=right_relative_margin,
         ax=ax
     )
-    print(fontsize)
-    print(wrapped_text)
     skip_lines = list(reversed(sorted(set(additional_newlines))))
     if verbose:
         print(skip_lines)

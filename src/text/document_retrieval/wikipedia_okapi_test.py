@@ -10,39 +10,13 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
 ###########################
 # File processing
+from src.utility.files import raw_buffered_line_counter
 
 start_time = time()
 
 
 def time_print(*args, **kwargs):
     print("{:8.2f}s:".format(time() - start_time), *args, **kwargs)
-
-
-def raw_buffered_line_counter(path, encoding="utf-8", buffer_size=1024 * 1024):
-    """
-    Fast way to count the number of lines in a file.
-    :param Path path: Path to file.
-    :param str encoding: Encoding used in file.
-    :param int buffer_size: Size of buffer for loading.
-    :return: int
-    """
-    # Open file
-    f = codecs.open(str(path), encoding=encoding, mode="r")
-
-    # Reader generator
-    def _reader_generator(reader):
-        b = reader(buffer_size)
-        while b:
-            yield b
-            b = reader(buffer_size)
-
-    # Reader used
-    file_read = f.raw.read
-
-    # Count lines
-    line_count = sum(buf.count(b'\n') for buf in _reader_generator(file_read)) + 1
-
-    return line_count
 
 
 file_path = Path("~", "Downloads", "enwiki-latest-abstract.xml").expanduser()

@@ -98,7 +98,7 @@ class TextInputLoop(BackendLoop):
                 placeholder='',
                 description="",
                 disabled=False,
-                layout=dict(width="90%", height=text_height, margin="-6px 0px 0px 0px"),
+                layout=dict(width="90%", height=text_height, margin="-3px 0px 0px 0px"),
             )
             self._widget.observe(self._widget_update, )
 

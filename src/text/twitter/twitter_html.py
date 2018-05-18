@@ -1,3 +1,4 @@
+import re
 from urllib import request
 import json
 import bs4
@@ -25,6 +26,9 @@ _ROW_FORMATTER = "\t" + """
 """.strip()
 
 
+_empty_line_pattern = re.compile("<br>")
+
+
 def get_tweet_json(tweet_id):
     # Get response and read
     response = request.urlopen(_PUBLISH_JSON_URL.format(tweet_id))
@@ -38,7 +42,7 @@ def get_tweet_json(tweet_id):
 
 
 def get_tweet_text(tweet_data):
-    return bs4.BeautifulSoup(tweet_data["html"], "lxml").get_text()
+    return bs4.BeautifulSoup(tweet_data["html"], "lxml").get_text().strip()
 
 
 def matplotlib2html(fig, auto_close=True):
@@ -85,3 +89,10 @@ def html_tweets(tweets_data, tweets_analyses):
         rows.append(html_tweet(tweet_data=tweet_data, analysis=tweet_analysis, single_row=True))
 
     return _TABLE_FORMATTER.format("\n".join(rows))
+
+
+if __name__ == "__main__":
+
+    tweet_id = 996273545910145025
+
+    test = html_tweet(get_tweet_json(tweet_id))

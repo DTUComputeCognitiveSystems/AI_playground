@@ -39,6 +39,16 @@ class _Bold(HTMLTag):
         return "<b>{}</b>"
 
 
+class _FontSize(HTMLTag):
+    def __init__(self, contents, size):
+        super().__init__(contents=contents)
+        self.size = size
+
+    @property
+    def formatter(self):
+        return "<font size={}>{{}}</b>".format(self.size)
+
+
 class _Color(HTMLTag):
     def __init__(self, contents, color):
         super().__init__(contents=contents)
@@ -66,10 +76,12 @@ def modified_text2html(text: str, modifiers: dict):
         text = _Ital(text)
     if "color" in modifiers:
         text = _Color(text, modifiers["color"])
+    if "html_fontsize" in modifiers:
+        text = _FontSize(text, modifiers["html_fontsize"])
     return text
 
 
-def modified_text_to_html(text, modifiers, fontsize=None, string=True):
+def modified_text_to_html(text, modifiers, html_fontsize=None, string=True):
     # Determine all splits for modifiers
     splits = list(sorted(set([
         max(val, 0)
@@ -96,8 +108,8 @@ def modified_text_to_html(text, modifiers, fontsize=None, string=True):
     # Go through sections
     html_parts = []
     for section, section_mod in zip(sections, section_mods):
-        if fontsize is not None:
-            section_mod["fontsize"] = fontsize
+        if html_fontsize is not None:
+            section_mod["html_fontsize"] = html_fontsize
 
         html_parts.append(modified_text2html(section, section_mod))
 

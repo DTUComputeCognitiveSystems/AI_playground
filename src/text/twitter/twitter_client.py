@@ -222,7 +222,6 @@ class Tweet:
             self.retweet_timestamp = None
 
     def process(self, some_raw_data):
-        print(some_raw_data)
         self.id = self.raw_data["id"]
         self.text = parseTweetText(
             some_raw_data["full_text"],

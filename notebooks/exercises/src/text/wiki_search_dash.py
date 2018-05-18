@@ -104,7 +104,10 @@ class WikipediaSearchDashboard:
         documents = [self.searcher.documents[val] for val in self._search_indices[:n_results]]
 
         # Output table
-        table = [[doc.title for doc in documents]]
+        titles = [doc.title for doc in documents]
+        if all(["Wikipedia: " in val for val in titles]):
+            titles = [val[len("Wikipedia: "):] for val in titles]
+        table = [titles]
         header = ["title"]
 
         # Add content
@@ -119,12 +122,12 @@ class WikipediaSearchDashboard:
         table = list(zip(*table))
 
         # Make dataframe
-        self.table = pd.DataFrame(table, columns=header)
+        self.table = pd.DataFrame(table, columns=header, index=list(range(1, len(table) + 1)))
 
         def make_hyperlink(val):
             return '<a href="{}" rel="noopener noreferrer" target="_blank">{}</a>'.format(val, val)
 
-        # Set table style
+        # Set table style and use 1-indexing
         styles = [
             dict(selector="th", props=[("text-align", "left"), ("font-size", "120%")]),
             dict(selector="td", props=[("text-align", "left")]),

@@ -28,12 +28,17 @@ __positive_test_words = "yes sweet great fantastic superb"
 __negative_test_words = "no damn bad fraud prick"
 
 
-def _sentiment_format(sentiment):
+def _sentiment_format(sentiment, full_contrast):
     # Get sign
     sign = np.sign(sentiment)
 
     # Determine formatting
-    weight, style, color_val = _sentiment_styles[int(abs(sentiment))]
+    if full_contrast:
+        weight = "bold"
+        style = None
+        color_val = 1.0
+    else:
+        weight, style, color_val = _sentiment_styles[int(abs(sentiment))]
     color_val = sign * color_val
 
     # Compute color
@@ -53,6 +58,10 @@ class SentimentHighlighter(BackendInterface):
         self.backend = backend  # type: TextInputLoop
         self.afinn = Afinn()
         self.resized_timer = None
+
+        # For options in widgets
+        self.full_contrast = False
+        self.do_highlighting = True
 
         self.c_text = None
         self.c_modifiers = None
@@ -100,7 +109,7 @@ class SentimentHighlighter(BackendInterface):
             end = idx + len(word)
 
             # Determine format
-            color, weight, style = _sentiment_format(sentiment=sentiment)
+            color, weight, style = _sentiment_format(sentiment=sentiment, full_contrast=self.full_contrast)
 
             # Add modifier
             modifiers.append(TextModifier(idx, end, "color", color))
@@ -134,7 +143,10 @@ class SentimentHighlighter(BackendInterface):
         if self.c_text:
 
             # Make modifiers
-            self.c_modifiers = self.make_modifiers(text=self.c_text)
+            if self.do_highlighting:
+                self.c_modifiers = self.make_modifiers(text=self.c_text)
+            else:
+                self.c_modifiers = []
 
             # Plots text
             flow_text_into_axes(
@@ -147,6 +159,9 @@ class SentimentHighlighter(BackendInterface):
         # Draw canvas
         self.canvas.draw()
         plt.pause(0.05)
+
+    def refresh(self):
+        self._loop_step()
 
     def _loop_stop_check(self):
         pass

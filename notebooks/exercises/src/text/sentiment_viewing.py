@@ -5,7 +5,7 @@ from IPython.display import display
 from threading import Timer
 from src.real_time import TextInputLoop
 from src.text.sentiment import SentimentHighlighter
-from ipywidgets.widgets import Label, Text, Button, Layout, HBox, VBox
+from ipywidgets.widgets import Label, Text, Button, Layout, HBox, VBox, Checkbox
 
 from src.text.utility.text_html import modified_text_to_html
 
@@ -42,19 +42,43 @@ class ViewSentiment:
             layout=dict(margin="2px 0px 0px 20px"),
         )
 
+        self.full_contrast = Checkbox(
+            value=False,
+            description='Full Contrast',
+            disabled=False
+        )
+        self.do_highlighting = Checkbox(
+            value=True,
+            description='Do Highlighting',
+            disabled=False
+        )
+
         box1 = HBox(
+            (self.do_highlighting, self.full_contrast),
+            layout=Layout(align_content="flex-start"),
+        )
+
+        box2 = HBox(
             (self.save_path, self.save_button),
             layout=Layout(align_content="flex-start"),
         )
+
         self.storage_dashboard = VBox(
-            (self.cwd_label, box1, self.progress_label)
+            (box1, self.cwd_label, box2, self.progress_label)
         )
 
         # Set observers
         self.save_button.on_click(self._save)
+        self.full_contrast.observe(self._special_options)
+        self.do_highlighting.observe(self._special_options)
 
         # noinspection PyTypeChecker
         display(self.storage_dashboard)
+
+    def _special_options(self, _=None):
+        self.highlighter.full_contrast = self.full_contrast.value
+        self.highlighter.do_highlighting = self.do_highlighting.value
+        self.highlighter.refresh()
 
     def _reset_progress(self):
         self.progress_label.value = ""

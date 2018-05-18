@@ -46,9 +46,9 @@ class TwitterClient:
 
         self.caching = caching
 
-        self.session = self.openSession()
+        self.session = self.open_session()
 
-    def openSession(self, access_token=None):
+    def open_session(self, access_token=None):
 
         client = BackendApplicationClient(client_id=self.consumer_key)
 
@@ -61,12 +61,12 @@ class TwitterClient:
 
         else:
             session = OAuth2Session(client=client)
-            access_token = self.reqeustAccessToken(session)
-            session = self.openSession(access_token)
+            access_token = self.request_access_token(session)
+            session = self.open_session(access_token)
 
         return session
 
-    def reqeustAccessToken(self, session):
+    def request_access_token(self, session):
 
         request_token_url = buildURL(TWITTER_BASE_API_URL, "oauth2/token")
         request_body = {"grant_type": "client_credentials"}
@@ -222,6 +222,7 @@ class Tweet:
             self.retweet_timestamp = None
 
     def process(self, some_raw_data):
+        print(some_raw_data)
         self.id = self.raw_data["id"]
         self.text = parseTweetText(
             some_raw_data["full_text"],

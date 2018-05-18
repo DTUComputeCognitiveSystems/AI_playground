@@ -3,12 +3,15 @@ import os.path
 import re
 from calendar import month_name
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from urllib.parse import urlencode
 
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
 from requests.auth import HTTPBasicAuth
 from requests_oauthlib import OAuth2Session
+
+from src.utility.files import ensure_directory
 
 TWITTER_API_VERSION = "1.1"
 TWITTER_BASE_API_URL = "https://api.twitter.com"
@@ -29,6 +32,10 @@ TWITTER_API_CALLS = {
 TWITTER_RATE_LIMIT_WINDOW = timedelta(minutes=15)
 
 
+_default_authentication_path = Path("data", "twitter", "authentication.json")
+ensure_directory(_default_authentication_path)
+
+
 class TwitterClientError(Exception):
     pass
 
@@ -47,6 +54,30 @@ class TwitterClient:
         self.caching = caching
 
         self.session = self.open_session()
+
+    @staticmethod
+    def authenticate_from_path(path=None, caching=False):
+        if path is None:
+            path = _default_authentication_path
+        authentication_path = Path(path)
+
+        try:
+            with open(authentication_path, "r") as authentication_file:
+                authentication = json.loads(authentication_file.read())
+            consumer_key = authentication["consumer_key"]
+            consumer_secret = authentication["consumer_secret"]
+        except:
+            raise ValueError("No authentication found at: {}".format(path))
+
+        return TwitterClient(consumer_key=consumer_key, consumer_secret=consumer_secret, caching=caching)
+
+    def save_authentication_to_path(self, path=None):
+        if path is None:
+            path = _default_authentication_path
+        authentication_path = Path(path)
+
+        with open(authentication_path, "w") as authentication_file:
+            json.dump(dict(consumer_key=self.consumer_key, consumer_secret=self.consumer_secret), authentication_file)
 
     def open_session(self, access_token=None):
 

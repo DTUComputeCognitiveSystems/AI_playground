@@ -58,7 +58,10 @@ def get_sentiment_words(text):
     return sentiments, sentiment_words
 
 
-def sentiment_text_modifiers(text, full_contrast=False):
+def sentiment_text_modifiers(text, full_contrast=False, lower=True):
+    if lower:
+        text = text.lower()
+
     # Get sentiments
     sentiments, sentiment_words = get_sentiment_words(text=text)
 
@@ -87,3 +90,10 @@ def sentiment_text_modifiers(text, full_contrast=False):
         idx = end
 
     return modifiers
+
+
+if __name__ == "__main__":
+    test_str = """Fake News Wrong forced big true.
+        Fake purposely wrong, as usual!- Donal J. Trump""".strip().replace("\t", "")
+
+    mods = sentiment_text_modifiers(text=test_str)

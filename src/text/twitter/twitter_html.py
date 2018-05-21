@@ -64,7 +64,9 @@ def matplotlib2html(fig, auto_close=True):
 
 
 def html_tweet(tweet_data, analysis="", single_row=False):
-    tweet_html = tweet_data["html"]
+    tweet_html = str(tweet_data["html"]) \
+        .replace("<html>", "").replace("</html>", "") \
+        .replace("<body>", "").replace("</body>", "")
 
     # For string-analyses
     if isinstance(analysis, str):

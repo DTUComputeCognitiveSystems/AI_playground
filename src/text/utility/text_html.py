@@ -46,7 +46,23 @@ class _FontSize(HTMLTag):
 
     @property
     def formatter(self):
-        return "<font size={}>{{}}</b>".format(self.size)
+        return "<font size={}>{{}}</font>".format(self.size)
+
+
+class CharSet(HTMLTag):
+    def __init__(self, contents, character_set="UTF-8"):
+        super().__init__(contents=contents)
+        self.character_set = character_set
+
+    @property
+    def formatter(self):
+        return "<form accept-charset=\"{}\">{{}}</form>".format(self.character_set)
+
+
+class Pre(HTMLTag):
+    @property
+    def formatter(self):
+        return "<pre>{}</pre>"
 
 
 class _Color(HTMLTag):

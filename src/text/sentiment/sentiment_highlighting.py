@@ -21,9 +21,9 @@ __positive_test_words = "yes sweet great fantastic superb"
 __negative_test_words = "no damn bad fraud prick"
 
 
-@lru_cache(maxsize=2)
-def _get_afinn():
-    return Afinn()
+@lru_cache(maxsize=5)
+def _get_afinn(language="en", emoticons=False, word_boundary=True):
+    return Afinn(language=language, emoticons=emoticons, word_boundary=word_boundary)
 
 
 def _sentiment_format(sentiment, full_contrast):
@@ -47,9 +47,9 @@ def _sentiment_format(sentiment, full_contrast):
     return color, weight, style
 
 
-def get_sentiment_words(text):
+def get_sentiment_words(text, language="en", emoticons=False, word_boundary=True):
     # Get AFinn
-    afinn = _get_afinn()
+    afinn = _get_afinn(language=language, emoticons=emoticons, word_boundary=word_boundary)
 
     # Get sentiment-words and their sentiments
     sentiment_words = afinn.find_all(text)
@@ -58,12 +58,14 @@ def get_sentiment_words(text):
     return sentiments, sentiment_words
 
 
-def sentiment_text_modifiers(text, full_contrast=False, lower=True):
+def sentiment_text_modifiers(text, full_contrast=False, lower=True,
+                             language="en", emoticons=False, word_boundary=True):
     if lower:
         text = text.lower()
 
     # Get sentiments
-    sentiments, sentiment_words = get_sentiment_words(text=text)
+    sentiments, sentiment_words = get_sentiment_words(text=text, language=language,
+                                                      emoticons=emoticons, word_boundary=word_boundary)
 
     # Make modifiers
     modifiers = []

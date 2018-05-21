@@ -4,10 +4,11 @@ from src.text.sentiment.sentiment_highlighting import sentiment_text_modifiers
 from src.text.twitter.twitter_client import TwitterClient
 from src.text.twitter.twitter_html import get_tweet_json, get_tweet_text, html_tweets
 from src.text.utility.text_html import modified_text_to_html
-from ipywidgets import Text, Button, Label, HBox, VBox, BoundedIntText
+from ipywidgets import Text, Button, Label, HBox, VBox, BoundedIntText, Dropdown, Checkbox
 
 
-def sentiment_analyse_tweets(tweets, full_contrast=False, html_fontsize=None):
+def sentiment_analyse_tweets(tweets, full_contrast=False, html_fontsize=None,
+                             language="en", emoticons=False, word_boundary=True):
     if isinstance(tweets, (int, str)):
         tweets = [tweets]
 
@@ -23,7 +24,8 @@ def sentiment_analyse_tweets(tweets, full_contrast=False, html_fontsize=None):
         tweet_text = get_tweet_text(tweet_data=tweet_data)
 
         # Analyse
-        modifiers = sentiment_text_modifiers(text=tweet_text, full_contrast=full_contrast)
+        modifiers = sentiment_text_modifiers(text=tweet_text, full_contrast=full_contrast,
+                                             language=language, emoticons=emoticons, word_boundary=word_boundary)
 
         # Make HTML
         html = modified_text_to_html(text=tweet_text, html_fontsize=html_fontsize, modifiers=modifiers)
@@ -32,7 +34,8 @@ def sentiment_analyse_tweets(tweets, full_contrast=False, html_fontsize=None):
     return analyses
 
 
-def html_sentiment_tweets(tweet_ids, full_contrast=False, html_fontsize=2):
+def html_sentiment_tweets(tweet_ids, full_contrast=False, html_fontsize=2,
+                          language="en", emoticons=False, word_boundary=True):
     if isinstance(tweet_ids, int):
         tweet_ids = [tweet_ids]
 
@@ -40,7 +43,8 @@ def html_sentiment_tweets(tweet_ids, full_contrast=False, html_fontsize=2):
     tweets = [get_tweet_json(tweet_id=tweet) for tweet in tweet_ids]
 
     # Sentiment analysis
-    analyses = sentiment_analyse_tweets(tweets=tweets, full_contrast=full_contrast, html_fontsize=html_fontsize)
+    analyses = sentiment_analyse_tweets(tweets=tweets, full_contrast=full_contrast, html_fontsize=html_fontsize,
+                                        language=language, emoticons=emoticons, word_boundary=word_boundary)
 
     # Make HTML table with all tweets
     html = html_tweets(tweets_data=tweets, tweets_analyses=analyses)
@@ -53,7 +57,7 @@ class TwitterSentimentViewer:
         self.full_contrast = full_contrast
         self.sentiment_font_size = sentiment_font_size
         self.twitter_client = twitter_client
-        self.state = None
+        self.last_search = self.tweet_ids = None
 
         self.search_text = Text(
             value='@CogSys',
@@ -70,9 +74,12 @@ class TwitterSentimentViewer:
             icon='',
             layout=dict(width="20%"),
         )
-        self.description = Label(
-            value="Type a search for Twitter. Use @ and # for searching for specific users or hashtags.",
-            layout=dict(width="80%"),
+        self.description = VBox(
+            (
+                Label(value="Type a search for Twitter."),
+                Label(value="Use @ and # for searching for specific users or hashtags."),
+            ),
+            layout=dict(width="70%")
         )
         self.n_results = BoundedIntText(
             value=5,
@@ -81,7 +88,19 @@ class TwitterSentimentViewer:
             step=1,
             description='Tweets:',
             disabled=False,
-            layout=dict(width="18%"),
+            layout=dict(width="23%"),
+        )
+
+        self.language = Dropdown(
+            options=['en', 'da', 'sv', "fr"],
+            value='en',
+            description='Language:',
+            disabled=False,
+        )
+        self.emoticons = Checkbox(
+            value=False,
+            description='Emoticons',
+            disabled=False
         )
 
         box1 = HBox(
@@ -90,8 +109,11 @@ class TwitterSentimentViewer:
         box2 = HBox(
             (self.search_text, self.search_button)
         )
+        box3 = HBox(
+            (self.language, self.emoticons)
+        )
         self.dashboard = VBox(
-            (box1, box2)
+            (box1, box2, box3)
         )
         # noinspection PyTypeChecker
         display(self.dashboard)
@@ -113,19 +135,28 @@ class TwitterSentimentViewer:
         self._hold_button()
         search_text = self.search_text.value.strip()
         n_results = self.n_results.value
+        emoticons = self.emoticons.value
+        language = self.language.value
 
-        # Get tweets
-        if search_text[0] == "@":
-            tweets = self.twitter_client.user_timeline(username=search_text[1:], count=n_results)
-        else:
-            tweets = self.twitter_client.search(query=search_text, count=n_results)
+        # Check if this is a new search
+        if search_text != self.last_search:
+            self.search_button.description = "Getting Tweets"
+            self.last_search = search_text
 
-        # Get twitter IDs
-        tweet_ids = [tweet.id for tweet in tweets]
+            # Get tweets
+            if search_text[0] == "@":
+                tweets = self.twitter_client.user_timeline(username=search_text[1:], count=n_results)
+            else:
+                tweets = self.twitter_client.search(query=search_text, count=n_results)
+
+            # Get twitter IDs
+            self.tweet_ids = [tweet.id for tweet in tweets]
+        self.search_button.description = "Analysing"
 
         # Make HTML-sentiment versions
-        html = html_sentiment_tweets(tweet_ids=tweet_ids, html_fontsize=self.sentiment_font_size,
-                                     full_contrast=self.full_contrast)
+        html = html_sentiment_tweets(tweet_ids=self.tweet_ids, html_fontsize=self.sentiment_font_size,
+                                     full_contrast=self.full_contrast,
+                                     language=language, emoticons=emoticons)
 
         self._reset_button()
         clear_output()

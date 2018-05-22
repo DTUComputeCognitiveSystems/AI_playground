@@ -208,7 +208,7 @@ class TwitterSentimentViewer:
             self.tweet_ids = [x for x in self.tweet_ids if not (x in seen or seen_add(x))]
 
             # Get twitter data
-            self.tweets = [get_tweet_json(tweet_id=tweet) for tweet in self.tweet_ids]
+            self.tweets = [get_tweet_json(tweet_id=tweet) for tweet in self.tweet_ids][:n_results]
 
         self.search_button.description = "Analysing"
 

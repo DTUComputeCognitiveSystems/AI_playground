@@ -47,6 +47,20 @@ def _sentiment_format(sentiment, full_contrast):
     return color, weight, style
 
 
+def single_sentiment_modifier(idx, end, sentiment, full_contrast=False):
+    # Determine format
+    color, weight, style = _sentiment_format(sentiment=sentiment, full_contrast=full_contrast)
+
+    # Add modifier
+    modifiers = [TextModifier(idx, end, "color", color)]
+    if weight is not None:
+        modifiers.append(TextModifier(idx, end, "weight", weight))
+    if style is not None:
+        modifiers.append(TextModifier(idx, end, "style", style))
+
+    return modifiers
+
+
 def get_sentiment_words(text, language="en", emoticons=False, word_boundary=True):
     # Get AFinn
     afinn = _get_afinn(language=language, emoticons=emoticons, word_boundary=word_boundary)
@@ -59,7 +73,7 @@ def get_sentiment_words(text, language="en", emoticons=False, word_boundary=True
 
 
 def sentiment_text_modifiers(text, full_contrast=False, lower=True,
-                             language="en", emoticons=False, word_boundary=True):
+                             language="en", emoticons=False, word_boundary=True, return_sentiment=False):
     if lower:
         text = text.lower()
 
@@ -78,19 +92,19 @@ def sentiment_text_modifiers(text, full_contrast=False, lower=True,
         # End position of word
         end = idx + len(word)
 
-        # Determine format
-        color, weight, style = _sentiment_format(sentiment=sentiment, full_contrast=full_contrast)
-
         # Add modifier
-        modifiers.append(TextModifier(idx, end, "color", color))
-        if weight is not None:
-            modifiers.append(TextModifier(idx, end, "weight", weight))
-        if style is not None:
-            modifiers.append(TextModifier(idx, end, "style", style))
+        modifiers.extend(single_sentiment_modifier(
+            idx=idx,
+            end=end,
+            sentiment=sentiment,
+            full_contrast=full_contrast
+        ))
 
         # Next
         idx = end
 
+    if return_sentiment:
+        return modifiers, sentiments, sentiment_words
     return modifiers
 
 

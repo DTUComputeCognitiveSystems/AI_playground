@@ -9,6 +9,7 @@ _sentiment_max = 5
 
 
 _sentiment_styles = {
+    0: (None, None, 0.0),
     1: (None, None, 0.5),
     2: (None, None, 0.75),
     3: (None, None, 1.0),

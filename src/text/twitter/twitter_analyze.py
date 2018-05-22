@@ -1,3 +1,5 @@
+import re
+
 from IPython.core.display import display, HTML, clear_output
 import numpy as np
 
@@ -6,6 +8,9 @@ from src.text.twitter.twitter_client import TwitterClient
 from src.text.twitter.twitter_html import get_tweet_json, get_tweet_text, html_tweets
 from src.text.utility.text_html import modified_text_to_html
 from ipywidgets import Text, Button, Label, HBox, VBox, BoundedIntText, Dropdown, Checkbox
+
+
+_user_pattern = re.compile("@\w+")
 
 
 def sentiment_mean(text, sentiments):
@@ -181,13 +186,15 @@ class TwitterSentimentViewer:
         show_mean = self.show_mean.value
         language = self.language.value
 
+        search_state = (search_text, n_results)
+
         # Check if this is a new search
-        if search_text != self.last_search:
+        if search_state != self.last_search:
             self.search_button.description = "Getting Tweets"
-            self.last_search = search_text
+            self.last_search = search_state
 
             # Get tweets
-            if search_text[0] == "@":
+            if _user_pattern.fullmatch(search_text):
                 tweets = self.twitter_client.user_timeline(username=search_text[1:], count=n_results)
             else:
                 tweets = self.twitter_client.search(query=search_text, count=n_results)

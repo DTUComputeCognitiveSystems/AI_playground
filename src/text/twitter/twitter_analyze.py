@@ -197,10 +197,15 @@ class TwitterSentimentViewer:
             if _user_pattern.fullmatch(search_text):
                 tweets = self.twitter_client.user_timeline(username=search_text[1:], count=n_results)
             else:
-                tweets = self.twitter_client.search(query=search_text, count=n_results)
+                tweets = self.twitter_client.search(query=search_text, count=n_results * 5)
 
             # Get twitter IDs
             self.tweet_ids = [tweet.id for tweet in tweets]
+
+            # Ensure uniqueness
+            seen = set()
+            seen_add = seen.add
+            self.tweet_ids = [x for x in self.tweet_ids if not (x in seen or seen_add(x))]
 
             # Get twitter data
             self.tweets = [get_tweet_json(tweet_id=tweet) for tweet in self.tweet_ids]
@@ -208,10 +213,13 @@ class TwitterSentimentViewer:
         self.search_button.description = "Analysing"
 
         # Make HTML-sentiment versions
-        html = html_sentiment_tweets(tweets=self.tweets, html_fontsize=self.sentiment_font_size,
-                                     full_contrast=self.full_contrast,
-                                     language=language, emoticons=emoticons,
-                                     show_mean=show_mean)
+        if self.tweets:
+            html = html_sentiment_tweets(tweets=self.tweets, html_fontsize=self.sentiment_font_size,
+                                         full_contrast=self.full_contrast,
+                                         language=language, emoticons=emoticons,
+                                         show_mean=show_mean)
+        else:
+            html = "No Tweets found for search."
 
         self._reset_button()
         clear_output()

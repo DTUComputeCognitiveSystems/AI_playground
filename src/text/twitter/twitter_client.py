@@ -66,10 +66,14 @@ class TwitterClient:
                 authentication = json.loads(authentication_file.read())
             consumer_key = authentication["consumer_key"]
             consumer_secret = authentication["consumer_secret"]
-        except:
+        except FileNotFoundError:
             raise ValueError("No authentication found at: {}".format(path))
 
-        return TwitterClient(consumer_key=consumer_key, consumer_secret=consumer_secret, caching=caching)
+        return TwitterClient(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            caching=caching
+        )
 
     def save_authentication_to_path(self, path=None):
         if path is None:
@@ -77,7 +81,13 @@ class TwitterClient:
         authentication_path = Path(path)
 
         with open(authentication_path, "w") as authentication_file:
-            json.dump(dict(consumer_key=self.consumer_key, consumer_secret=self.consumer_secret), authentication_file)
+            json.dump(
+                dict(
+                    consumer_key=self.consumer_key,
+                    consumer_secret=self.consumer_secret
+                ),
+                authentication_file
+            )
 
     def open_session(self, access_token=None):
 
@@ -99,7 +109,7 @@ class TwitterClient:
 
     def request_access_token(self, session):
 
-        request_token_url = buildURL(TWITTER_BASE_API_URL, "oauth2/token")
+        request_token_url = build_url(TWITTER_BASE_API_URL, "oauth2/token")
         request_body = {"grant_type": "client_credentials"}
 
         try:
@@ -153,7 +163,8 @@ class TwitterClient:
 
         maximum_count = TWITTER_API_CALLS[resource]["maximum_count"]
         rate_limit = TWITTER_API_CALLS[resource]["rate_limit"]
-        maximum_duration_between_retrievals = TWITTER_RATE_LIMIT_WINDOW / rate_limit
+        maximum_duration_between_retrievals = \
+            TWITTER_RATE_LIMIT_WINDOW / rate_limit
 
         if count > maximum_count:
             print(
@@ -187,7 +198,7 @@ class TwitterClient:
                 or time_since_retrieval > maximum_duration_between_retrievals
                 or len(timeline) < count):
 
-            request_url = buildURL(
+            request_url = build_url(
                 TWITTER_BASE_API_URL, TWITTER_API_VERSION,
                 f"{resource}.json",
                 tweet_mode="extended",
@@ -254,7 +265,7 @@ class Tweet:
 
     def process(self, some_raw_data):
         self.id = self.raw_data["id"]
-        self.text = parseTweetText(
+        self.text = parse_tweet_text(
             some_raw_data["full_text"],
             some_raw_data["entities"]
         )
@@ -269,14 +280,14 @@ class Tweet:
         tweet_parts = [
             f"{self.user}",
             f"\"{self.text}\"",
-            formatTimestamp(self.timestamp)
+            format_timestamp(self.timestamp)
         ]
 
         if self.retweet:
             tweet_parts.append(
                 "Retweeted by {} on {}".format(
                     self.retweeter,
-                    formatTimestamp(self.retweet_timestamp)
+                    format_timestamp(self.retweet_timestamp)
                 )
             )
 
@@ -295,8 +306,8 @@ class User:
         return f"{self.full_name} (@{self.username})"
 
 
-def buildURL(base_URL, *components, **parameters):
-    url = base_URL
+def build_url(base_url, *components, **parameters):
+    url = base_url
 
     for component in components:
         component = str(component)
@@ -309,7 +320,7 @@ def buildURL(base_URL, *components, **parameters):
     return url
 
 
-def parseTweetText(text, entities=None):
+def parse_tweet_text(text, entities=None):
     urls = []
 
     if entities:
@@ -324,7 +335,7 @@ def parseTweetText(text, entities=None):
     return text
 
 
-def formatTimestamp(timestamp):
+def format_timestamp(timestamp):
     timestamp = timestamp.replace(tzinfo=timezone.utc).astimezone(tz=None)
     now = datetime.now()
 

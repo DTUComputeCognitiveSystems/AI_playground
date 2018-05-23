@@ -5,6 +5,7 @@ import urllib.parse
 from calendar import month_name
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from shutil import rmtree
 
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
@@ -252,6 +253,9 @@ class TwitterClient:
         timeline = [Tweet(tweet) for tweet in timeline[:count]]
 
         return timeline
+
+    def clear_cache(self):
+        rmtree(self.cache_directory)
 
 
 class Tweet:

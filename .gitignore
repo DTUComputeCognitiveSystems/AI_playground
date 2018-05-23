@@ -107,3 +107,7 @@ ENV/
 *.mp4
 
 *.jpg
+
+*.html
+
+data/

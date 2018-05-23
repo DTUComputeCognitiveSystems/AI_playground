@@ -4,6 +4,7 @@ from threading import Thread, Event, Timer
 from time import time
 
 from ipywidgets import widgets
+from IPython.display import display
 
 from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
 
@@ -48,7 +49,7 @@ class UpdateChecker(Thread):
 
 class TextInputLoop(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
-                 widget_name="Input:", check_delay=.15):
+                 widget_name="Input:", check_delay=.15, text_height="450px"):
         """
         :param BackendInterfaceObject backend_interface:
         """
@@ -88,12 +89,16 @@ class TextInputLoop(BackendLoop):
             self.timer = Timer(check_delay, self.check_output)
             self.timer.start()
 
+            self._widget_label = widgets.Label(
+                value=widget_name,
+                margin="0px 0px 0px 0px",
+            )
             self._widget = widgets.Textarea(
                 value='',
                 placeholder='',
-                description=widget_name,
+                description="",
                 disabled=False,
-                layout=dict(width="80%")
+                layout=dict(width="90%", height=text_height, margin="-3px 0px 0px 0px"),
             )
             self._widget.observe(self._widget_update, )
 
@@ -207,7 +212,12 @@ class TextInputLoop(BackendLoop):
 
     def start(self):
         super().start()
-        return self._widget
+        self.display()
+
+    # noinspection PyTypeChecker
+    def display(self):
+        display(self._widget_label)
+        display(self._widget)
 
     @property
     def widget(self):

@@ -454,7 +454,5 @@ class ArtFeaturesViewer:
         self.start_button.disabled = False
 
 
-
-
 if __name__ == "__main__":
     out = plot_color_scales()

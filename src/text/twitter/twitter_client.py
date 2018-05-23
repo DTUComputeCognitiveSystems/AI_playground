@@ -1,10 +1,10 @@
 import json
 import os.path
 import re
+import urllib.parse
 from calendar import month_name
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from urllib.parse import urlencode
 
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
@@ -26,7 +26,7 @@ TWITTER_API_CALLS = {
     },
     "statuses/user_timeline": {
         "maximum_count": 3200,
-        "rate_limit": 1
+        "rate_limit": 1500
     }
 }
 TWITTER_RATE_LIMIT_WINDOW = timedelta(minutes=15)
@@ -35,13 +35,16 @@ TWITTER_RATE_LIMIT_WINDOW = timedelta(minutes=15)
 _default_authentication_path = Path("data", "twitter", "authentication.json")
 ensure_directory(_default_authentication_path)
 
+_default_cache_directory = Path("data", "twitter", "cache")
+ensure_directory(_default_cache_directory)
+
 
 class TwitterClientError(Exception):
     pass
 
 
 class TwitterClient:
-    def __init__(self, consumer_key, consumer_secret, caching=False):
+    def __init__(self, consumer_key, consumer_secret, cache_directory=None):
 
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
@@ -51,12 +54,15 @@ class TwitterClient:
             self.consumer_secret
         )
 
-        self.caching = caching
+        if cache_directory is None:
+            self.cache_directory = _default_cache_directory
+        else:
+            self.cache_directory = cache_directory
 
         self.session = self.open_session()
 
     @staticmethod
-    def authenticate_from_path(path=None, caching=False):
+    def authenticate_from_path(path=None, cache_directory=None):
         if path is None:
             path = _default_authentication_path
         authentication_path = Path(path)
@@ -72,7 +78,7 @@ class TwitterClient:
         return TwitterClient(
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
-            caching=caching
+            cache_directory=cache_directory
         )
 
     def save_authentication_to_path(self, path=None):
@@ -173,17 +179,24 @@ class TwitterClient:
             )
             count = maximum_count
 
-        # TODO Make filename robust and platform independent
-        # Use convention from AI Playground
-        timeline_filename = "{}-{}.json".format(
-            resource.replace("/", "-"),
-            list(parameters.values())[0]
+        timeline_directory = Path(
+            self.cache_directory,
+            resource.replace("/", "-")
         )
+        ensure_directory(timeline_directory)
 
+        timeline_filename = format_filename(
+            base_name="-".join([f"{k}={v}" for k, v in parameters.items()]),
+            extension="json"
+        )
+        timeline_path = Path(timeline_directory, timeline_filename)
+
+        timeline = None
         time_since_retrieval = None
-        if os.path.exists(timeline_filename):
-            with open(timeline_filename, "r") as timeline_file:
-                response_body = json.loads(timeline_file.read())
+
+        if os.path.exists(timeline_path):
+            with timeline_path.open("r") as timeline_file:
+                response_body = json.load(timeline_file)
             retrieved_timestamp = datetime.strptime(
                 response_body["retrieved_timestamp"],
                 INTERNAL_DATE_TIME_FORMAT
@@ -191,8 +204,6 @@ class TwitterClient:
             now = datetime.now(timezone.utc)
             time_since_retrieval = now - retrieved_timestamp
             timeline = response_body["statuses"]
-        else:
-            timeline = None
 
         if (not timeline
                 or time_since_retrieval > maximum_duration_between_retrievals
@@ -232,9 +243,9 @@ class TwitterClient:
                 INTERNAL_DATE_TIME_FORMAT
             )
 
-            if self.caching and response_body["statuses"]:
-                with open(timeline_filename, "w") as timeline_file:
-                    timeline_file.write(json.dumps(response_body))
+            if response_body["statuses"]:
+                with timeline_path.open("w") as timeline_file:
+                    json.dump(response_body, timeline_file)
 
             timeline = response_body["statuses"]
 
@@ -314,10 +325,30 @@ def build_url(base_url, *components, **parameters):
         url = f"{url}/{component}"
 
     if parameters:
-        encoded_parameters = urlencode(parameters)
+        encoded_parameters = urllib.parse.urlencode(parameters)
         url = f"{url}?{encoded_parameters}"
 
     return url
+
+
+def format_filename(base_name, extension, allow_spaces=False):
+
+    invalid_characters = ["/", "\\", "?", "%", "*", ":", "|", "\""]
+
+    if not allow_spaces:
+        invalid_characters.append(" ")
+
+    for character in invalid_characters:
+        base_name = base_name.replace(
+            character,
+            urllib.parse.quote(character)
+        )
+
+    extension = extension.lstrip(".")
+
+    filename = f"{base_name}.{extension}"
+
+    return filename
 
 
 def parse_tweet_text(text, entities=None):

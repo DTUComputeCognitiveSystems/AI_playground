@@ -68,7 +68,7 @@ class TwitterClient:
         authentication_path = Path(path)
 
         try:
-            with open(authentication_path, "r") as authentication_file:
+            with authentication_path.open("r") as authentication_file:
                 authentication = json.loads(authentication_file.read())
             consumer_key = authentication["consumer_key"]
             consumer_secret = authentication["consumer_secret"]
@@ -86,7 +86,7 @@ class TwitterClient:
             path = _default_authentication_path
         authentication_path = Path(path)
 
-        with open(authentication_path, "w") as authentication_file:
+        with authentication_path.open("w") as authentication_file:
             json.dump(
                 dict(
                     consumer_key=self.consumer_key,

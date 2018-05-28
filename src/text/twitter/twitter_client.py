@@ -262,10 +262,12 @@ class Tweet:
     def __init__(self, raw_data):
 
         self.raw_data = raw_data
-        self.id = self.text = self.user = self.timestamp = None
+        self.id = self.raw_data["id"]
+        self.text = self.user = self.timestamp = None
+        self.hashtags = self.mentions = self.urls = None
 
         if "retweeted_status" in self.raw_data:
-            self.process(self.raw_data["retweeted_status"])
+            self.__process(self.raw_data["retweeted_status"])
             self.retweet = True
             self.retweeter = User(self.raw_data["user"])
             self.retweet_timestamp = datetime.strptime(
@@ -273,22 +275,46 @@ class Tweet:
                 TWITTER_DATE_TIME_FORMAT
             )
         else:
-            self.process(self.raw_data)
+            self.__process(self.raw_data)
             self.retweet = False
             self.retweeter = None
             self.retweet_timestamp = None
 
-    def process(self, some_raw_data):
-        self.id = self.raw_data["id"]
-        self.text = parse_tweet_text(
-            some_raw_data["full_text"],
-            some_raw_data["entities"]
-        )
-        self.user = User(some_raw_data["user"])
+    def __process(self, raw_tweet):
+
+        self.text = raw_tweet["full_text"]
+        self.user = User(raw_tweet["user"])
         self.timestamp = datetime.strptime(
-            some_raw_data["created_at"],
+            raw_tweet["created_at"],
             TWITTER_DATE_TIME_FORMAT
         )
+
+        hashtags = mentions = urls = None
+
+        if "entities" in raw_tweet:
+            entities = raw_tweet["entities"]
+            if "hashtags" in entities and entities["hashtags"]:
+                hashtags = entities["hashtags"]
+            if "user_mentions" in entities and entities["user_mentions"]:
+                mentions = entities["user_mentions"]
+            if "urls" in entities and entities["urls"]:
+                urls = entities["urls"]
+            if "media" in entities and entities["media"]:
+                if not urls:
+                    urls = []
+                urls.extend(entities["media"])
+
+        if hashtags:
+            self.hashtags = [f"#{hashtag['text']}" for hashtag in hashtags]
+
+        if mentions:
+            self.mentions = [f"@{mention['screen_name']}"
+                             for mention in mentions]
+
+        if urls:
+            self.urls = [url["expanded_url"] for url in urls]
+            for url in urls:
+                self.text = self.text.replace(url["url"], url["expanded_url"])
 
     def __repr__(self):
 
@@ -353,21 +379,6 @@ def format_filename(base_name, extension, allow_spaces=False):
     filename = f"{base_name}.{extension}"
 
     return filename
-
-
-def parse_tweet_text(text, entities=None):
-    urls = []
-
-    if entities:
-        if "urls" in entities and entities["urls"]:
-            urls.extend(entities["urls"])
-        if "media" in entities and entities["media"]:
-            urls.extend(entities["media"])
-
-    for url in urls:
-        text = text.replace(url["url"], url["display_url"])
-
-    return text
 
 
 def format_timestamp(timestamp):

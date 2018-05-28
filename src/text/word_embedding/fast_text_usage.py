@@ -20,7 +20,7 @@ def get_fasttext_model(lang="en"):
     # Check for bin file
     if bin_path.exists():
         print("\tLoading model from binary file.")
-        model = fastText.load_model(bin_path)
+        model = fastText.load_model(str(bin_path))
 
     # Check for zip file
     elif zip_path.exists():

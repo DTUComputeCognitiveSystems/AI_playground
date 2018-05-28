@@ -1,0 +1,67 @@
+Gender -
+man woman
+king queen
+prince princess
+husband wife
+father mother
+boy girl
+son daughter
+uncle aunt
+he she
+
+Verbs -
+walk walking walked
+swim swimming swam
+run running ran
+jump jumping jumped
+give giving gave
+push pushing pushed
+write writing wrote
+
+Adjectives -
+long longer longest
+fast faster fastest
+slow slower slowest
+deep deeper deepest
+friendly friendlier friendliest
+good better best
+short shorter shortest
+loud louder loudest
+soft softer softest
+dark darker darkest
+
+Capitals -
+Denmark Copenhagen
+France Paris
+England London
+Italy Rome
+Germany Berlin
+Australia Canberra
+Netherlands Amsterdam
+Sweden Stockholm
+Norway Oslo
+China Beijing
+Russia Moscow
+Japan Tokyo
+Turkey Ankara
+Poland Warsaw
+Greece Rome
+Spain Madrid
+Portugal Lisbon
+
+Singular/plural -
+cat cats
+dog dogs
+cow cows
+mouse mice
+house houses
+car cars
+
+Categories
+music instrument saxophone piano guitar drums bass node chord chorus song vocals pitch keyboard
+computer windows mac apple linux monitor screen cpu gpu mouse keyboard code program programming
+animal mouse cow horse cat dog chicken fish bird snake wolf lion
+food chicken beef soup potato dish hungry meal tomato cucumber apple fish
+kitchen oven microwave refrigerator pan bowl pot
+house room kitchen bathroom loft basement
+nature tree bush plant flower grass hay leaf

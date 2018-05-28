@@ -124,9 +124,9 @@ class TwitterSentimentViewer:
             layout=dict(width="70%")
         )
         self.n_results = BoundedIntText(
-            value=5,
+            value=15,
             min=1,
-            max=20,
+            max=50,
             step=1,
             description='Tweets:',
             disabled=False,
@@ -134,7 +134,7 @@ class TwitterSentimentViewer:
         )
 
         self.language = Dropdown(
-            options=['en', 'da', 'sv', "fr"],
+            options=['en', 'da'],
             value='en',
             description='Language:',
             disabled=False,

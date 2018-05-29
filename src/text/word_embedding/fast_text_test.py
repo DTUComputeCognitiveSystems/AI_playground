@@ -69,7 +69,7 @@ def get_test_word_groups():
     return word_groups
 
 
-def visualize_word_embeddings(word_groups=None, lang="en", method="pca"):
+def visualize_word_all_embeddings(word_groups=None, lang="en", method="pca"):
     word_groups = get_test_word_groups() if word_groups is None else word_groups
 
     # Get fastText model
@@ -77,75 +77,82 @@ def visualize_word_embeddings(word_groups=None, lang="en", method="pca"):
 
     # Go through word groups
     for word_group in word_groups:
-        # Make figure
-        _ = plt.figure()
-        ax = plt.gca()
+        visualize_word_embeddings(word_group=word_group, fasttext_model=model, method=method)
 
-        # Make vectors
-        vectors = np.array([
-            [model.get_word_vector(word) for word in group]
-            for group in word_group
+
+def visualize_word_embeddings(word_group, fasttext_model, method="pca"):
+
+    # Make figure
+    fig = plt.figure()
+    ax = plt.gca()
+
+    # Make vectors
+    vectors = np.array([
+        [fasttext_model.get_word_vector(word) for word in group]
+        for group in word_group
+    ])
+
+    # SVD
+    if "svd" in method.lower():
+        # Compute differences between pairs of vectors
+        vector_differences = np.array([
+            group[idx + 1] - group[idx]
+            for group in vectors
+            for idx in range(len(group) - 1)
         ])
 
-        # SVD
-        if "svd" in method.lower():
-            # Compute differences between pairs of vectors
-            vector_differences = np.array([
-                group[idx + 1] - group[idx]
-                for group in vectors
-                for idx in range(len(group) - 1)
-            ])
+        # Comute mean and SVD
+        mean_vector = vector_differences.mean(0)
+        svd = np.linalg.svd(vector_differences - mean_vector)
 
-            # Comute mean and SVD
-            mean_vector = vector_differences.mean(0)
-            svd = np.linalg.svd(vector_differences - mean_vector)
+        # Get projection matrix and project vectors
+        projection_matrix = svd[2][-2:]
+        pro_vectors = [[projection_matrix.dot(vec) for vec in item]
+                       for item in vectors
+                       ]
 
-            # Get projection matrix and project vectors
-            projection_matrix = svd[2][-2:]
-            pro_vectors = [[projection_matrix.dot(vec) for vec in item]
-                           for item in vectors
-                           ]
+    # PCA
+    elif "pca" in method.lower():
+        # Flatten vector lists
+        vectors_np = np.array(
+            [v for item in vectors for v in item]
+        )
 
-        # PCA
-        elif "pca" in method.lower():
-            # Flatten vector lists
-            vectors_np = np.array(
-                [v for item in vectors for v in item]
+        # Fit PCA
+        pca = PCA(n_components=2)
+        _ = pca.fit(vectors_np)
+
+        pro_vectors = [[pca.transform(np.expand_dims(vec, 0))[0, :] for vec in item]
+                       for item in vectors
+                       ]
+
+    # Unknown method
+    else:
+        raise ValueError("Unknown methods for plotting embeddings.")
+
+    # Plot embeddings
+    for pair, words in zip(pro_vectors, word_group):
+        # Numpy format
+        pair = np.array(pair)
+
+        # Plot texts
+        for loc, word in zip(pair, words):
+            ax.text(
+                x=loc[0],
+                y=loc[1],
+                s=word,
+                ha="center",
+                va="center"
             )
 
-            # Fit PCA
-            pca = PCA(n_components=2)
-            _ = pca.fit(vectors_np)
-
-            pro_vectors = [[pca.transform(np.expand_dims(vec, 0))[0, :] for vec in item]
-                           for item in vectors
-                           ]
-
-        # Unknown method
+        # Plot lines or points
+        if "-" in word_group.attributes:
+            ax.plot(pair[:, 0], pair[:, 1])
         else:
-            raise ValueError("Unknown methods for plotting embeddings.")
+            ax.scatter(pair[:, 0], pair[:, 1])
 
-        # Plot embeddings
-        for pair, words in zip(pro_vectors, word_group):
-            # Numpy format
-            pair = np.array(pair)
-
-            # Plot texts
-            for loc, word in zip(pair, words):
-                ax.text(
-                    x=loc[0],
-                    y=loc[1],
-                    s=word,
-                    ha="center",
-                    va="center"
-                )
-
-            # Plot lines or points
-            if "-" in word_group.attributes:
-                ax.plot(pair[:, 0], pair[:, 1])
-            else:
-                ax.scatter(pair[:, 0], pair[:, 1])
+    return fig
 
 
 if __name__ == "__main__":
-    visualize_word_embeddings()
+    visualize_word_all_embeddings()

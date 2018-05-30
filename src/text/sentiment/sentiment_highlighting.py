@@ -27,6 +27,20 @@ def _get_afinn(language="en", emoticons=False, word_boundary=True):
     return Afinn(language=language, emoticons=emoticons, word_boundary=word_boundary)
 
 
+def get_vocabulary_sentiment(vocabulary, language="en", emoticons=False, word_boundary=True):
+    if isinstance(vocabulary, dict):
+        vocabulary = list(sorted((idx, key) for key, idx in vocabulary.items()))
+        vocabulary = [val[1] for val in vocabulary]
+
+    # Get model
+    afinn = _get_afinn(language=language, emoticons=emoticons, word_boundary=word_boundary)
+
+    # Get sentiments
+    sentiments = [afinn.score(word) for word in vocabulary]
+
+    return sentiments
+
+
 def _sentiment_format(sentiment, full_contrast):
     # Get sign
     sign = np.sign(sentiment)
@@ -107,10 +121,3 @@ def sentiment_text_modifiers(text, full_contrast=False, lower=True,
     if return_sentiment:
         return modifiers, sentiments, sentiment_words
     return modifiers
-
-
-if __name__ == "__main__":
-    test_str = """Fake News Wrong forced big true.
-        Fake purposely wrong, as usual!- Donal J. Trump""".strip().replace("\t", "")
-
-    mods = sentiment_text_modifiers(text=test_str)

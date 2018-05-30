@@ -58,7 +58,7 @@ def get_fasttext_model(lang="en"):
                    "\nDo you want to download this file now? - Note that this is a LARGE file."
                    "\n[y/N]",
             default_yes=False,
-            chunk_size= 4096 * 32
+            chunk_size=4096 * 32
         )
 
         # Check if downloaded

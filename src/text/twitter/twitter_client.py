@@ -280,6 +280,25 @@ class Tweet:
             self.retweeter = None
             self.retweet_timestamp = None
 
+    def text_excluding(self, hashtags=False, mentions=False, urls=False):
+
+        text = self.text
+        excluded_strings = []
+
+        if hashtags and self.hashtags:
+            excluded_strings.extend(self.hashtags)
+
+        if mentions and self.mentions:
+            excluded_strings.extend(self.mentions)
+
+        if urls and self.urls:
+            excluded_strings.extend(self.urls)
+
+        for excluded_string in excluded_strings:
+            text = text.replace(excluded_string, "")
+
+        return text
+
     def __process(self, raw_tweet):
 
         self.text = raw_tweet["full_text"]

@@ -245,6 +245,10 @@ class WikipediaSearcher:
         # Store
         self.documents = documents
 
+    @property
+    def vocabulary(self):
+        return self.term_vectorizer.vocabulary_
+
     def __str__(self):
         return "{}({} documents, {} words)".format(type(self).__name__, self.n_documents, self.n_words)
 

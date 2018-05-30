@@ -1,22 +1,22 @@
+import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import display, clear_output
 from ipywidgets import Button, HBox, VBox, Label, Dropdown
 from ipywidgets import HTML
 
-import matplotlib.pyplot as plt
 from src.text.word_embedding.fast_text_test import get_test_word_groups, WordGroup, visualize_word_embeddings
-from src.text.word_embedding.fast_text_usage import get_fasttext_model
 
 
 class WordEmbeddingVisualizer:
-    def __init__(self):
+    def __init__(self, fasttext_model, figsize=(8, 6)):
+        self.figsize = figsize
         self.dashboard = None
         self.df = self.row_button_list = self.row_on = self.column_button_list = self.col_on = None
         self.current_group_name = self.current_group = self.fig = None
         self.word_groups = get_test_word_groups()
 
         # Get fastText model
-        self.fasttext_model = get_fasttext_model(lang="en")
+        self.fasttext_model = fasttext_model
 
         self._row_height = 28
         self._column_width = 80
@@ -155,12 +155,13 @@ class WordEmbeddingVisualizer:
 
     def refresh(self):
         self._make_table()
-        clear_output()
+        clear_output(wait=True)
 
         # noinspection PyTypeChecker
-        display(self.dashboard)
         if self.fig is not None:
-            display(self.fig)
+            display(self.dashboard, self.fig)
+        else:
+            display(self.dashboard)
 
     def _row_button_clicked(self, nr):
         def set_bool(_=None):
@@ -205,7 +206,9 @@ class WordEmbeddingVisualizer:
                 self.fig = visualize_word_embeddings(
                     word_group=new_word_group,
                     fasttext_model=self.fasttext_model,
+                    word_group_for_plane=self.current_group,
                     method=method,
+                    figsize=self.figsize,
                 )
                 plt.close("all")
 

@@ -71,4 +71,6 @@ def get_fasttext_model(lang="en"):
                 _data_dir.resolve())
             )
 
+    print("festText model loaded.")
+
     return model

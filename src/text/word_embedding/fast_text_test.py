@@ -80,24 +80,32 @@ def visualize_word_all_embeddings(word_groups=None, lang="en", method="pca"):
         visualize_word_embeddings(word_group=word_group, fasttext_model=model, method=method)
 
 
-def visualize_word_embeddings(word_group, fasttext_model, method="pca"):
+def visualize_word_embeddings(word_group, fasttext_model, word_group_for_plane=None, method="pca", figsize=(8, 6)):
+    word_group_for_plane = word_group_for_plane if word_group_for_plane is not None else word_group
 
     # Make figure
-    fig = plt.figure()
+    fig = plt.figure(figsize=figsize)
     ax = plt.gca()
 
     # Make vectors
-    vectors = np.array([
+    plane_vectors = np.array([
         [fasttext_model.get_word_vector(word) for word in group]
-        for group in word_group
+        for group in word_group_for_plane
     ])
+    if word_group != word_group_for_plane:
+        vectors = np.array([
+            [fasttext_model.get_word_vector(word) for word in group]
+            for group in word_group
+        ])
+    else:
+        vectors = plane_vectors
 
     # SVD
     if "svd" in method.lower():
         # Compute differences between pairs of vectors
         vector_differences = np.array([
             group[idx + 1] - group[idx]
-            for group in vectors
+            for group in plane_vectors
             for idx in range(len(group) - 1)
         ])
 
@@ -115,7 +123,7 @@ def visualize_word_embeddings(word_group, fasttext_model, method="pca"):
     elif "pca" in method.lower():
         # Flatten vector lists
         vectors_np = np.array(
-            [v for item in vectors for v in item]
+            [v for item in plane_vectors for v in item]
         )
 
         # Fit PCA

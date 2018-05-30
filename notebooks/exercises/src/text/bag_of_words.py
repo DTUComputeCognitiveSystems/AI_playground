@@ -10,20 +10,42 @@ COLOUR_MAP = seaborn.cubehelix_palette(as_cmap=True)
 
 
 class BagOfWords:
-    def __init__(self, corpus):
+    def __init__(self, corpus, stop_words=[]):
 
         if not isinstance(corpus, list):
             corpus = [corpus]
 
+        if not isinstance(stop_words, list):
+            stop_words = [stop_words]
+
         self.__corpus = corpus
+        self.__stop_words = stop_words
         self.__count_matrix = self.__tfidf_matrix = self.__vocabulary = None
         self.__number_of_documents = self.__number_of_words = None
 
-        self.update(self.__corpus)
+        self.__update()
 
     @property
     def corpus(self):
         return self.__corpus
+
+    @corpus.setter
+    def corpus(self, value):
+        if not isinstance(value, list):
+            value = [value]
+        self.__corpus = value
+        self.__update()
+
+    @property
+    def stop_words(self):
+        return self.__stop_words
+
+    @stop_words.setter
+    def stop_words(self, value):
+        if not isinstance(value, list):
+            value = [value]
+        self.__stop_words = value
+        self.__update()
 
     @property
     def count_matrix(self):
@@ -70,18 +92,31 @@ class BagOfWords:
 
         return data_frame
 
-    def update(self, corpus):
+    def __update(self):
 
-        count_vectoriser = CountVectorizer()
+        count_vectoriser = CountVectorizer(stop_words=self.__stop_words)
         tfidf_transformer = TfidfTransformer()
 
-        self.__count_matrix = count_vectoriser.fit_transform(corpus)
+        self.__count_matrix = count_vectoriser.fit_transform(self.__corpus)
         self.__tfidf_matrix = tfidf_transformer.fit_transform(
             self.__count_matrix)
         self.__vocabulary = count_vectoriser.get_feature_names()
 
         self.__number_of_documents, self.__number_of_words = \
             self.__count_matrix.shape
+
+    def filter_vocabulary(self, filters=[]):
+
+        stop_words = []
+
+        for word in self.__vocabulary:
+            for filter_ in filters:
+                if filter_(word):
+                    stop_words.append(word)
+
+        self.__stop_words += stop_words
+
+        self.__update()
 
     def plot(self, tfidf=False):
 

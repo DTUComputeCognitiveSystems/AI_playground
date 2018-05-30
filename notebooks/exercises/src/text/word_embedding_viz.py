@@ -3,9 +3,9 @@ import pandas as pd
 from IPython.display import display, clear_output
 from ipywidgets import HBox, VBox, Dropdown
 
-from src.text.word_embedding.fast_text_test import get_test_word_groups, WordGroup, fasttext_projections, \
+from src.text.word_embedding.fast_text_visualisation import get_test_word_groups, WordGroup, fasttext_projections, \
     visualise_vector_pairs
-from src.text.word_embedding.jupyter_selection_table import SelectionTable
+from notebooks.exercises.src.text.jupyter_selection_table import SelectionTable
 
 
 class WordEmbeddingVisualizer:

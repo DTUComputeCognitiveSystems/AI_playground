@@ -141,7 +141,7 @@ class WikipediaPageRow(Document):
 
         self.remove_button = Button(
             description='Remove',
-            disabled=False,b
+            disabled=False,
             button_style='danger',  # 'success', 'info', 'warning', 'danger' or ''
             layout=_remove_layout,
         )

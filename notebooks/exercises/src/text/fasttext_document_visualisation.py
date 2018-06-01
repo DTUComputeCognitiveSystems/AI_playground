@@ -453,11 +453,6 @@ class DocumentEmbeddingVisualiser:
             ax.set_ylim(projections[:, 1].min(), projections[:, 1].max())
             ax.set_zlim(projections[:, 2].min(), projections[:, 2].max())
 
-            # Remove ticks
-            ax.set_xticks([])
-            ax.set_yticks([])
-            ax.set_zticks([])
-
             plt.close("all")
 
         # Re-enable button

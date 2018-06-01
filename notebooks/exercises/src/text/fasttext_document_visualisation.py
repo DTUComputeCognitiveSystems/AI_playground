@@ -1,15 +1,14 @@
-from functools import lru_cache
-import numpy as np
 from enum import Enum
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d, Axes3D
+from functools import lru_cache
 
+import matplotlib.pyplot as plt
+import numpy as np
+import wikipedia
 from IPython.display import display, clear_output
 from fastText import FastText
 from ipywidgets import Tab, Text, Checkbox, Label, HBox, VBox, Button, Dropdown, Textarea
-import wikipedia
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
-
 
 # TODO: Make system fir handling DisambiguationError when searching wikipedia
 
@@ -38,7 +37,7 @@ class DocumentVectorTypes(Enum):
 _checkbox_layout = dict(width="30pt")
 _label_layout = dict(width="180pt")
 _remove_layout = dict(width="60pt")
-_additional_info_layout = dict(width="180pt", padding="0pt 0pt 0pt 20pt")
+_additional_info_layout = dict(width="380pt", padding="0pt 0pt 0pt 20pt")
 _editable_text_layout = dict(width="350pt")
 _editable_label_layout = dict(width="50pt")
 
@@ -146,18 +145,48 @@ class WikipediaPageRow(Document):
             layout=_remove_layout,
         )
         self.additional_info = Label("", layout=_additional_info_layout)
+        self.ambiguity_dropdown = None
 
     def __iter__(self):
         yield self.checkbox
         yield self.text_field
         yield self.remove_button
-        yield self.additional_info
+
+        if self.ambiguity_dropdown is None:
+            yield self.additional_info
+        else:
+            yield self.ambiguity_dropdown
 
     def _search(self):
         if self.last_textfield != self.text_field_value:
-            self.last_textfield = self.text_field_value
-            self.true_name = _get_wikipedia_search(name=self.text_field_value)[0]
-            self.summary = _get_wikipedia_summary(self.true_name)
+            try:
+                self.last_textfield = self.text_field_value
+                self.true_name = _get_wikipedia_search(name=self.text_field_value)[0]
+                self.summary = _get_wikipedia_summary(self.true_name)
+                self.ambiguity_dropdown = None
+
+            except (wikipedia.DisambiguationError, IndexError) as e:
+                if isinstance(e, wikipedia.DisambiguationError):
+                    options = [val for val in e.options if not "All pages" in val]
+
+                    self.ambiguity_dropdown = Dropdown(
+                        options=options,
+                        value=options[0],
+                        description='-> Ambiguity:',
+                        disabled=False,
+                        layout=_additional_info_layout
+                    )
+                    self.ambiguity_dropdown.observe(self._true_name_from_dropdown)
+                    self._true_name_from_dropdown()
+                else:
+                    self.last_textfield = ""
+                    self.true_name = ""
+                    self.summary = None
+                    self.ambiguity_dropdown = None
+
+    def _true_name_from_dropdown(self, _=None):
+        self.true_name = self.ambiguity_dropdown.value
+        self.summary = _get_wikipedia_summary(self.true_name)
 
     @property
     def text_field_value(self):
@@ -350,15 +379,21 @@ class DocumentEmbeddingVisualiser:
             # Check if page is wanted and valid
             if page.on:
 
-                # Get name and text from wikipedia search
-                document_names.append(page.name)
-                document_texts.append(page.text)
-                document_colors.append("black")
+                # Check search
+                if page.name:
 
-                # Notify
-                self._do_embeddings_button.description = getting_page_formatter \
-                    .format(nr + 1, self.wikipedia_tab.n_rows)
-                page.additional_info.value = "-> " + page.name
+                    # Get name and text from wikipedia search
+                    document_names.append(page.name)
+                    document_texts.append(page.text)
+                    document_colors.append("black")
+
+                    # Notify
+                    self._do_embeddings_button.description = getting_page_formatter \
+                        .format(nr + 1, self.wikipedia_tab.n_rows)
+                    page.additional_info.value = "-> " + page.name
+
+                else:
+                    page.additional_info.value = "-> UNSUCCESSFUL SEARCH"
 
         # Go through free text
         for nr, page in enumerate(self.free_text_tab.rows):
@@ -422,6 +457,8 @@ class DocumentEmbeddingVisualiser:
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_zticks([])
+
+            plt.close("all")
 
         # Re-enable button
         self._do_embeddings_button.button_style = "success"

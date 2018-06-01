@@ -8,12 +8,12 @@ from random import random, sample
 
 
 class NeuralQAgent:
-    def __init__(self, state_dim: int, num_actions: int, alpha: float, epsilon: float, gamma: float):
+    def __init__(self, state_dim: int, num_actions: int, alpha: float, epsilon: float, gamma: float, decay: float):
         self.model = Sequential()
         self.model.add(Dense(6, input_dim=state_dim, activation='tanh'))
         #self.model.add(Dense(8, activation='relu'))
         self.model.add(Dense(num_actions, activation='linear'))
-        self.model.compile(loss='mse', optimizer=Adam(lr=alpha))
+        self.model.compile(loss='mse', optimizer=Adam(lr=alpha, decay=decay))
         self.state_dim = state_dim
         self.num_actions = num_actions
         self.epsilon = epsilon

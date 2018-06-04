@@ -7,6 +7,9 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 
 COLOUR_MAP = seaborn.cubehelix_palette(as_cmap=True)
 MAXIMUM_NUMBER_OF_WORDS_WHEN_INCLUDING_ABSENT_ONES = 25
+MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT = 10
+MAXIMUM_NUMBER_OF_WORDS_FOR_SIMPLE_PLOT = 25
+MAXIMUM_VALUE_RANGE_FOR_DISCRETE_COLOUR_BAR = 25
 
 
 class BagOfWords:
@@ -158,7 +161,10 @@ class BagOfWords:
             remove_absent_words=remove_absent_words
         ).to_dense()
 
-        if self.__number_of_documents <= 10 and self.__number_of_words <= 20:
+        if self.__number_of_documents \
+                <= MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT \
+                and self.__number_of_words \
+                <= MAXIMUM_NUMBER_OF_WORDS_FOR_SIMPLE_PLOT:
             annotate = True
             line_width = 1
             y_tick_labels = "auto"
@@ -173,6 +179,8 @@ class BagOfWords:
                 "orientation": "horizontal"
             }
 
+        colour_bar_tick_labels = None
+
         if tfidf:
             annotation_format = ".2g"
         else:
@@ -180,12 +188,20 @@ class BagOfWords:
 
             minimum_value = data_frame.values.min()
             maximum_value = data_frame.values.max()
+            value_range = maximum_value - minimum_value
 
-            colour_bar_ticks = numpy.linspace(
-                minimum_value, maximum_value, maximum_value + 2)
+            if value_range <= MAXIMUM_VALUE_RANGE_FOR_DISCRETE_COLOUR_BAR:
 
-            colour_bar_parameters["boundaries"] = colour_bar_ticks
-            colour_bar_parameters["ticks"] = colour_bar_ticks
+                colour_bar_boundaries = numpy.linspace(
+                    minimum_value, maximum_value, value_range + 2)
+                colour_bar_ticks = numpy.stack(
+                    (colour_bar_boundaries[:-1], colour_bar_boundaries[1:])
+                ).mean(axis=0)
+                colour_bar_tick_labels = numpy.arange(
+                    minimum_value, maximum_value + 1)
+
+                colour_bar_parameters["boundaries"] = colour_bar_boundaries
+                colour_bar_parameters["ticks"] = colour_bar_ticks
 
         figure = pyplot.figure(figsize=(10, 4), dpi=150)
 
@@ -230,6 +246,9 @@ class BagOfWords:
                 axis.get_yticklabels(),
                 rotation="horizontal"
             )
+
+        if colour_bar_axis and colour_bar_tick_labels is not None:
+            colour_bar_axis.set_xticklabels(colour_bar_tick_labels)
 
 
 def ensure_list_input(value):

@@ -149,6 +149,8 @@ class BagOfWords:
 
     def plot(self, tfidf=False, remove_absent_words=None):
 
+        # Data
+
         if remove_absent_words is None:
             if self.number_of_words \
                     > MAXIMUM_NUMBER_OF_WORDS_WHEN_INCLUDING_ABSENT_ONES:
@@ -159,7 +161,11 @@ class BagOfWords:
         data_frame = self.__as_data_frame(
             tfidf=tfidf,
             remove_absent_words=remove_absent_words
-        ).to_dense()
+        )
+        data_frame = data_frame.reindex(index=data_frame.index[::-1])
+        data_frame = data_frame.to_dense()
+
+        # Setup
 
         if self.__number_of_documents \
                 <= MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT \
@@ -182,8 +188,10 @@ class BagOfWords:
         colour_bar_tick_labels = None
 
         if tfidf:
+            value_kind = "tf-idf value"
             annotation_format = ".2g"
         else:
+            value_kind = "count"
             annotation_format = "d"
 
             minimum_value = data_frame.values.min()
@@ -203,7 +211,12 @@ class BagOfWords:
                 colour_bar_parameters["boundaries"] = colour_bar_boundaries
                 colour_bar_parameters["ticks"] = colour_bar_ticks
 
-        figure = pyplot.figure(figsize=(10, 4), dpi=150)
+        # Plot
+
+        figure = pyplot.figure(
+            figsize=(10, 5),
+            # dpi=150
+        )
 
         if colour_bar:
             grid_spec_parameters = {"height_ratios": (.9, .05), "hspace": .3}
@@ -216,7 +229,7 @@ class BagOfWords:
             colour_bar_axis = None
 
         seaborn.heatmap(
-            data_frame.reindex(index=data_frame.index[::-1]),
+            data_frame,
             yticklabels=y_tick_labels,
             cmap=COLOUR_MAP,
             annot=annotate,
@@ -249,6 +262,55 @@ class BagOfWords:
 
         if colour_bar_axis and colour_bar_tick_labels is not None:
             colour_bar_axis.set_xticklabels(colour_bar_tick_labels)
+
+        # Hover annotation
+
+        hover_annotation = axis.annotate(
+            s="",
+            xy=(0, 0),
+            xytext=(0, 0),
+            textcoords="data",
+            bbox={
+                "boxstyle": "square",
+                "facecolor": "white"
+            }
+        )
+        hover_annotation.set_visible(False)
+
+        def update_hover_annotation(x, y):
+
+            x, y = map(int, (x, y))
+
+            hover_annotation.xy = (x, y)
+            hover_annotation.set_x(x + 0.1)
+            hover_annotation.set_y(y + 1.2)
+
+            document_index = int(y)
+            word_index = int(x)
+            document = self.__corpus[
+                self.__number_of_documents - 1 - document_index]
+            word = self.__words[word_index]
+            value = data_frame.values[document_index, word_index]
+
+            text = "\n".join([
+                f"Document: \"{document}\".",
+                f"Word: \"{word}\".",
+                f"{value_kind.capitalize()}: {value:{annotation_format}}."
+            ])
+            hover_annotation.set_text(text)
+
+        def hover(event):
+            if event.inaxes == axis:
+                # x, y = event.xdata, event.ydata
+                update_hover_annotation(x=event.xdata, y=event.ydata)
+                hover_annotation.set_visible(True)
+                figure.canvas.draw_idle()
+                # x_old, y_old
+            else:
+                hover_annotation.set_visible(False)
+                figure.canvas.draw_idle()
+
+        figure.canvas.mpl_connect("motion_notify_event", hover)
 
 
 def ensure_list_input(value):

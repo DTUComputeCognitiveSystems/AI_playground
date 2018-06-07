@@ -5,11 +5,13 @@ from matplotlib import pyplot
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.decomposition import PCA
 
+
 COLOUR_MAP = seaborn.cubehelix_palette(as_cmap=True)
 MAXIMUM_NUMBER_OF_WORDS_WHEN_INCLUDING_ABSENT_ONES = 25
 MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT = 10
 MAXIMUM_NUMBER_OF_WORDS_FOR_SIMPLE_PLOT = 25
 MAXIMUM_VALUE_RANGE_FOR_DISCRETE_COLOUR_BAR = 25
+
 
 seaborn.set(
     context="notebook",
@@ -154,7 +156,7 @@ class BagOfWords:
 
         self.__update()
 
-    def plot(self, tfidf=False, remove_absent_words=None):
+    def plot_heat_map(self, tfidf=False, remove_absent_words=None):
 
         # Data
 
@@ -198,7 +200,7 @@ class BagOfWords:
             value_kind = "tf-idf value"
             annotation_format = ".2g"
         else:
-            value_kind = "count"
+            value_kind = "Count"
             annotation_format = "d"
 
             minimum_value = data_frame.values.min()
@@ -226,14 +228,18 @@ class BagOfWords:
         )
 
         if colour_bar:
-            grid_spec_parameters = {"height_ratios": (.9, .05), "hspace": .3}
             axis, colour_bar_axis = figure.subplots(
                 nrows=2,
-                gridspec_kw=grid_spec_parameters
+                gridspec_kw={
+                    "height_ratios": (.9, .05),
+                    "hspace": .3
+                }
             )
         else:
             axis = figure.add_subplot(1, 1, 1)
             colour_bar_axis = None
+
+        seaborn.despine()
 
         seaborn.heatmap(
             data_frame,
@@ -250,8 +256,8 @@ class BagOfWords:
         )
         axis.invert_yaxis()
 
+        axis.set_xlabel("Words")
         x_tick_labels = axis.get_xticklabels()
-        y_tick_labels = axis.get_yticklabels()
 
         if x_tick_labels[0].get_rotation() == 90.0:
             axis.set_xticklabels(
@@ -261,22 +267,27 @@ class BagOfWords:
                 rotation=45
             )
 
+        axis.set_ylabel("Document numbers")
+        y_tick_labels = axis.get_yticklabels()
+
         if y_tick_labels[0].get_rotation() == 90.0:
             axis.set_yticklabels(
                 axis.get_yticklabels(),
                 rotation="horizontal"
             )
 
-        if colour_bar_axis and colour_bar_tick_labels is not None:
-            colour_bar_axis.set_xticklabels(colour_bar_tick_labels)
+        if colour_bar_axis:
+            colour_bar_axis.set_xlabel(value_kind)
+            if colour_bar_tick_labels is not None:
+                colour_bar_axis.set_xticklabels(colour_bar_tick_labels)
 
         # Hover annotation
 
         hover_annotation = axis.annotate(
             s="",
             xy=(0, 0),
-            xytext=(0, 0),
-            textcoords="data",
+            xytext=(0, 20),
+            textcoords="offset points",
             bbox={
                 "boxstyle": "square",
                 "facecolor": "white"
@@ -289,30 +300,27 @@ class BagOfWords:
             x, y = map(int, (x, y))
 
             hover_annotation.xy = (x, y)
-            hover_annotation.set_x(x + 0.1)
-            hover_annotation.set_y(y + 1.2)
 
             document_index = int(y)
+            document_number = self.__number_of_documents - document_index
             word_index = int(x)
-            document = self.__corpus[
-                self.__number_of_documents - 1 - document_index]
+            document = self.__corpus[document_number - 1]
             word = self.__words[word_index]
             value = data_frame.values[document_index, word_index]
 
             text = "\n".join([
-                f"Document: \"{document}\".",
+                f"Document number: {document_number}.",
+                f"Document content: \"{document}\".",
                 f"Word: \"{word}\".",
-                f"{value_kind.capitalize()}: {value:{annotation_format}}."
+                f"{value_kind}: {value:{annotation_format}}."
             ])
             hover_annotation.set_text(text)
 
         def hover(event):
             if event.inaxes == axis:
-                # x, y = event.xdata, event.ydata
                 update_hover_annotation(x=event.xdata, y=event.ydata)
                 hover_annotation.set_visible(True)
                 figure.canvas.draw_idle()
-                # x_old, y_old
             else:
                 hover_annotation.set_visible(False)
                 figure.canvas.draw_idle()
@@ -399,9 +407,9 @@ class BagOfWords:
                 position = scatter_plot.get_offsets()[index]
                 positions[i] = position
 
-                document_number = index
-                document = self.__corpus[document_number]
-                value = document_word_sum[document_number]
+                document_number = index + 1
+                document = self.__corpus[document_number - 1]
+                value = document_word_sum[document_number - 1]
 
                 text = "\n".join([
                     f"Document number: {document_number}.",

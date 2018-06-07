@@ -320,7 +320,7 @@ class SoundClassifier:
         model.add(Activation('softmax'))
         
         # load the saved checkpoint weights
-        model.load_weights('/Users/nbip/proj/dtu/dtu-bach/dev/sound_classification_epoch_025_val_loss_0.7090.hdf5')
+        model.load_weights('/Users/nbip/proj/dtu/dtu-bach/dev/sound_classification_weights.hdf5')
         
         # pop the top layers?
         # Try to remove a different number of layers. Removing 2 seems to work okay

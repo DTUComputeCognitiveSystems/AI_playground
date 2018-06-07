@@ -3,13 +3,20 @@ import pandas
 import seaborn
 from matplotlib import pyplot
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-
+from sklearn.decomposition import PCA
 
 COLOUR_MAP = seaborn.cubehelix_palette(as_cmap=True)
 MAXIMUM_NUMBER_OF_WORDS_WHEN_INCLUDING_ABSENT_ONES = 25
 MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT = 10
 MAXIMUM_NUMBER_OF_WORDS_FOR_SIMPLE_PLOT = 25
 MAXIMUM_VALUE_RANGE_FOR_DISCRETE_COLOUR_BAR = 25
+
+seaborn.set(
+    context="notebook",
+    style="ticks",
+    palette="Set2",
+    rc={"lines.markersize": 5}
+)
 
 
 class BagOfWords:
@@ -309,6 +316,115 @@ class BagOfWords:
             else:
                 hover_annotation.set_visible(False)
                 figure.canvas.draw_idle()
+
+        figure.canvas.mpl_connect("motion_notify_event", hover)
+
+    def plot_pca(self, tfidf=False):
+
+        # Data
+
+        if tfidf:
+            matrix = self.__tfidf_matrix
+        else:
+            matrix = self.__count_matrix
+
+        pca = PCA(n_components=2)
+        decomposed_matrix = pca.fit_transform(matrix.A)
+
+        document_word_sum = matrix.sum(axis=1).A.flatten()
+
+        # Setup
+
+        if tfidf:
+            document_word_sum_kind = "Document tf-idf sum"
+            document_word_sum_format = ".2g"
+        else:
+            document_word_sum_kind = "Document word count"
+            document_word_sum_format = "d"
+
+        # Plotting
+
+        figure = pyplot.figure(
+            tight_layout=True,
+            figsize=(10, 5),
+            # dpi=150
+        )
+        axis = figure.add_subplot(1, 1, 1)
+        seaborn.despine()
+
+        scatter_plot = axis.scatter(
+            decomposed_matrix[:, 0], decomposed_matrix[:, 1],
+            c=document_word_sum, cmap=COLOUR_MAP,
+            zorder=-1
+        )
+
+        axis.set_xlabel(
+            "Principal component #1 ({:.3g} % of variance explained)"
+            .format(pca.explained_variance_ratio_[0] * 100)
+        )
+        axis.set_ylabel(
+            "Principal component #2 ({:.3g} % of variance explained)"
+            .format(pca.explained_variance_ratio_[1] * 100)
+        )
+
+        colour_bar = figure.colorbar(scatter_plot)
+        colour_bar.outline.set_linewidth(0)
+        colour_bar.set_label(document_word_sum_kind)
+        colour_bar.ax.zorder = -1
+
+        # Hover annotation
+
+        hover_annotation = axis.annotate(
+            s="",
+            xy=(0, 0),
+            xytext=(0, 20),
+            textcoords="offset points",
+            bbox={
+                "boxstyle": "square",
+                "facecolor": "white"
+            }
+        )
+        hover_annotation.set_visible(False)
+
+        def update_hover_annotation(points):
+
+            point_indices = points["ind"]
+            number_of_points = len(point_indices)
+
+            positions = numpy.empty((number_of_points, 2))
+            texts = []
+
+            for i, index in enumerate(point_indices):
+
+                position = scatter_plot.get_offsets()[index]
+                positions[i] = position
+
+                document_number = index
+                document = self.__corpus[document_number]
+                value = document_word_sum[document_number]
+
+                text = "\n".join([
+                    f"Document number: {document_number}.",
+                    f"Document content: \"{document}\".",
+                    f"{document_word_sum_kind}:"
+                    f" {value:{document_word_sum_format}}."
+                ])
+                texts.append(text)
+
+            hover_annotation.xy = positions.mean(axis=0)
+            hover_annotation.set_text("\n\n".join(texts))
+
+        def hover(event):
+            visible = hover_annotation.get_visible()
+            if event.inaxes == axis:
+                contained, points = scatter_plot.contains(event)
+                if contained:
+                    update_hover_annotation(points)
+                    hover_annotation.set_visible(True)
+                    figure.canvas.draw_idle()
+                elif visible:
+                    hover_annotation.set_visible(False)
+                    figure.canvas.draw_idle()
 
         figure.canvas.mpl_connect("motion_notify_event", hover)
 

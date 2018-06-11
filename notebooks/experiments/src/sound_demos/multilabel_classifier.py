@@ -1,3 +1,4 @@
+# TODO: Change path to pretrained weights
 import os
 import glob
 import time

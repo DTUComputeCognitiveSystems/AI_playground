@@ -29,7 +29,6 @@ class BagOfWords:
         self.__stop_words = ensure_list_input(stop_words)
 
         self.__count_matrix = self.__tfidf_matrix = self.__words = None
-        self.__number_of_documents = self.__number_of_words = None
 
         self.__update()
 
@@ -81,33 +80,39 @@ class BagOfWords:
         return self.__words
 
     @property
+    def document_numbers(self):
+        return [i + 1 for i in range(self.number_of_documents)]
+
+    @property
     def number_of_documents(self):
-        return self.__number_of_documents
+        return self.count_matrix.shape[0]
 
     @property
     def number_of_words(self):
-        return self.__number_of_words
+        return self.count_matrix.shape[1]
 
     def __as_data_frame(self, tfidf=False, remove_absent_words=False):
 
         if tfidf:
-            matrix = self.__tfidf_matrix
+            matrix = self.tfidf_matrix
         else:
-            matrix = self.__count_matrix
+            matrix = self.count_matrix
 
-        document_numbers = [i + 1 for i in range(self.__number_of_documents)]
+        words = numpy.array(self.words)
+
+        if remove_absent_words:
+            word_sums = matrix.sum(axis=0).A.flatten()
+            absent_word_indices = word_sums != 0
+            matrix = matrix[:, absent_word_indices]
+            words = words[absent_word_indices]
 
         data_frame = pandas.SparseDataFrame(
             matrix,
-            index=document_numbers,
-            columns=self.__words,
+            index=self.document_numbers,
+            columns=words.tolist(),
             default_fill_value=0
-        ).astype(matrix.dtype)
-
-        if remove_absent_words:
-            word_sums = data_frame.sum(axis="index")
-            absent_words = word_sums[word_sums == 0].index
-            data_frame = data_frame.drop(columns=absent_words)
+        )
+        data_frame = data_frame.astype(matrix.dtype)
 
         return data_frame
 
@@ -136,9 +141,6 @@ class BagOfWords:
             self.__count_matrix)
         self.__vocabulary = count_vectoriser.vocabulary_
         self.__words = count_vectoriser.get_feature_names()
-
-        self.__number_of_documents, self.__number_of_words = \
-            self.__count_matrix.shape
 
     def filter_vocabulary(self, filters=[]):
 
@@ -176,9 +178,9 @@ class BagOfWords:
 
         # Setup
 
-        if self.__number_of_documents \
+        if self.number_of_documents \
                 <= MAXIMUM_NUMBER_OF_DOCUMENTS_FOR_SIMPLE_PLOT \
-                and self.__number_of_words \
+                and self.number_of_words \
                 <= MAXIMUM_NUMBER_OF_WORDS_FOR_SIMPLE_PLOT:
             annotate = True
             line_width = 1
@@ -188,7 +190,7 @@ class BagOfWords:
         else:
             annotate = False
             line_width = 0
-            y_tick_labels = max(self.__number_of_documents // 4, 5)
+            y_tick_labels = max(self.number_of_documents // 4, 5)
             colour_bar = True
             colour_bar_parameters = {
                 "orientation": "horizontal"
@@ -302,10 +304,10 @@ class BagOfWords:
             hover_annotation.xy = (x, y)
 
             document_index = int(y)
-            document_number = self.__number_of_documents - document_index
+            document_number = self.number_of_documents - document_index
             word_index = int(x)
             document = self.__corpus[document_number - 1]
-            word = self.__words[word_index]
+            word = data_frame.columns[word_index]
             value = data_frame.values[document_index, word_index]
 
             text = "\n".join([

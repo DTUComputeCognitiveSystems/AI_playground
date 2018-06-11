@@ -1,9 +1,11 @@
 import sys
+import urllib
 from io import TextIOWrapper
 from pathlib import Path
 
 import requests
-from tqdm import tqdm
+from tqdm import tqdm  # , tqdm_notebook
+from tqdm._tqdm_notebook import tqdm_notebook
 
 from src.utility.files import ensure_directory
 
@@ -79,3 +81,38 @@ def download_file(url, destination, prompt=None, require_accept=True, default_ye
 
     print("File downloaded.")
     return True
+
+
+if not sys.stdout.isatty():
+    tqdm = tqdm_notebook
+
+
+class TqdmUpTo(tqdm):
+    """Provides `update_to(n)` which uses `tqdm.update(delta_n)`."""
+    def update_to(self, b=1, bsize=1, tsize=None):
+        """
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] remains unchanged.
+        """
+        if tsize is not None:
+            self.total = tsize
+        self.update(b * bsize - self.n)
+
+
+def retrieve_file(url, path, title=None):
+
+    path = Path(path)
+    ensure_directory(path.parent)
+
+    site = urllib.request.urlopen(url)
+    meta = site.info()
+    total_size = int(meta["Content-Length"])
+
+    with TqdmUpTo(unit='B', unit_scale=True, miniters=1,
+                  desc=title, total=total_size) as t:
+        urllib.request.urlretrieve(url, filename=path,
+                                   reporthook=t.update_to, data=None)

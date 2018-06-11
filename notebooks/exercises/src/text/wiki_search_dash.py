@@ -101,7 +101,7 @@ class WikipediaSearchDashboard:
             self._search_indices = [val[0] for val in search_results]
 
         # Get documents
-        documents = [self.searcher.documents[val] for val in self._search_indices[:n_results]]
+        documents = [self.searcher.wikipedia.documents[val] for val in self._search_indices[:n_results]]
 
         # Output table
         titles = [doc.title for doc in documents]

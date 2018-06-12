@@ -14,6 +14,10 @@ class WikipediaSearcher:
         return str(self)
 
     def search(self, search, k=1.5, b=0.75, search_min_threshold=0, max_results=None):
+
+        if isinstance(search, list):
+            search = "\n\n".join(search)
+
         # Vectorize search
         m_search_term = self.wikipedia.term_vectorizer.transform([search])
         m_search_bool = (m_search_term > 0).toarray()[0, :]
@@ -25,10 +29,17 @@ class WikipediaSearcher:
         idf_search = self.wikipedia.idf[m_search_bool]
 
         # Compute okapi bm25 score
-        numerator = doc_f * (k + 1)
-        denominator = doc_f + k * (1 - b + b * (self.wikipedia.document_lengths / self.wikipedia._avg_document_length))
-        fraction = numerator / denominator
-        scores = np.squeeze(np.array(fraction * np.expand_dims(idf_search, axis=1)), axis=1)
+        numerator_matrix = doc_f * (k + 1)
+        denominator_matrix = doc_f + k * (1 - b + b *
+            (self.wikipedia.document_lengths
+            / self.wikipedia._avg_document_length))
+        fraction_matrix = numerator_matrix / denominator_matrix
+        scores = np.squeeze(
+            np.array(
+                fraction_matrix @ np.expand_dims(idf_search, axis=1)
+            ),
+            axis=1
+        )
 
         # Sort search results
         sort_locs = np.argsort(a=-scores, kind="quicksort")

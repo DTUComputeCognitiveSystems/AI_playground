@@ -141,7 +141,7 @@ class TwitterClient:
 
         return access_token
 
-    def search(self, query, count=100):
+    def search(self, query, count=None):
 
         query = re.sub("\\s{2,}", " ", query.strip())
 
@@ -153,7 +153,7 @@ class TwitterClient:
 
         return tweets
 
-    def user_timeline(self, username, count=100):
+    def user_timeline(self, username, count=None):
 
         timeline = self.__timeline(
             resource="statuses/user_timeline",
@@ -163,7 +163,7 @@ class TwitterClient:
 
         return timeline
 
-    def __timeline(self, resource, parameters, count):
+    def __timeline(self, resource, parameters, count=None):
 
         if resource not in TWITTER_API_CALLS:
             raise TwitterClientError("Cannot request resource `{resource}.`")
@@ -172,6 +172,9 @@ class TwitterClient:
         rate_limit = TWITTER_API_CALLS[resource]["rate_limit"]
         maximum_duration_between_retrievals = \
             TWITTER_RATE_LIMIT_WINDOW / rate_limit
+
+        if count is None:
+            count = maximum_count
 
         if count > maximum_count:
             print(

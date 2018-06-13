@@ -4,15 +4,15 @@ from IPython.core.display import display, clear_output
 from ipywidgets import Textarea, Checkbox, IntSlider, HBox, VBox, Label
 import pandas as pd
 
-from src.text.document_retrieval.wikipedia_searcher import WikipediaSearcher
+from src.text.document_retrieval.wikipedia import Wikipedia
 
 
 class WikipediaSearchDashboard:
-    def __init__(self, searcher: WikipediaSearcher):
+    def __init__(self, wikipedia: Wikipedia):
         self._last_widget_state = None
         self._run_timer = None
         self._last_search = None
-        self.searcher = searcher
+        self.wikipedia = wikipedia
         self.text = Textarea(
             value='',
             placeholder='Type something',
@@ -60,6 +60,9 @@ class WikipediaSearchDashboard:
         for observer in [self.show_url, self.show_abstract, self.text, self.n_results]:
             observer.observe(self._widgets_updates)
 
+        # noinspection PyTypeChecker
+        display(self.dashboard)
+
     def _widgets_updates(self, _=None):
         self.progress_label.value = "Updating!"
 
@@ -92,7 +95,7 @@ class WikipediaSearchDashboard:
             self.progress_label.value = "Searching!"
 
             # Search through wikipedia
-            search_results = self.searcher.search(
+            search_results = self.wikipedia.search(
                 search=search_text,
             )
             self._last_search = search_text
@@ -101,7 +104,7 @@ class WikipediaSearchDashboard:
             self._search_indices = [val[0] for val in search_results]
 
         # Get documents
-        documents = [self.searcher.wikipedia.documents[val] for val in self._search_indices[:n_results]]
+        documents = [self.wikipedia.documents[val] for val in self._search_indices[:n_results]]
 
         # Output table
         titles = [doc.title for doc in documents]
@@ -145,7 +148,3 @@ class WikipediaSearchDashboard:
 
         # Update is done
         self.progress_label.value = ""
-
-    def display(self):
-        # noinspection PyTypeChecker
-        display(self.dashboard)

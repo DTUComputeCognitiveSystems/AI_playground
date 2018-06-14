@@ -1,5 +1,4 @@
 import gzip
-import pickle
 import sys
 from pathlib import Path
 from xml.etree.cElementTree import Element, fromstring
@@ -22,10 +21,12 @@ _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
 WIKIPEDIA_URL = "https://dumps.wikimedia.org/enwiki/latest/"\
-                          "enwiki-latest-abstract10.xml.gz"
+                "enwiki-latest-abstract.xml.gz"
 
 WIKIPEDIA_FILENAME = WIKIPEDIA_URL.split("/")[-1]
 WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]
+
+WIKIPEDIA_DOCUMENT_TITLE_PREFIX = "Wikipedia: "
 
 class WikipediaDocument:
     def __init__(self, title=None, url=None, abstract=None, text=None):
@@ -126,7 +127,8 @@ class Wikipedia:
 
     @_vectorised_storage.setter
     def _vectorised_storage(self, values):
-        (self.n_documents, self.n_words, self.matrix_doc_term, self.document_lengths, self._avg_document_length,
+        (self.n_documents, self.n_words, self.matrix_doc_term,
+         self.document_lengths, self._avg_document_length,
          self.idf, self.term_vectorizer) = values
 
     def _process_parsed_documents(self):
@@ -134,10 +136,34 @@ class Wikipedia:
         print("Preprocessing documents.")
 
         # Get titles and abstracts
-        abstracts = [val.abstract if val.abstract is not None else "" for val in self.documents]
+        documents = []
+        for document in self.documents:
+
+            if document.abstract:
+                abstract = document.abstract
+            else:
+                abstract = ""
+
+            if document.title:
+                title = document.title
+                if title.startswith(WIKIPEDIA_DOCUMENT_TITLE_PREFIX):
+                    title = title.replace(
+                        WIKIPEDIA_DOCUMENT_TITLE_PREFIX,
+                        "",
+                        1
+                    )
+            else:
+                title = ""
+
+            if title: # and title not in abstract:
+                title_and_abstract = "\n\n".join([title, abstract])
+            else:
+                title_and_abstract = abstract
+
+            documents.append(title_and_abstract)
 
         # Number of documents
-        self.n_documents = len(abstracts)
+        self.n_documents = len(documents)
 
         # Make vectorizer
         self.term_vectorizer = CountVectorizer(
@@ -150,7 +176,7 @@ class Wikipedia:
         )
 
         # Vectorize documents
-        self.matrix_doc_term = self.term_vectorizer.fit_transform(abstracts)
+        self.matrix_doc_term = self.term_vectorizer.fit_transform(documents)
 
         # Compute document lengths
         self.document_lengths = self.matrix_doc_term.sum(1)
@@ -305,7 +331,7 @@ class Wikipedia:
 
     def __repr__(self):
         return str(self)
-    
+
     def search(self, query, k=1.5, b=0.75, search_min_threshold=0, max_results=None):
 
         if isinstance(query, list):

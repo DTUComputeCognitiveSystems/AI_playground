@@ -1,9 +1,11 @@
 import numpy
 import pandas
+import scipy.sparse
 import seaborn
 from matplotlib import pyplot
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.decomposition import PCA
+from wordcloud import WordCloud
 
 
 COLOUR_MAP = seaborn.cubehelix_palette(as_cmap=True)
@@ -28,7 +30,8 @@ class BagOfWords:
         self.__vocabulary = ensure_vocabulary_input(vocabulary)
         self.__stop_words = ensure_list_input(stop_words)
 
-        self.__count_matrix = self.__tfidf_matrix = self.__words = None
+        self.__count_matrix = self.__tfidf_matrix = None
+        self.__words = self.__idf = None
 
         self.__update()
 
@@ -78,6 +81,10 @@ class BagOfWords:
     @property
     def words(self):
         return self.__words
+
+    @property
+    def idf(self):
+        return self.__idf
 
     @property
     def document_numbers(self):
@@ -141,22 +148,23 @@ class BagOfWords:
             self.__count_matrix)
         self.__vocabulary = count_vectoriser.vocabulary_
         self.__words = count_vectoriser.get_feature_names()
+        self.__idf = tfidf_transformer.idf_
 
-    def filter_vocabulary(self, filters=[]):
-
-        stop_words = []
-
-        for word in self.__vocabulary:
-            for filter_ in filters:
-                if filter_(word):
-                    stop_words.append(word)
-
-        if self.__stop_words:
-            self.__stop_words += stop_words
-        else:
-            self.__stop_words = stop_words
-
-        self.__update()
+    # def filter_vocabulary(self, filters=[]):
+    #
+    #     stop_words = []
+    #
+    #     for word in self.__vocabulary:
+    #         for filter_ in filters:
+    #             if filter_(word):
+    #                 stop_words.append(word)
+    #
+    #     if self.__stop_words:
+    #         self.__stop_words += stop_words
+    #     else:
+    #         self.__stop_words = stop_words
+    #
+    #     self.__update()
 
     def plot_heat_map(self, tfidf=False, remove_absent_words=None):
 
@@ -328,6 +336,65 @@ class BagOfWords:
                 figure.canvas.draw_idle()
 
         figure.canvas.mpl_connect("motion_notify_event", hover)
+
+    def plot_word_cloud(self, kind="count"):
+
+        if kind in ["count", "tfidf"]:
+            if kind == "count":
+                matrix = self.__count_matrix
+            elif kind == "tfidf":
+                matrix = self.__tfidf_matrix
+            sum_vector = scipy.sparse.coo_matrix(matrix.sum(axis=0))
+            frequency_vector = sum_vector / sum_vector.max()
+        elif kind == "idf":
+            nonzero_indices = self.__count_matrix.sum(axis=0).nonzero()
+            idf = self.__idf.copy()
+            idf_normalised = (idf - idf.min()) / (idf.max() - idf.min())
+            frequency_vector = scipy.sparse.coo_matrix((
+                idf_normalised[nonzero_indices[1]], nonzero_indices
+            ))
+        else:
+            raise ValueError("`kind` can only be 'count', 'tfidf', or 'idf'.")
+
+        word_frequencies = {}
+
+        for index, value in zip(frequency_vector.col,
+                                frequency_vector.data):
+            word = self.words[index]
+            frequency = value
+            word_frequencies[word] = frequency
+
+        word_cloud_generator = WordCloud(
+            width=400,
+            height=200,
+            prefer_horizontal=0.9,
+            mask=None,
+            scale=5,
+            min_font_size=4,
+            font_step=1,
+            max_words=None,
+            stopwords=None,
+            background_color="white",
+            mode="RGB",
+            relative_scaling=0.5,
+            regexp=None,
+            collocations=True,
+            colormap="rocket",
+            normalize_plurals=False
+        )
+        word_cloud = word_cloud_generator.generate_from_frequencies(
+            word_frequencies)
+
+        figure = pyplot.figure(
+            figsize=(10, 5),
+            # dpi=150
+            frameon=False
+        )
+        axis = pyplot.Axes(figure, [0., 0., 1., 1.])
+        axis.set_axis_off()
+        figure.add_axes(axis)
+
+        axis.imshow(word_cloud, interpolation="bilinear", aspect="equal")
 
     def plot_pca(self, tfidf=False):
 

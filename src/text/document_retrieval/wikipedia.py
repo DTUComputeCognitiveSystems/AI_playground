@@ -21,7 +21,8 @@ _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
 WIKIPEDIA_URL = "https://dumps.wikimedia.org/enwiki/latest/"\
-                "enwiki-latest-abstract.xml.gz"
+                "enwiki-latest-abstract10.xml.gz"
+                # "enwiki-latest-abstract.xml.gz"
 
 WIKIPEDIA_FILENAME = WIKIPEDIA_URL.split("/")[-1]
 WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]

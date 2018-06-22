@@ -3,7 +3,9 @@ import sys
 from pathlib import Path
 from xml.etree.cElementTree import Element, fromstring
 
-import numpy as np
+import numpy
+import pandas
+import scipy.sparse
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from tqdm import tqdm, tqdm_notebook
 
@@ -21,8 +23,7 @@ _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
 WIKIPEDIA_URL = "https://dumps.wikimedia.org/enwiki/latest/"\
-                "enwiki-latest-abstract10.xml.gz"
-                # "enwiki-latest-abstract.xml.gz"
+                "enwiki-latest-abstract.xml.gz"
 
 WIKIPEDIA_FILENAME = WIKIPEDIA_URL.split("/")[-1]
 WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]
@@ -333,50 +334,66 @@ class Wikipedia:
     def __repr__(self):
         return str(self)
 
-    def search(self, query, k=1.5, b=0.75, search_min_threshold=0, max_results=None):
+    def search(self, query, k_1=1.5, b=0.75):
 
-        if isinstance(query, list):
-            query = "\n\n".join(query)
+        # Vectorise query and get keyword indices
+        query_vectorised = self.term_vectorizer.transform([query])
+        _, keyword_indices = query_vectorised.nonzero()
 
-        # Vectorize search
-        m_search_term = self.term_vectorizer.transform([query])
-        m_search_bool = (m_search_term > 0).toarray()[0, :]
+        # Term frequencies of keywords for all documents
+        tf_matrix = self.matrix_doc_term[:, keyword_indices]
 
-        # Get term-frequencies of query for all documents
-        doc_f = self.matrix_doc_term[:, m_search_bool]
+        # IDF of keywords
+        idf_vector = numpy.expand_dims(self.idf[keyword_indices], axis=1)
 
-        # Get IDF of the search words
-        idf_search = self.idf[m_search_bool]
+        # Normalised document lengths
+        l = self.document_lengths / self._avg_document_length
 
-        # Compute okapi bm25 scores
-        numerator_matrix = doc_f * (k + 1)
-        denominator_matrix = doc_f + k * (1 - b + b
-            * (self.document_lengths / self._avg_document_length))
-        fraction_matrix = numerator_matrix / denominator_matrix
-        scores = np.squeeze(
-            np.array(
-                fraction_matrix @ np.expand_dims(idf_search, axis=1)
+        # Nonzero indices for term-frequency matrix for sparse optimisations
+        nonzero_rows, nonzero_columns = tf_matrix.nonzero()
+
+        # For the additional term in the denominator of the fraction in the
+        # Okapi score equation, only entries which will be nonzero in the
+        # resulting matrix from the division are computed, and this matrix is
+        # then encoded as a sparse matrix to take advantage of sparse
+        # operations
+        denominator_addend_matrix_data = k_1 * (1 - b + b * l[nonzero_rows])
+        denominator_addend_matrix = scipy.sparse.csr_matrix(
+            (
+                denominator_addend_matrix_data.A.flatten(),
+                (nonzero_rows, nonzero_columns)
             ),
-            axis=1
+            tf_matrix.shape
         )
 
-        # Sort search results
-        sort_locs = np.argsort(a=-scores, kind="quicksort")
-        sort_scores = scores[sort_locs]
+        # Compute fraction Okapi score equation
+        numerator_matrix = tf_matrix * (k_1 + 1)
+        denominator_matrix = tf_matrix + denominator_addend_matrix
+        fraction_matrix = numerator_matrix / denominator_matrix
+        fraction_matrix = scipy.sparse.csr_matrix(
+            (
+                fraction_matrix[nonzero_rows, nonzero_columns].A.flatten(),
+                (nonzero_rows, nonzero_columns)
+            ),
+            shape=tf_matrix.shape
+        )
 
+        # Compute Okapi BM25 scores
+        scores = fraction_matrix @ idf_vector
+
+        # Package scores
+        scores = pandas.Series(scores.flatten())
+        
         # Remove zero-scores
-        thresh_locs = sort_scores > search_min_threshold
-        sort_locs = sort_locs[thresh_locs]
-        sort_scores = sort_scores[thresh_locs]
+        scores = scores[scores > 0]
+        
+        # Sort scores
+        scores = scores.sort_values(
+            ascending=False,
+            kind="quicksort"
+        )
 
-        # Weave indices and scores for output
-        output = [(idx, c_score) for idx, c_score in zip(sort_locs, sort_scores)]
-
-        # Restrict number of outputs
-        if isinstance(max_results, int):
-            output = output[:max_results]
-
-        return output
+        return scores
 
 
 if __name__ == "__main__":

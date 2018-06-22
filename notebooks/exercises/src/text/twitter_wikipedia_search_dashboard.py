@@ -141,7 +141,7 @@ class TwitterWikipediaSearchController:
 
         if twitter_method == "search":
             label = f"Wikipedia articles related to recent tweets " \
-                f"matching \"{query}\"."
+                f"including \"{query}\"."
             self.dashboard.update_results_label(label)
             self.dashboard.append_to_results_html(
                 html="<p>Downloading recent matching tweets.</p>")
@@ -164,13 +164,11 @@ class TwitterWikipediaSearchController:
         if self.tweets:
             self.dashboard.append_to_results_html(
                 html="<p>Searching local Wikipedia using tweets.</p>")
-            tweet_texts = [tweet.text for tweet in self.tweets]
-            self.wikipedia_results = self.wikipedia.search(query=tweet_texts)
+            self.wikipedia_results = self.wikipedia.search(
+                query=self.tweets[0].text)
             # TODO Add number of results to results label.
             formatted_results = []
-            for result in self.wikipedia_results[:25]:
-                index = result[0]
-                score = result[1]
+            for index, score in self.wikipedia_results[:25].items():
                 document = self.wikipedia.documents[index]
                 title = document.title
                 WIKIPEDIA_DOCUMENT_TITLE_PREFIX = "Wikipedia: "

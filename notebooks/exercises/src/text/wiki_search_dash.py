@@ -95,13 +95,11 @@ class WikipediaSearchDashboard:
             self.progress_label.value = "Searching!"
 
             # Search through wikipedia
-            search_results = self.wikipedia.search(
-                search=search_text,
-            )
+            search_results = self.wikipedia.search(query=search_text)
             self._last_search = search_text
 
             # Get most probably indices
-            self._search_indices = [val[0] for val in search_results]
+            self._search_indices = search_results.index.tolist()
 
         # Get documents
         documents = [self.wikipedia.documents[val] for val in self._search_indices[:n_results]]

@@ -1,13 +1,8 @@
-import numpy
-import pandas
-import scipy.sparse
 import seaborn
-from matplotlib import pyplot
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-from wordcloud import WordCloud
 
 from src.text.bag_of_words import bag_of_words_utilities
-
+from src.text.bag_of_words.okapi_bm25_search import OkapiBM25Searcher
 
 seaborn.set(
     context="notebook",
@@ -26,6 +21,7 @@ class BagOfWords:
 
         self.__count_matrix = self.__tfidf_matrix = None
         self.__words = self.__idf = None
+        self.searcher = None
 
         self.__update()
 
@@ -110,6 +106,7 @@ class BagOfWords:
 
     def __update(self):
 
+        # Setup
         count_vectoriser = CountVectorizer(
             encoding="utf-8",
             strip_accents=None,
@@ -128,12 +125,23 @@ class BagOfWords:
         if self.__vocabulary and min(map(len, self.__vocabulary)) == 1:
             count_vectoriser.token_pattern = r"(?u)\b\w+\b"
 
+        # Fit and transform
         self.__count_matrix = count_vectoriser.fit_transform(self.__corpus)
         self.__tfidf_matrix = tfidf_transformer.fit_transform(
             self.__count_matrix)
+
+        # Extract attributes
+        self.__count_transform = count_vectoriser.transform
+        self.__tfidf_transform = tfidf_transformer.transform
         self.__vocabulary = count_vectoriser.vocabulary_
         self.__words = count_vectoriser.get_feature_names()
         self.__idf = tfidf_transformer.idf_
+
+        # Initialise searcher
+        self.searcher = OkapiBM25Searcher(
+            tf_matrix=self.__count_matrix,
+            idf_vector=self.__idf
+        )
 
     # def filter_vocabulary(self, filters=[]):
     #
@@ -206,6 +214,37 @@ class BagOfWords:
             corpus=self.corpus
         )
 
+    def transform(self, documents, kind="count"):
+
+        kind = bag_of_words_utilities.ensure_kind_of_bag_of_words(kind)
+
+        if kind == "count":
+            transform = self.__count_transform
+        elif kind == "tfidf":
+            transform = self.__tfidf_transform
+
+        return transform(documents)
+
+    def search(self, query, k_1=1.5, b=0.75):
+
+        query_vectorised = self.transform([query], kind="count")
+
+        results = self.searcher.search(
+            query_vectorised=query_vectorised,
+            k_1=k_1,
+            b=b
+        )
+
+        formatted_results = []
+
+        for index, score in results.items():
+            document = self.corpus[index]
+            formatted_result = f"\"{document}\" (score: {score})"
+            formatted_results.append(formatted_result)
+
+        formatted_results = "\n".join(formatted_results)
+
+        return formatted_results
 
 def ensure_list_input(value):
     if value and not isinstance(value, list):

@@ -22,16 +22,11 @@ if not sys.stdout.isatty():
 _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
-WIKIPEDIA_LANGUAGE_ID = "da"
-
 WIKIPEDIA_PAGE_BASE_URL = "https://{}.wikipedia.org/wiki/"
 
 WIKIPEDIA_DUMP_URL = "https://dumps.wikimedia.org/"\
-    f"{0}wiki/latest/"\
-    f"{0}wiki-latest-pages-articles-multistream.xml.bz2"
-
-WIKIPEDIA_FILENAME = WIKIPEDIA_DUMP_URL.split("/")[-1]
-WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]
+    "{0}wiki/latest/"\
+    "{0}wiki-latest-pages-articles-multistream.xml.bz2"
 
 CC_BY_SA_LICENSE_URL = "https://creativecommons.org/licenses/by-sa/3.0/"
 GNU_FREE_DOCUMENTATION_LICENSE_URL = "https://www.gnu.org/copyleft/fdl.html"
@@ -56,14 +51,21 @@ class WikipediaDocument:
 
 
 class Wikipedia:
-    __default_wikipedia_filename = WIKIPEDIA_FILENAME
-    __parsed_documents_path = Path(_data_dir,
-        f"{WIKIPEDIA_BASE_NAME}-parsed.pkl.gz")
-    __vectorised_documents_path = Path(_data_dir,
-        f"{WIKIPEDIA_BASE_NAME}-vectorised.pkl.gz")
 
-    def __init__(self, maximum_number_of_documents=None, always_load=False):
+    def __init__(self, language_code="en", maximum_number_of_documents=None,
+                 always_load=True, cache_directory_url=None):
         self.documents = None  # type: list[WikipediaDocument]
+
+        self.__language_code = language_code
+        self.__page_base_url = WIKIPEDIA_PAGE_BASE_URL.format(
+            self.__language_code)
+        self.__dump_url = WIKIPEDIA_DUMP_URL.format(self.__language_code)
+        self.__filename = self.__dump_url.split("/")[-1]
+        self.__base_name = self.__filename.split(".")[0]
+        self.__parsed_documents_path = Path(_data_dir,
+            self.__base_name + "-parsed.pkl.gz")
+        self.__vectorised_documents_path = Path(_data_dir,
+            self.__base_name + "-vectorised.pkl.gz")
 
         # Check whether parsed documents can be used
         use_parsed = self._use_parsed(always_load=always_load)
@@ -72,7 +74,7 @@ class Wikipedia:
         if use_parsed:
             print("Loading parsed documents.")
             parsed_documents = load_from_compressed_pickle_file(
-                Wikipedia.__parsed_documents_path)
+                self.__parsed_documents_path)
             self.documents = parsed_documents["content"]
 
         # Otherwise start processing a Wikipedia file
@@ -83,7 +85,7 @@ class Wikipedia:
                 self._request_wikipedia_directory()
             self._wikipedia_data_path = Path(
                 self._wikipedia_data_directory,
-                Wikipedia.__default_wikipedia_filename
+                self.__filename
             )
             if self._wikipedia_data_path is None:
                 return
@@ -108,7 +110,7 @@ class Wikipedia:
             }
             save_as_compressed_pickle_file(
                 parsed_documents,
-                Wikipedia.__parsed_documents_path,
+                self.__parsed_documents_path,
             )
 
         # Check whether vectorised documents can be used
@@ -118,7 +120,7 @@ class Wikipedia:
         if use_vectorised:
             print("Loading preprocessed documents.")
             vectorised_storage = load_from_compressed_pickle_file(
-                Wikipedia.__vectorised_documents_path)
+                self.__vectorised_documents_path)
             self._vectorised_storage = vectorised_storage["content"]
 
         else:
@@ -136,7 +138,7 @@ class Wikipedia:
             }
             save_as_compressed_pickle_file(
                 vectorised_storage,
-                Wikipedia.__vectorised_documents_path.open("wb"),
+                self.__vectorised_documents_path.open("wb"),
             )
 
         # Okapi BM25 searcher
@@ -223,26 +225,24 @@ class Wikipedia:
         print(wiki_data_dir)
         return wiki_data_dir
 
-    @staticmethod
-    def _use_parsed(always_load):
+    def _use_parsed(self, always_load):
         use_parsed = False
-        if Wikipedia.__parsed_documents_path.exists():
+        if self.__parsed_documents_path.exists():
             if always_load:
                 return True
-            prompt = "\nParsed documents found in {}".format(Wikipedia.__parsed_documents_path) + \
+            prompt = "\nParsed documents found in {}".format(self.__parsed_documents_path) + \
                      "\nDo you want to use this file? (Y/n) "
             answer = input(prompt)
             if not answer or answer.lower().strip() in ["y", "yes"]:
                 use_parsed = True
         return use_parsed
 
-    @staticmethod
-    def _use_vectorised(always_load):
+    def _use_vectorised(self, always_load):
         use_vectorised = False
-        if Wikipedia.__vectorised_documents_path.exists():
+        if self.__vectorised_documents_path.exists():
             if always_load:
                 return True
-            prompt = "\nPreprocessed documents found in {}\n".format(Wikipedia.__vectorised_documents_path) + \
+            prompt = "\nPreprocessed documents found in {}\n".format(self.__vectorised_documents_path) + \
                      "Do you want to use this file? (Y/n) "
             answer = input(prompt)
             if not answer or answer.lower().strip() in ["y", "yes"]:
@@ -251,7 +251,7 @@ class Wikipedia:
 
     def _download_wikipedia(self):
         retrieve_file(
-            url=WIKIPEDIA_DUMP_URL,
+            url=self.__dump_url,
             path=self._wikipedia_data_path,
             title="Downloading"
         )
@@ -347,7 +347,7 @@ class Wikipedia:
                                     or page_redirect:
                                         continue
 
-                                url = WIKIPEDIA_PAGE_BASE_URL \
+                                url = self.__page_base_url \
                                     + title.replace(" ", "_")
 
                                 abstract = self._parse_wikipedia_article(

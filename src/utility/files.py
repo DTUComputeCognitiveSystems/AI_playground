@@ -82,28 +82,29 @@ def load_from_compressed_pickle_file(file_path, title="Loading"):
 
     # TODO Speed up this method significantly before using it
     # compressed_size = file_path.stat().st_size
-    # progress_bar = tqdm(desc=title, total=compressed_size,
-    #                     unit='B', unit_scale=True)
-    # total_compressed_bytes_read_at_last_line = 0
     #
     # with file_path.open("rb") as compressed_file:
     #     with gzip.GzipFile(fileobj=compressed_file) as uncompressed_file:
     #
     #         deserialisation = b""
+    #         total_compressed_bytes_read_at_last_batch = 0
     #
-    #         for line in uncompressed_file:
-    #        
-    #             deserialisation += line
-    #        
-    #             total_compressed_bytes_read = compressed_file.tell()
-    #             compressed_bytes_read_for_line = \
-    #                 total_compressed_bytes_read \
-    #                 - total_compressed_bytes_read_at_last_line
-    #             total_compressed_bytes_read_at_last_line = \
-    #                 total_compressed_bytes_read
-    #             progress_bar.update(compressed_bytes_read_for_line)
-    #        
-    #         progress_bar.close()
+    #         with tqdm(desc="", total=compressed_size, unit="B",
+    #                   unit_scale=True) as progress_bar:
+    #             for line_number, line in enumerate(uncompressed_file):
+    #
+    #                 deserialisation += line
+    #
+    #                 if event_number % 1000 == 0:
+    #                     total_compressed_bytes_read = \
+    #                         compressed_file.tell()
+    #                     compressed_bytes_read_for_batch = \
+    #                         total_compressed_bytes_read \
+    #                         - total_compressed_bytes_read_at_last_batch
+    #                     total_compressed_bytes_read_at_last_batch = \
+    #                         total_compressed_bytes_read
+    #                     progress_bar.update(
+    #                         compressed_bytes_read_for_batch)
     #
     #         obj = pickle.loads(deserialisation)
 

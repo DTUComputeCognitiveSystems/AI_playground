@@ -1,8 +1,10 @@
-import gzip
+import bz2
+import re
 import sys
 from pathlib import Path
-from xml.etree.cElementTree import Element, fromstring
+from xml.etree import cElementTree as ElementTree
 
+import mwparserfromhell
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from tqdm import tqdm, tqdm_notebook
 
@@ -20,14 +22,24 @@ if not sys.stdout.isatty():
 _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
-WIKIPEDIA_URL = "https://dumps.wikimedia.org/enwiki/latest/"\
-                "enwiki-latest-abstract.xml.gz" # TODO Revert
-                # "enwiki-latest-abstract10.xml.gz"
+WIKIPEDIA_LANGUAGE_ID = "da"
 
-WIKIPEDIA_FILENAME = WIKIPEDIA_URL.split("/")[-1]
+WIKIPEDIA_PAGE_BASE_URL = "https://{}.wikipedia.org/wiki/"
+
+WIKIPEDIA_DUMP_URL = "https://dumps.wikimedia.org/"\
+    f"{0}wiki/latest/"\
+    f"{0}wiki-latest-pages-articles-multistream.xml.bz2"
+
+WIKIPEDIA_FILENAME = WIKIPEDIA_DUMP_URL.split("/")[-1]
 WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]
 
-WIKIPEDIA_DOCUMENT_TITLE_PREFIX = "Wikipedia: "
+CC_BY_SA_LICENSE_URL = "https://creativecommons.org/licenses/by-sa/3.0/"
+GNU_FREE_DOCUMENTATION_LICENSE_URL = "https://www.gnu.org/copyleft/fdl.html"
+
+LICENSE_URLS = [
+    CC_BY_SA_LICENSE_URL,
+    GNU_FREE_DOCUMENTATION_LICENSE_URL
+]
 
 class WikipediaDocument:
     def __init__(self, title=None, url=None, abstract=None, text=None):
@@ -49,21 +61,9 @@ class Wikipedia:
         f"{WIKIPEDIA_BASE_NAME}-parsed.pkl.gz")
     __vectorised_documents_path = Path(_data_dir,
         f"{WIKIPEDIA_BASE_NAME}-vectorised.pkl.gz")
-    __fields_of_interest = ["title", "abstract", "url"]
-    __out_start_tag = "<doc>"
-    __out_end_tag = "</doc>"
 
-    def __init__(self, max_lines=None, always_load=False):
+    def __init__(self, maximum_number_of_documents=None, always_load=False):
         self.documents = None  # type: list[WikipediaDocument]
-
-        # Check whether vectorised documents can be used
-        use_vectorised = self._use_vectorised(always_load=always_load)
-
-        # If we have the vectorised storage then load
-        if use_vectorised:
-            print("Loading preprocessed documents.")
-            self._vectorised_storage = load_from_compressed_pickle_file(
-                Wikipedia.__vectorised_documents_path)
 
         # Check whether parsed documents can be used
         use_parsed = self._use_parsed(always_load=always_load)
@@ -71,8 +71,9 @@ class Wikipedia:
         # If parsed documents are to be used, then get these
         if use_parsed:
             print("Loading parsed documents.")
-            self.documents = load_from_compressed_pickle_file(
+            parsed_documents = load_from_compressed_pickle_file(
                 Wikipedia.__parsed_documents_path)
+            self.documents = parsed_documents["content"]
 
         # Otherwise start processing a Wikipedia file
         else:
@@ -94,22 +95,47 @@ class Wikipedia:
 
             # Parse Wikipedia file
             print("Parsing Wikipedia documents.")
-            self._parse_wikipedia(max_lines=max_lines)
+            self._parse_wikipedia(
+                maximum_number_of_documents=maximum_number_of_documents
+            )
 
             # Store data
             print("Saving parsed documents.")
+            parsed_documents = {
+                "content": self.documents,
+                "changes": "extracted first paragraph of each article",
+                "license": LICENSE_URLS
+            }
             save_as_compressed_pickle_file(
-                self.documents,
+                parsed_documents,
                 Wikipedia.__parsed_documents_path,
             )
+
+        # Check whether vectorised documents can be used
+        use_vectorised = self._use_vectorised(always_load=always_load)
+
+        # If we have the vectorised storage then load
+        if use_vectorised:
+            print("Loading preprocessed documents.")
+            vectorised_storage = load_from_compressed_pickle_file(
+                Wikipedia.__vectorised_documents_path)
+            self._vectorised_storage = vectorised_storage["content"]
+
+        else:
 
             # Process documents
             self._process_parsed_documents()
 
             # Store vectorised data
             print("Saving preprocessed documents.")
+            vectorised_storage = {
+                "content": self._vectorised_storage,
+                "changes": "bag-of-words representation of the first "
+                           "paragraph of each article",
+                "license": LICENSE_URLS
+            }
             save_as_compressed_pickle_file(
-                self._vectorised_storage,
+                vectorised_storage,
                 Wikipedia.__vectorised_documents_path.open("wb"),
             )
 
@@ -142,32 +168,8 @@ class Wikipedia:
 
         print("Preprocessing documents.")
 
-        # Get titles and abstracts
-        documents = []
-        for document in self.documents:
-
-            if document.abstract:
-                abstract = document.abstract
-            else:
-                abstract = ""
-
-            if document.title:
-                title = document.title
-                if title.startswith(WIKIPEDIA_DOCUMENT_TITLE_PREFIX):
-                    title = title.replace(
-                        WIKIPEDIA_DOCUMENT_TITLE_PREFIX,
-                        "",
-                        1
-                    )
-            else:
-                title = ""
-
-            if title: # and title not in abstract:
-                title_and_abstract = "\n\n".join([title, abstract])
-            else:
-                title_and_abstract = abstract
-
-            documents.append(title_and_abstract)
+        # Get abstracts
+        documents = [document.abstract for document in self.documents]
 
         # Number of documents
         self.n_documents = len(documents)
@@ -198,7 +200,7 @@ class Wikipedia:
         )
 
         # Transform to TF-IDF
-        _ = tfidf_transformer.fit_transform(self.matrix_doc_term)
+        tfidf_transformer.fit_transform(self.matrix_doc_term)
 
         # Get IDF
         self.idf = tfidf_transformer.idf_
@@ -247,87 +249,265 @@ class Wikipedia:
                 use_vectorised = True
         return use_vectorised
 
-    @staticmethod
-    def _process_xml_element(element: Element, fields_of_interest):
-        output = WikipediaDocument()
-        for child in element:
-            for name in fields_of_interest:
-                if name in child.tag:
-                    output.__setattr__(name, child.text)
-
-        return output
-
     def _download_wikipedia(self):
         retrieve_file(
-            url=WIKIPEDIA_URL,
+            url=WIKIPEDIA_DUMP_URL,
             path=self._wikipedia_data_path,
             title="Downloading"
         )
 
-    def _parse_wikipedia(self, out_start_tag="<doc>", out_end_tag="</doc>",
-                         fields_of_interest=("title", "abstract", "url"),
-                         max_lines=None):
+    def _parse_wikipedia(self, maximum_number_of_documents=None):
         assert self._wikipedia_data_path.exists(), "Wikipedia data does not exist"
 
         # Determine size of file
         compressed_size = self._wikipedia_data_path.stat().st_size
 
-        # Open file
+        # Initialise container for documents
+        documents = []
 
-        progress_bar = tqdm(desc="Parsing", total=compressed_size,
-                            unit="B", unit_scale=True)
+        with open(self._wikipedia_data_path, mode="rb") as compressed_file:
+            with bz2.BZ2File(compressed_file, mode="rb") as uncompressed_file:
 
-        with self._wikipedia_data_path.open(mode="rb") as compressed_file:
-            with gzip.GzipFile(fileobj=compressed_file) as uncompressed_file:
+                total_compressed_bytes_read_at_last_batch = 0
+                tag_prefix = ""
+                namespaces = []
+                article_namespace_key = None
+                in_page = False
 
-                # Initialize
-                buffer = []
-                append = False
-                documents = []
-                total_compressed_bytes_read_at_last_line = 0
+                with tqdm(desc="", total=compressed_size, unit="B",
+                          unit_scale=True) as progress_bar:
 
-                # Go through lines
-                for line_number, line in enumerate(uncompressed_file):
-
-                    line = line.decode("utf-8")
-
-                    # Check for hard-break
-                    if isinstance(max_lines, int) and line_number > max_lines:
-                        break
-
-                    if out_start_tag in line:
-                        buffer = []
-                        append = True
-
-                    if append:
-                        buffer.append(line)
-
-                    if out_end_tag in line:
-                        append = False
-
-                        # Process xml-element
-                        element = fromstring("".join(buffer))
-                        documents.append(
-                            self._process_xml_element(
-                                element=element,
-                                fields_of_interest=fields_of_interest
+                    for event_number, (event, element) in enumerate(
+                            ElementTree.iterparse(
+                                uncompressed_file,
+                                events=["start", "end", "start-ns", "end-ns"]
                             )
-                        )
+                        ):
 
-                        buffer = []
+                        if event == "start-ns":
+                            namespaces.append(element)
+                            namespace_id, namespace_uri = element
+                            if namespace_id == "":
+                                tag_prefix = f"{{{namespace_uri}}}"
 
-                    total_compressed_bytes_read = compressed_file.tell()
-                    compressed_bytes_read_for_line = \
-                        total_compressed_bytes_read \
-                        - total_compressed_bytes_read_at_last_line
-                    total_compressed_bytes_read_at_last_line = \
-                        total_compressed_bytes_read
-                    progress_bar.update(compressed_bytes_read_for_line)
+                        elif event == "end-ns":
+                            namespace = namespaces.pop()
+                            namespace_id, namespace_uri = namespace
+                            if namespace_id == "":
+                                tag_prefix = ""
 
-                progress_bar.close()
+                        elif event == "start":
+                            if element.tag == f"{tag_prefix}page":
+                                in_page = True
+                                title = None
+                                text = None
+                                page_namespace_keys = []
+                                page_redirect = False
+
+                        elif event == "end":
+
+                            tag = element.tag
+
+                            if tag.startswith(tag_prefix):
+                                tag = tag.replace(tag_prefix, "", 1)
+
+                            if tag == "namespace":
+                                if element.text is None:
+                                    article_namespace_key = element.attrib["key"]
+
+                            elif in_page and tag == "title":
+                                if not title:
+                                    title = element.text
+                                else:
+                                    progress_bar.write(
+                                        "Multiple titles found for article "
+                                        f"\"{title}\". First one used."
+                                    )
+
+                            elif in_page and tag == "text":
+                                if not text:
+                                    text = element.text
+                                else:
+                                    progress_bar.write(
+                                        "Multiple text sections found for article "
+                                        f"\"{title}\". First one used."
+                                    )
+
+                            elif in_page and tag == "ns":
+                                page_namespace_keys.append(element.text)
+
+                            elif in_page and tag == "redirect":
+                                page_redirect = True
+
+                            elif in_page and tag == "page":
+
+                                in_page = False
+
+                                if article_namespace_key not in page_namespace_keys \
+                                    or page_redirect:
+                                        continue
+
+                                url = WIKIPEDIA_PAGE_BASE_URL \
+                                    + title.replace(" ", "_")
+
+                                abstract = self._parse_wikipedia_article(
+                                    article_text=text,
+                                    sections="first paragraph",
+                                    include_header_image_captions=False,
+                                    include_header_infoboxes=False
+                                )
+
+                                document = WikipediaDocument(
+                                    title=title,
+                                    url=url,
+                                    abstract=abstract
+                                )
+
+                                documents.append(document)
+
+                            element.clear()
+
+                        if maximum_number_of_documents and \
+                            len(documents) >= maximum_number_of_documents:
+                                break
+
+                        if event_number % 1000 == 0:
+                            total_compressed_bytes_read = \
+                                compressed_file.tell()
+                            compressed_bytes_read_for_batch = \
+                                total_compressed_bytes_read \
+                                - total_compressed_bytes_read_at_last_batch
+                            total_compressed_bytes_read_at_last_batch = \
+                                total_compressed_bytes_read
+                            progress_bar.update(
+                                compressed_bytes_read_for_batch)
 
         # Store
         self.documents = documents
+
+    def _parse_wikipedia_article(self,
+                                 article_text,
+                                 sections="first paragraph",
+                                 include_header_image_captions=False,
+                                 include_header_infoboxes=False):
+
+        if sections not in ["first paragraph", "lead", "all"]:
+            raise ValueError(
+                "Can only extract the first paragraph, the lead, or all sections."
+            )
+
+        def remove_footnotes_from_wikimedia_markup(markup):
+            for element in markup.filter_tags():
+                if element.tag == "ref":
+                    try:
+                        markup.remove(element)
+                    except ValueError:
+                        pass
+
+        def add_line_break_before_lists_in_wikimedia_text(text):
+            return re.sub(r"(?m)(^(\*|#) .+$)", r"\n\1", text)
+
+        if sections == "all":
+            article_text = add_line_break_before_lists_in_wikimedia_text(
+                article_text)
+            article_markup = mwparserfromhell.parse(article_text)
+            sections_markup = article_markup.get_sections(
+                include_lead = True, include_headings=True)
+            lead_markup = sections_markup[0]
+        else:
+            # Remove everything after the first header including the header
+            lead_text = re.split(r"==[^=]+==", article_text, maxsplit=1)[0]
+            lead_text = add_line_break_before_lists_in_wikimedia_text(lead_text)
+            lead_markup = mwparserfromhell.parse(lead_text)
+
+        remove_footnotes_from_wikimedia_markup(lead_markup)
+
+        header_infoboxes = []
+        header_image_captions = []
+        nodes_to_remove = []
+
+        # Find the first line while saving image captions and info boxes as well
+        # as removing the rest before the first line
+        for node in lead_markup.nodes:
+
+            if isinstance(node, mwparserfromhell.nodes.Wikilink) and node.text:
+                nodes_to_remove.append(node)
+                caption = node.text.strip_code().split("|")[-1]
+                header_image_captions.append(caption)
+
+            elif isinstance(node, mwparserfromhell.nodes.Template):
+                nodes_to_remove.append(node)
+                if "\n" in node:
+                    infobox = {
+                        parameter.name.strip_code().strip():
+                        parameter.value.strip_code().strip()
+                        for parameter in node.params
+                    }
+                    header_infoboxes.append(infobox)
+
+            elif isinstance(node, mwparserfromhell.nodes.Comment):
+                nodes_to_remove.append(node)
+
+            elif isinstance(node, mwparserfromhell.nodes.Tag) \
+                and node.tag == "table":
+                    nodes_to_remove.append(node)
+
+            elif isinstance(node, mwparserfromhell.nodes.Text):
+                value = re.sub(r"__[A-Z]+__", "", node.value.lstrip())
+                if not re.match(r"[A-Za-z0-9\"\']", value):
+                    nodes_to_remove.append(node)
+                else:
+                    node.value = value
+                    break
+
+            else:
+                break
+
+        for node in nodes_to_remove:
+            lead_markup.remove(node)
+
+        lead = lead_markup.strip_code(
+            normalize=True,
+            collapse=True,
+            keep_template_params=False
+        )
+
+        # Add line breaks before and after image links
+        lead = re.sub(r"(?m)(^thumb\|.+$)", r"\n\1\n", lead)
+        lead = re.sub(r"(?m)(^.+)(thumb\|.+$)", r"\1\n\n\2\n", lead)
+
+        if sections == "first paragraph":
+            text = lead.split("\n\n")[0]
+            text = text.replace("\n", " ")
+        elif sections == "lead":
+            text = lead
+
+        if include_header_image_captions and header_image_captions:
+            text += "\n\n" + "\n\n".join(header_image_captions)
+
+        if include_header_infoboxes and header_infoboxes:
+            for infobox in header_infoboxes:
+                infobox_string = "\n\n"
+                for infobox_key, infobox_value in infobox.items():
+                    infobox_string += f"* {infobox_key}: {infobox_value}\n"
+                text += infobox_string
+
+        if sections == "all":
+            remaining_sections_markup = sections_markup[1:]
+            remove_footnotes_from_wikimedia_markup(
+                remaining_sections_markup)
+            text += remaining_sections_markup.strip_code(
+                normalize=True,
+                collapse=True,
+                keep_template_params=False
+            )
+
+        text = re.sub(r"__[A-Z]+__\n?", "", text)
+        text = text.replace("()", "")
+        text = re.sub(r" +", " ", text)
+        text = text.strip()
+
+        return text
 
     @property
     def vocabulary(self):

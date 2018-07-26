@@ -3,12 +3,10 @@ import sys
 from pathlib import Path
 from xml.etree.cElementTree import Element, fromstring
 
-import numpy
-import pandas
-import scipy.sparse
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from tqdm import tqdm, tqdm_notebook
 
+from src.text.bag_of_words.okapi_bm25_search import OkapiBM25Searcher
 from src.utility.connectivity import retrieve_file
 from src.utility.files import (
     ensure_directory,
@@ -23,7 +21,8 @@ _data_dir = Path("data", "wikipedia")
 ensure_directory(_data_dir)
 
 WIKIPEDIA_URL = "https://dumps.wikimedia.org/enwiki/latest/"\
-                "enwiki-latest-abstract.xml.gz"
+                "enwiki-latest-abstract.xml.gz" # TODO Revert
+                # "enwiki-latest-abstract10.xml.gz"
 
 WIKIPEDIA_FILENAME = WIKIPEDIA_URL.split("/")[-1]
 WIKIPEDIA_BASE_NAME = WIKIPEDIA_FILENAME.split(".")[0]
@@ -113,6 +112,12 @@ class Wikipedia:
                 self._vectorised_storage,
                 Wikipedia.__vectorised_documents_path.open("wb"),
             )
+
+        # Okapi BM25 searcher
+        self.searcher = OkapiBM25Searcher(
+            tf_matrix=self.matrix_doc_term,
+            idf_vector=self.idf
+        )
 
         # Progress
         print("\nWikipedia loaded.")
@@ -328,6 +333,10 @@ class Wikipedia:
     def vocabulary(self):
         return self.term_vectorizer.vocabulary_
 
+    @property
+    def terms(self):
+        return self.term_vectorizer.get_feature_names()
+
     def __str__(self):
         return "{}({} documents, {} words)".format(type(self).__name__, self.n_documents, self.n_words)
 
@@ -336,64 +345,15 @@ class Wikipedia:
 
     def search(self, query, k_1=1.5, b=0.75):
 
-        # Vectorise query and get keyword indices
         query_vectorised = self.term_vectorizer.transform([query])
-        _, keyword_indices = query_vectorised.nonzero()
 
-        # Term frequencies of keywords for all documents
-        tf_matrix = self.matrix_doc_term[:, keyword_indices]
-
-        # IDF of keywords
-        idf_vector = numpy.expand_dims(self.idf[keyword_indices], axis=1)
-
-        # Normalised document lengths
-        l = self.document_lengths / self._avg_document_length
-
-        # Nonzero indices for term-frequency matrix for sparse optimisations
-        nonzero_rows, nonzero_columns = tf_matrix.nonzero()
-
-        # For the additional term in the denominator of the fraction in the
-        # Okapi score equation, only entries which will be nonzero in the
-        # resulting matrix from the division are computed, and this matrix is
-        # then encoded as a sparse matrix to take advantage of sparse
-        # operations
-        denominator_addend_matrix_data = k_1 * (1 - b + b * l[nonzero_rows])
-        denominator_addend_matrix = scipy.sparse.csr_matrix(
-            (
-                denominator_addend_matrix_data.A.flatten(),
-                (nonzero_rows, nonzero_columns)
-            ),
-            tf_matrix.shape
+        results = self.searcher.search(
+            query_vectorised = query_vectorised,
+            k_1 = k_1,
+            b = b
         )
 
-        # Compute fraction Okapi score equation
-        numerator_matrix = tf_matrix * (k_1 + 1)
-        denominator_matrix = tf_matrix + denominator_addend_matrix
-        fraction_matrix = numerator_matrix / denominator_matrix
-        fraction_matrix = scipy.sparse.csr_matrix(
-            (
-                fraction_matrix[nonzero_rows, nonzero_columns].A.flatten(),
-                (nonzero_rows, nonzero_columns)
-            ),
-            shape=tf_matrix.shape
-        )
-
-        # Compute Okapi BM25 scores
-        scores = fraction_matrix @ idf_vector
-
-        # Package scores
-        scores = pandas.Series(scores.flatten())
-        
-        # Remove zero-scores
-        scores = scores[scores > 0]
-        
-        # Sort scores
-        scores = scores.sort_values(
-            ascending=False,
-            kind="quicksort"
-        )
-
-        return scores
+        return results
 
 
 if __name__ == "__main__":

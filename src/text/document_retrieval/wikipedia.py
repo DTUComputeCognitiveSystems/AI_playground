@@ -166,7 +166,7 @@ class Wikipedia:
         print("Loading parsed documents.")
         parsed_documents = load_from_compressed_pickle_file(
             self.__parsed_documents_path)
-        self.documents = parsed_documents["content"]
+        self.__set_documents(parsed_documents["content"])
 
     def _load_vectorised_documents(self):
         print("Loading preprocessed documents.")
@@ -178,14 +178,14 @@ class Wikipedia:
 
         # Parse Wikipedia file
         print("Parsing Wikipedia documents.")
-        self._parse_wikipedia(
+        documents = self._parse_wikipedia(
             maximum_number_of_documents=self.__maximum_number_of_documents
         )
 
         # Store data
         print("Saving parsed documents.")
         parsed_documents = {
-            "content": self.documents,
+            "content": documents,
             "changes": "extracted first paragraph of each article",
             "license": LICENSE_URLS
         }
@@ -193,6 +193,20 @@ class Wikipedia:
             parsed_documents,
             self.__parsed_documents_path,
         )
+
+        self.__set_documents(documents)
+
+    def __set_documents(self, documents):
+        self.documents = []
+
+        for document in documents:
+            self.documents.append(
+                WikipediaDocument(
+                    title=document["title"],
+                    url=document["url"],
+                    abstract=document["abstract"]
+                )
+            )
 
     def _vectorise_documents(self):
 
@@ -379,11 +393,11 @@ class Wikipedia:
                                     include_header_infoboxes=False
                                 )
 
-                                document = WikipediaDocument(
-                                    title=title,
-                                    url=url,
-                                    abstract=abstract
-                                )
+                                document = {
+                                    "title": title,
+                                    "url": url,
+                                    "abstract": abstract
+                                }
 
                                 documents.append(document)
 
@@ -404,8 +418,7 @@ class Wikipedia:
                             progress_bar.update(
                                 compressed_bytes_read_for_batch)
 
-        # Store
-        self.documents = documents
+        return documents
 
     def _parse_wikipedia_article(self,
                                  article_text,

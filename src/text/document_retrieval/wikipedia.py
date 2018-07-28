@@ -3,6 +3,8 @@ import re
 import sys
 from pathlib import Path
 from xml.etree import cElementTree as ElementTree
+from urllib.parse import urljoin
+from urllib.error import URLError
 
 import mwparserfromhell
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -19,8 +21,8 @@ from src.utility.files import (
 if not sys.stdout.isatty():
     tqdm = tqdm_notebook
 
-_data_dir = Path("data", "wikipedia")
-ensure_directory(_data_dir)
+DATA_DIRECTORY = Path("data", "wikipedia")
+ensure_directory(DATA_DIRECTORY)
 
 WIKIPEDIA_PAGE_BASE_URL = "https://{}.wikipedia.org/wiki/"
 
@@ -52,94 +54,104 @@ class WikipediaDocument:
 
 class Wikipedia:
 
-    def __init__(self, language_code="en", maximum_number_of_documents=None,
-                 always_load=True, cache_directory_url=None):
+    def __init__(self,
+                 language_code="en",
+                 cache_directory_url=None,
+                 maximum_number_of_documents=None):
+
         self.documents = None  # type: list[WikipediaDocument]
 
         self.__language_code = language_code
+        self.__maximum_number_of_documents = maximum_number_of_documents
+
+        # Wikipedia URLs
         self.__page_base_url = WIKIPEDIA_PAGE_BASE_URL.format(
             self.__language_code)
         self.__dump_url = WIKIPEDIA_DUMP_URL.format(self.__language_code)
+
+        # Local files
+
         self.__filename = self.__dump_url.split("/")[-1]
-        self.__base_name = self.__filename.split(".")[0]
-        self.__parsed_documents_path = Path(_data_dir,
-            self.__base_name + "-parsed.pkl.gz")
-        self.__vectorised_documents_path = Path(_data_dir,
-            self.__base_name + "-vectorised.pkl.gz")
+        self.__path = Path(
+            DATA_DIRECTORY,
+            self.__filename
+        )
 
-        # Check whether parsed documents can be used
-        use_parsed = self._use_parsed(always_load=always_load)
+        base_name = self.__filename.split(".")[0]
 
-        # If parsed documents are to be used, then get these
-        if use_parsed:
-            print("Loading parsed documents.")
-            parsed_documents = load_from_compressed_pickle_file(
-                self.__parsed_documents_path)
-            self.documents = parsed_documents["content"]
+        self.__parsed_documents_filename = \
+            base_name + "-parsed.pkl.gz"
+        self.__parsed_documents_path = Path(
+            DATA_DIRECTORY, self.__parsed_documents_filename)
 
-        # Otherwise start processing a Wikipedia file
-        else:
+        self.__vectorised_documents_filename = \
+            base_name + "-vectorised.pkl.gz"
+        self.__vectorised_documents_path = Path(
+            DATA_DIRECTORY, self.__vectorised_documents_filename)
 
-            # Get wikipedia data path
-            self._wikipedia_data_directory = \
-                self._request_wikipedia_directory()
-            self._wikipedia_data_path = Path(
-                self._wikipedia_data_directory,
-                self.__filename
-            )
-            if self._wikipedia_data_path is None:
-                return
+        # Load, download cache, or parse and preprocess as necessary
 
-            # Download Wikipedia file
-            if not self._wikipedia_data_path.exists():
-                print("Downloading Wikipedia documents.")
-                self._download_wikipedia()
-
-            # Parse Wikipedia file
-            print("Parsing Wikipedia documents.")
-            self._parse_wikipedia(
-                maximum_number_of_documents=maximum_number_of_documents
-            )
-
-            # Store data
-            print("Saving parsed documents.")
-            parsed_documents = {
-                "content": self.documents,
-                "changes": "extracted first paragraph of each article",
-                "license": LICENSE_URLS
-            }
-            save_as_compressed_pickle_file(
-                parsed_documents,
-                self.__parsed_documents_path,
-            )
-
-        # Check whether vectorised documents can be used
-        use_vectorised = self._use_vectorised(always_load=always_load)
-
-        # If we have the vectorised storage then load
-        if use_vectorised:
-            print("Loading preprocessed documents.")
-            vectorised_storage = load_from_compressed_pickle_file(
-                self.__vectorised_documents_path)
-            self._vectorised_storage = vectorised_storage["content"]
+        if self.__parsed_documents_path.exists():
+            self._load_parsed_documents()
+            if self.__vectorised_documents_path.exists():
+                self._load_vectorised_documents()
+            else:
+                self._vectorise_documents()
 
         else:
+            parsed_documents_loaded_succesfully = False
 
-            # Process documents
-            self._process_parsed_documents()
+            if cache_directory_url:
 
-            # Store vectorised data
-            print("Saving preprocessed documents.")
-            vectorised_storage = {
-                "content": self._vectorised_storage,
-                "changes": "bag-of-words representation of the first "
-                           "paragraph of each article",
-                "license": LICENSE_URLS
-            }
-            save_as_compressed_pickle_file(
-                vectorised_storage,
-                self.__vectorised_documents_path.open("wb"),
-            )
+                parsed_documents_downloaded_succesfully = False
+                vectorised_documents_downloaded_succesfully = False
+
+                try:
+                    print("Downloading parsed Wikipedia documents.")
+                    parsed_documents_url = urljoin(
+                        cache_directory_url,
+                        self.__parsed_documents_filename
+                    )
+                    retrieve_file(
+                        url=parsed_documents_url,
+                        path=self.__parsed_documents_path
+                    )
+                    parsed_documents_downloaded_succesfully = True
+
+                except URLError as url_error:
+                    print(f"Failed to download documents ({url_error}).")
+                    print("Falling back to parsing Wikipedia locally.")
+                
+                if parsed_documents_downloaded_succesfully:
+                    self._load_parsed_documents()
+                    parsed_documents_loaded_succesfully = True
+
+                    try:
+                        print("Downloading preprocessed Wikipedia documents.")
+                        vectorised_documents_url = urljoin(
+                            cache_directory_url,
+                            self.__vectorised_documents_filename
+                        )
+                        retrieve_file(
+                            url=vectorised_documents_url,
+                            path=self.__vectorised_documents_path
+                        )
+                        vectorised_documents_downloaded_succesfully = True
+                    except URLError as url_error:
+                        print(f"Failed to download documents ({url_error}).")
+                        print("Falling back to preprocess Wikipedia locally.")
+
+                    if vectorised_documents_downloaded_succesfully:
+                        self._load_vectorised_documents()
+                    else:
+                        self._vectorise_documents()
+
+            if not parsed_documents_loaded_succesfully:
+                if not self.__path.exists():
+                    print("Downloading Wikipedia documents.")
+                    self._download_wikipedia()
+                self._parse_documents()
+                self._vectorise_documents()
 
         # Okapi BM25 searcher
         self.searcher = OkapiBM25Searcher(
@@ -148,7 +160,57 @@ class Wikipedia:
         )
 
         # Progress
-        print("\nWikipedia loaded.")
+        print("Wikipedia loaded.")
+
+    def _load_parsed_documents(self):
+        print("Loading parsed documents.")
+        parsed_documents = load_from_compressed_pickle_file(
+            self.__parsed_documents_path)
+        self.documents = parsed_documents["content"]
+
+    def _load_vectorised_documents(self):
+        print("Loading preprocessed documents.")
+        vectorised_storage = load_from_compressed_pickle_file(
+            self.__vectorised_documents_path)
+        self._vectorised_storage = vectorised_storage["content"]
+
+    def _parse_documents(self):
+
+        # Parse Wikipedia file
+        print("Parsing Wikipedia documents.")
+        self._parse_wikipedia(
+            maximum_number_of_documents=self.__maximum_number_of_documents
+        )
+
+        # Store data
+        print("Saving parsed documents.")
+        parsed_documents = {
+            "content": self.documents,
+            "changes": "extracted first paragraph of each article",
+            "license": LICENSE_URLS
+        }
+        save_as_compressed_pickle_file(
+            parsed_documents,
+            self.__parsed_documents_path,
+        )
+
+    def _vectorise_documents(self):
+
+        # Process documents
+        self._process_parsed_documents()
+
+        # Store vectorised data
+        print("Saving preprocessed documents.")
+        vectorised_storage = {
+            "content": self._vectorised_storage,
+            "changes": "bag-of-words representation of the first "
+                       "paragraph of each article",
+            "license": LICENSE_URLS
+        }
+        save_as_compressed_pickle_file(
+            vectorised_storage,
+            self.__vectorised_documents_path.open("wb"),
+        )
 
     @property
     def _vectorised_storage(self):
@@ -210,62 +272,22 @@ class Wikipedia:
         # Number of features
         self.n_words = self.matrix_doc_term.shape[1]
 
-    @staticmethod
-    def _request_wikipedia_directory():
-        prompt = "Path to Wikipedia directory "\
-                 "(default is '{}'; type 'Cancel' to abort):"\
-                 .format(_data_dir)
-        wiki_data_dir = input(prompt)
-        if not wiki_data_dir:
-            wiki_data_dir = _data_dir.resolve()
-        else:
-            if wiki_data_dir.lower().strip() in ["quit", "cancel"]:
-                return None
-            wiki_data_dir = Path(wiki_data_dir).resolve()
-        print(wiki_data_dir)
-        return wiki_data_dir
-
-    def _use_parsed(self, always_load):
-        use_parsed = False
-        if self.__parsed_documents_path.exists():
-            if always_load:
-                return True
-            prompt = "\nParsed documents found in {}".format(self.__parsed_documents_path) + \
-                     "\nDo you want to use this file? (Y/n) "
-            answer = input(prompt)
-            if not answer or answer.lower().strip() in ["y", "yes"]:
-                use_parsed = True
-        return use_parsed
-
-    def _use_vectorised(self, always_load):
-        use_vectorised = False
-        if self.__vectorised_documents_path.exists():
-            if always_load:
-                return True
-            prompt = "\nPreprocessed documents found in {}\n".format(self.__vectorised_documents_path) + \
-                     "Do you want to use this file? (Y/n) "
-            answer = input(prompt)
-            if not answer or answer.lower().strip() in ["y", "yes"]:
-                use_vectorised = True
-        return use_vectorised
-
     def _download_wikipedia(self):
         retrieve_file(
             url=self.__dump_url,
-            path=self._wikipedia_data_path,
-            title="Downloading"
+            path=self.__path
         )
 
     def _parse_wikipedia(self, maximum_number_of_documents=None):
-        assert self._wikipedia_data_path.exists(), "Wikipedia data does not exist"
+        assert self.__path.exists(), "Wikipedia data does not exist"
 
         # Determine size of file
-        compressed_size = self._wikipedia_data_path.stat().st_size
+        compressed_size = self.__path.stat().st_size
 
         # Initialise container for documents
         documents = []
 
-        with open(self._wikipedia_data_path, mode="rb") as compressed_file:
+        with open(self.__path, mode="rb") as compressed_file:
             with bz2.BZ2File(compressed_file, mode="rb") as uncompressed_file:
 
                 total_compressed_bytes_read_at_last_batch = 0
@@ -534,7 +556,6 @@ class Wikipedia:
         )
 
         return results
-
 
 if __name__ == "__main__":
     wikipedia = Wikipedia()

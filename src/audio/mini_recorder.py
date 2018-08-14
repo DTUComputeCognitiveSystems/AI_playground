@@ -30,8 +30,8 @@ class miniRecorder:
         
         print("Recording...")
 
-        data = self.stream.read(self.noframes * self.framesize)
-        self.sound = np.frombuffer(data, dtype=np.float32)
+        self.data = self.stream.read(self.noframes * self.framesize)
+        self.sound = np.frombuffer(self.data, dtype=np.float32)
 
         print("Finished recording...")
         

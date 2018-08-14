@@ -104,6 +104,12 @@ ENV/
 
 *.npy
 
+*.chkpt
+
+*·gz
+
+*.npz
+
 *.mp4
 
 *.jpg

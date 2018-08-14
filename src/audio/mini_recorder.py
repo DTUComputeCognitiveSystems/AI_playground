@@ -1,5 +1,6 @@
 import pyaudio
 import numpy as np
+import wave
 
 class miniRecorder:
     def __init__(self, seconds=1, rate=44100):
@@ -40,6 +41,16 @@ class miniRecorder:
         self.p.terminate()
         
         return self.sound
+
+    def write2file(self, fname):
+        
+        wavefile = wave.open(fname, 'wb')
+        wavefile.setnchannels(self.channels)
+        wavefile.setsampwidth(self.p.get_sample_size(pyaudio.paInt16))
+        wavefile.setframerate(self.rate)
+        wavefile.writeframes(self.data)
+
+        wavefile.close()
     
     def playback(self):
         

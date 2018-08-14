@@ -164,17 +164,18 @@ def SoundPlotter2(miniSound):
     
     max_freq = 2000
     
-    # fft
-    f, fft = signal.periodogram(miniSound.sound, miniSound.rate)
+    # Power spectrum
+    f, fft = signal.periodogram(miniSound.sound, miniSound.rate, scaling='spectrum')
     
     fig, (ax1, ax2) = plt.subplots(2, 1)
     # show 0.01s
     samp = int(miniSound.rate * 0.01)
     ax1.plot(np.linspace(0, samp, samp) / miniSound.rate, miniSound.sound[:samp])
     ax1.set_xlabel('Time [s]')
+    ax1.set_ylabel('Amplitude')
     ax2.plot(f[:max_freq], fft[:max_freq])       
     ax2.set_xlabel('Frequency [Hz]')
-    ax2.set_ylabel('$V^2/Hz$')
+    ax2.set_ylabel('Power')
     # make sure axis labels and titles do not overlap
     plt.tight_layout()
 
@@ -198,7 +199,7 @@ class SoundPlotter3:
         self.midpoint = int(self.n / 2)
         
         # slider names
-        names = ['window zoom', 'location']
+        names = ['zoom', 'location']
         
         # Make widgets
         self.widgets = [
@@ -270,7 +271,7 @@ class SoundPlotter3:
         ############################
         
         s = self.sound
-        f, fft = signal.periodogram(self.sound[xmin_sample: xmax_sample], self.rate)
+        f, fft = signal.periodogram(self.sound[xmin_sample: xmax_sample], self.rate, scaling='spectrum')
         
         ############################
         # Plot settings            #
@@ -285,15 +286,17 @@ class SoundPlotter3:
         # Title and labels
         self.ax1.set_title("Sound, window size {0:4d} samples".format(window_size))
         self.ax1.set_xlabel('Time [ms]')
+        self.ax1.set_ylabel('Amplitude')
         self.ax1.set_xlim(0, (self.n / self.rate) * 1000)
         
         self.ax2.set_xlabel('Frequency [Hz]')
-        self.ax2.yaxis.set_visible(False)
+        self.ax2.set_ylabel('Power')
+        # self.ax2.yaxis.set_visible(False)
         self.ax2.set_title('Frequency spectrum of window')
         self.ax2.set_xlim(f[0], f[-1])
         
         self.ax3.set_ylabel('Frequency [Hz]')
-        self.ax1.set_xlabel('Time [ms]')
+        self.ax3.set_xlabel('Time [ms]')
         self.ax3.set_title('Frequency spectrum of window, shown as colors')
         
         # Plot

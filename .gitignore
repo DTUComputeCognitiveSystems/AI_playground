@@ -91,6 +91,9 @@ ENV/
 .spyderproject
 .spyproject
 
+# DS_store
+.DS_Store
+
 # Rope project settings
 .ropeproject
 

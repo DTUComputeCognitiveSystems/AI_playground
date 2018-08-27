@@ -16,9 +16,11 @@ from src.utility.files import ensure_directory
 
 TWITTER_API_VERSION = "1.1"
 TWITTER_BASE_API_URL = "https://api.twitter.com"
+TWITTER_BASE_STATUS_URL = "https://twitter.com/{}/status"
+TWITTER_BASE_EMBED_URL = "https://publish.twitter.com/oembed"
 
 TWITTER_DATE_TIME_FORMAT = "%a %b %d %H:%M:%S %z %Y"
-INTERNAL_DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S %z"
+INTERNAL_DATE_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
 TWITTER_API_CALLS = {
     "search/tweets": {
@@ -28,6 +30,10 @@ TWITTER_API_CALLS = {
     "statuses/user_timeline": {
         "maximum_count": 3200,
         "rate_limit": 1500
+    },
+    "statuses/lookup": {
+        "maximum_count": 100,
+        "rate_limit": 300
     }
 }
 TWITTER_RATE_LIMIT_WINDOW = timedelta(minutes=15)
@@ -141,13 +147,17 @@ class TwitterClient:
 
         return access_token
 
-    def search(self, query, count=None):
+    def search(self, query, language_code=None, count=None):
 
         query = re.sub("\\s{2,}", " ", query.strip())
+        parameters = {"q": query}
+
+        if language_code:
+            parameters["lang"] = language_code
 
         tweets = self.__timeline(
             resource="search/tweets",
-            parameters={"q": query},
+            parameters=parameters,
             count=count
         )
 
@@ -164,6 +174,8 @@ class TwitterClient:
         return timeline
 
     def __timeline(self, resource, parameters, count=None):
+
+        # Setup
 
         if resource not in TWITTER_API_CALLS:
             raise TwitterClientError("Cannot request resource `{resource}.`")
@@ -183,77 +195,111 @@ class TwitterClient:
             )
             count = maximum_count
 
-        timeline_directory = Path(
-            self.cache_directory,
-            resource.replace("/", "-")
-        )
-        ensure_directory(timeline_directory)
-
-        timeline_filename = format_filename(
-            base_name="-".join([f"{k}={v}" for k, v in parameters.items()]),
+        last_request_filename = format_filename(
+            base_name="last_request",
             extension="json"
         )
-        timeline_path = Path(timeline_directory, timeline_filename)
+        last_request_path = Path(self.cache_directory, last_request_filename)
 
-        timeline = None
-        time_since_retrieval = None
+        time_since_last_request = None
+        last_request = {}
 
-        if os.path.exists(timeline_path):
-            with timeline_path.open("r") as timeline_file:
-                response_body = json.load(timeline_file)
-            retrieved_timestamp = datetime.strptime(
-                response_body["retrieved_timestamp"],
+        if os.path.exists(last_request_path):
+            with last_request_path.open("r") as last_request_file:
+                last_request = json.load(last_request_file)
+            last_request_retrieved_timestamp = datetime.strptime(
+                last_request[resource]["retrieved_timestamp"],
                 INTERNAL_DATE_TIME_FORMAT
             )
-            now = datetime.now(timezone.utc)
-            time_since_retrieval = now - retrieved_timestamp
-            timeline = response_body["statuses"]
+            now = datetime.now(timezone.utc).astimezone()
+            time_since_last_request = now - last_request_retrieved_timestamp
 
-        if (not timeline
-                or time_since_retrieval > maximum_duration_between_retrievals
-                or len(timeline) < count):
-
-            request_url = build_url(
-                TWITTER_BASE_API_URL, TWITTER_API_VERSION,
-                f"{resource}.json",
-                tweet_mode="extended",
-                count=count,
-                **parameters
-            )
-            response = self.session.get(request_url)
-            retrieved_timestamp = datetime.now(timezone.utc)
-
-            # TODO Handle response status codes better
-            # Suspended account returns 401
-            # Non-existent account return 404
-
-            if response.status_code == 401:
-                raise TwitterClientError("Bad authentication data.")
-
-            elif response.status_code == 404:
-                raise TwitterClientError("Invalid API resource.")
-
-            elif response.status_code == 429:
+        if time_since_last_request and \
+            time_since_last_request < maximum_duration_between_retrievals:
+                time_until_next_allowed_request = \
+                    maximum_duration_between_retrievals \
+                    - time_since_last_request
                 raise TwitterClientError(
-                    "Exceeded maximum number of allowed requests.")
+                    "Exceeded maximum number of allowed requests for now. "
+                    "Wait {}.".format(format_duration(
+                        time_until_next_allowed_request.total_seconds()))
+                )
 
-            response_body = response.json()
+        # Request
 
-            if isinstance(response_body, list):
-                response_body = {"statuses": response_body}
+        request_url = build_url(
+            TWITTER_BASE_API_URL, TWITTER_API_VERSION,
+            f"{resource}.json",
+            tweet_mode="extended",
+            count=count,
+            **parameters
+        )
+        response = self.session.get(request_url)
+        retrieved_timestamp = datetime.now(timezone.utc).astimezone()
 
-            response_body["retrieved_timestamp"] = datetime.strftime(
-                retrieved_timestamp,
-                INTERNAL_DATE_TIME_FORMAT
+        # TODO Handle response status codes better
+        # Suspended account returns 401
+        # Non-existent account return 404
+
+        if response.status_code == 401:
+            raise TwitterClientError("Bad authentication data.")
+
+        elif response.status_code == 404:
+            raise TwitterClientError("Invalid API resource.")
+
+        elif response.status_code == 429:
+            raise TwitterClientError(
+                "Exceeded maximum number of allowed requests.")
+
+        response_body = response.json()
+
+        # Parsing
+
+        timeline = response_body["statuses"]
+
+        timeline = [Tweet(tweet) for tweet in timeline]
+
+        # Saving results
+
+        tweet_ids = [tweet.id for tweet in timeline]
+
+        result = {
+            "resource": resource,
+            "parameters": parameters,
+            "ids": [tweet.id for tweet in timeline],
+            "retrieved_timestamp":
+                retrieved_timestamp.strftime(INTERNAL_DATE_TIME_FORMAT)
+        }
+
+        timeline_filename = format_filename(
+            base_name=retrieved_timestamp.strftime(INTERNAL_DATE_TIME_FORMAT)
+                .replace(":", "-"),
+            extension="json"
+        )
+        timeline_path = Path(self.cache_directory, timeline_filename)
+
+        with timeline_path.open("w") as timeline_file:
+            json.dump(
+                result,
+                timeline_file,
+                ensure_ascii=False,
+                indent=4
             )
 
-            if response_body["statuses"]:
-                with timeline_path.open("w") as timeline_file:
-                    json.dump(response_body, timeline_file)
+        # Logging
 
-            timeline = response_body["statuses"]
+        if not resource in last_request:
+            last_request[resource] = {}
 
-        timeline = [Tweet(tweet) for tweet in timeline[:count]]
+        last_request[resource] = result
+
+        with open(last_request_path, "w") as last_request_file:
+            json.dump(
+                last_request,
+                last_request_file,
+                ensure_ascii=False,
+                indent=4
+            )
 
         return timeline
 
@@ -283,6 +329,14 @@ class Tweet:
             self.retweeter = None
             self.retweet_timestamp = None
 
+    @property
+    def url(self):
+        url = build_url(
+            TWITTER_BASE_STATUS_URL.format(self.user.username),
+            self.id
+        )
+        return url
+
     def text_excluding(self, hashtags=False, mentions=False, urls=False):
 
         text = self.text
@@ -301,6 +355,18 @@ class Tweet:
             text = text.replace(excluded_string, "")
 
         return text
+
+    def as_html(self, hide_thread=False):
+        request_url = build_url(
+            TWITTER_BASE_EMBED_URL,
+            url=self.url,
+            hide_thread=hide_thread,
+            dnt=True
+        )
+        response = requests.get(request_url)
+        response_body = response.json()
+        html = response_body["html"]
+        return html
 
     def __process(self, raw_tweet):
 
@@ -420,3 +486,51 @@ def format_timestamp(timestamp):
     timestamp_string = f"{date_string} at {time_string}"
 
     return timestamp_string
+
+
+TIME_UNITS_IN_SECONDS = {
+    "year": 365*24*60*60,
+    "week": 52*24*60*60,
+    "day": 24*60*60,
+    "hour": 60*60,
+    "minute": 60,
+    "second": 1,
+}
+
+
+def format_duration(duration_in_seconds):
+
+    remainder_in_seconds = duration_in_seconds
+    duration_string_parts = []
+
+    for time_unit_name, time_unit_in_seconds in sorted(
+            TIME_UNITS_IN_SECONDS.items(),
+            key=lambda t: t[1],
+            reverse=True
+        ):
+
+        duration_in_time_unit, remainder_in_seconds = divmod(
+            remainder_in_seconds, time_unit_in_seconds)
+        duration_in_time_unit = int(duration_in_time_unit)
+
+        if duration_in_time_unit != 0:
+
+            if duration_in_time_unit != 1:
+                plural = "s"
+            else:
+                plural = ""
+
+            duration_string_parts.append(
+                f"{duration_in_time_unit} {time_unit_name}{plural}")
+
+    if len(duration_string_parts) == 0:
+        duration_string = "less than a second"
+    if len(duration_string_parts) == 1:
+        duration_string = duration_string_parts[0]
+    if len(duration_string_parts) == 2:
+        duration_string = " and ".join(duration_string_parts)
+    if len(duration_string_parts) > 2:
+        duration_string = ", ".join(duration_string_parts[:-1])
+        duration_string += ", and " + duration_string_parts[-1]
+
+    return duration_string

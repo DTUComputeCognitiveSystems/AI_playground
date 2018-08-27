@@ -4,8 +4,10 @@ import re
 import urllib.parse
 from calendar import month_name
 from datetime import datetime, timedelta, timezone
+from math import inf
 from pathlib import Path
 from shutil import rmtree
+from time import sleep
 
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
@@ -20,7 +22,8 @@ TWITTER_BASE_STATUS_URL = "https://twitter.com/{}/status"
 TWITTER_BASE_EMBED_URL = "https://publish.twitter.com/oembed"
 
 TWITTER_DATE_TIME_FORMAT = "%a %b %d %H:%M:%S %z %Y"
-INTERNAL_DATE_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
+INTERNAL_DATE_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f%z"
+INTERNAL_FILENAME_DATE_TIME_FORMAT = "%Y-%m-%dT%H_%M_%S%z"
 
 TWITTER_API_CALLS = {
     "search/tweets": {
@@ -65,6 +68,15 @@ class TwitterClient:
             self.cache_directory = _default_cache_directory
         else:
             self.cache_directory = cache_directory
+
+        last_results_filename = format_filename(
+            base_name="last_results",
+            extension="json"
+        )
+        self.last_results_path = Path(
+            self.cache_directory,
+            last_results_filename
+        )
 
         self.session = self.open_session()
 
@@ -149,7 +161,7 @@ class TwitterClient:
 
     def search(self, query, language_code=None, count=None):
 
-        query = re.sub("\\s{2,}", " ", query.strip())
+        query = re.sub(r"\s{2,}", " ", query.strip())
         parameters = {"q": query}
 
         if language_code:
@@ -173,6 +185,68 @@ class TwitterClient:
 
         return timeline
 
+    def tweets(self, ids):
+
+        # Setup
+
+        maximum_count = TWITTER_API_CALLS["statuses/lookup"]["maximum_count"]
+
+        rate_limit = TWITTER_API_CALLS["statuses/lookup"]["rate_limit"]
+        minimum_duration_between_retrievals = \
+            TWITTER_RATE_LIMIT_WINDOW / rate_limit
+
+        tweets = []
+
+        # Loop
+
+        for i in range(0, len(ids), maximum_count):
+
+            if i != 0:
+                sleep(minimum_duration_between_retrievals.total_seconds())
+
+            id_subset = ids[i:i+maximum_count]
+
+            id_subset_string = ",".join(list(map(str, id_subset)))
+
+            tweet_subset = self.__request_tweets(
+                resource="statuses/lookup",
+                parameters={"id": id_subset_string}
+            )
+            tweets.extend(tweet_subset)
+
+        return tweets
+
+    def last_result(self):
+
+        with open(self.last_results_path) as last_results_file:
+            last_results = json.load(last_results_file)
+
+        fewest_seconds_since_last_result = inf
+
+        for resource, result in last_results.items():
+
+            if resource == "statuses/lookup":
+                continue
+
+            retrieved_timestamp = datetime.strptime(
+                result["retrieved_timestamp"],
+                INTERNAL_DATE_TIME_FORMAT
+            )
+            now = datetime.now(timezone.utc).astimezone()
+            time_since_last_result = now - retrieved_timestamp
+            seconds_since_last_result = time_since_last_result.total_seconds()
+
+            if seconds_since_last_result < fewest_seconds_since_last_result:
+                fewest_seconds_since_last_result = seconds_since_last_result
+                last_result = result
+
+        if "ids" in last_result:
+            tweets = self.tweets(ids=last_result["ids"])
+            last_result["tweets"] = tweets
+            last_result.pop("ids")
+
+        return last_result
+
     def __timeline(self, resource, parameters, count=None):
 
         # Setup
@@ -181,9 +255,6 @@ class TwitterClient:
             raise TwitterClientError("Cannot request resource `{resource}.`")
 
         maximum_count = TWITTER_API_CALLS[resource]["maximum_count"]
-        rate_limit = TWITTER_API_CALLS[resource]["rate_limit"]
-        maximum_duration_between_retrievals = \
-            TWITTER_RATE_LIMIT_WINDOW / rate_limit
 
         if count is None:
             count = maximum_count
@@ -195,30 +266,48 @@ class TwitterClient:
             )
             count = maximum_count
 
-        last_request_filename = format_filename(
-            base_name="last_request",
-            extension="json"
-        )
-        last_request_path = Path(self.cache_directory, last_request_filename)
+        parameters = dict(parameters)
+        parameters["count"] = count
 
-        time_since_last_request = None
-        last_request = {}
+        # Request
 
-        if os.path.exists(last_request_path):
-            with last_request_path.open("r") as last_request_file:
-                last_request = json.load(last_request_file)
-            last_request_retrieved_timestamp = datetime.strptime(
-                last_request[resource]["retrieved_timestamp"],
-                INTERNAL_DATE_TIME_FORMAT
-            )
-            now = datetime.now(timezone.utc).astimezone()
-            time_since_last_request = now - last_request_retrieved_timestamp
+        timeline = self.__request_tweets(resource, parameters)
 
-        if time_since_last_request and \
-            time_since_last_request < maximum_duration_between_retrievals:
+        return timeline
+
+    def __request_tweets(self, resource, parameters):
+
+        # Setup
+
+        if resource not in TWITTER_API_CALLS:
+            raise TwitterClientError("Cannot request resource `{resource}.`")
+
+        rate_limit = TWITTER_API_CALLS[resource]["rate_limit"]
+        minimum_duration_between_retrievals = \
+            TWITTER_RATE_LIMIT_WINDOW / rate_limit
+
+        time_since_last_result = None
+        last_results = {}
+
+        if os.path.exists(self.last_results_path):
+
+            with self.last_results_path.open("r") as last_results_file:
+                last_results = json.load(last_results_file)
+
+            if resource in last_results:
+                last_results_retrieved_timestamp = datetime.strptime(
+                    last_results[resource]["retrieved_timestamp"],
+                    INTERNAL_DATE_TIME_FORMAT
+                )
+                now = datetime.now(timezone.utc).astimezone()
+                time_since_last_result = now \
+                    - last_results_retrieved_timestamp
+
+        if time_since_last_result and \
+            time_since_last_result < minimum_duration_between_retrievals:
                 time_until_next_allowed_request = \
-                    maximum_duration_between_retrievals \
-                    - time_since_last_request
+                    minimum_duration_between_retrievals \
+                    - time_since_last_result
                 raise TwitterClientError(
                     "Exceeded maximum number of allowed requests for now. "
                     "Wait {}.".format(format_duration(
@@ -231,7 +320,6 @@ class TwitterClient:
             TWITTER_BASE_API_URL, TWITTER_API_VERSION,
             f"{resource}.json",
             tweet_mode="extended",
-            count=count,
             **parameters
         )
         response = self.session.get(request_url)
@@ -255,53 +343,65 @@ class TwitterClient:
 
         # Parsing
 
-        timeline = response_body["statuses"]
+        raw_tweets = None
 
-        timeline = [Tweet(tweet) for tweet in timeline]
+        if isinstance(response_body, list):
+            raw_tweets = response_body
+        elif isinstance(response_body, dict):
+            if "statuses" in response_body:
+                raw_tweets = response_body["statuses"]
+
+        if raw_tweets is None:
+            raise TwitterClientError(
+                "Tweets not found in response from Twitter")
+
+        tweets = [Tweet(tweet) for tweet in raw_tweets]
 
         # Saving results
 
-        tweet_ids = [tweet.id for tweet in timeline]
+        tweet_ids = [tweet.id for tweet in tweets]
 
         result = {
             "resource": resource,
             "parameters": parameters,
-            "ids": [tweet.id for tweet in timeline],
+            "ids": tweet_ids,
             "retrieved_timestamp":
                 retrieved_timestamp.strftime(INTERNAL_DATE_TIME_FORMAT)
         }
 
-        timeline_filename = format_filename(
-            base_name=retrieved_timestamp.strftime(INTERNAL_DATE_TIME_FORMAT)
-                .replace(":", "-"),
-            extension="json"
-        )
-        timeline_path = Path(self.cache_directory, timeline_filename)
+        if resource != "statuses/lookup":
 
-        with timeline_path.open("w") as timeline_file:
-            json.dump(
-                result,
-                timeline_file,
-                ensure_ascii=False,
-                indent=4
+            timeline_filename = format_filename(
+                base_name=retrieved_timestamp.strftime(
+                    INTERNAL_FILENAME_DATE_TIME_FORMAT),
+                extension="json"
             )
+            timeline_path = Path(self.cache_directory, timeline_filename)
+
+            with timeline_path.open("w") as timeline_file:
+                json.dump(
+                    result,
+                    timeline_file,
+                    ensure_ascii=False,
+                    indent=4
+                )
 
         # Logging
 
-        if not resource in last_request:
-            last_request[resource] = {}
+        if not resource in last_results:
+            last_results[resource] = {}
 
-        last_request[resource] = result
+        last_results[resource] = result
 
-        with open(last_request_path, "w") as last_request_file:
+        with open(self.last_results_path, "w") as last_results_file:
             json.dump(
-                last_request,
-                last_request_file,
+                last_results,
+                last_results_file,
                 ensure_ascii=False,
                 indent=4
             )
 
-        return timeline
+        return tweets
 
     def clear_cache(self):
         rmtree(self.cache_directory)

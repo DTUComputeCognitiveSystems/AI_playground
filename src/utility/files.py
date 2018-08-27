@@ -65,7 +65,7 @@ if not sys.stdout.isatty():
     tqdm = tqdm_notebook
 
 
-def save_as_compressed_pickle_file(obj, file_path, title="Saving"):
+def save_as_compressed_pickle_file(obj, file_path, title=None):
     with gzip.open(file_path, "wb") as compressed_file:
         serialisation = pickle.dumps(obj)
         for start in trange(0, len(serialisation), PICKLING_BYTES_STEP_SIZE,
@@ -75,7 +75,7 @@ def save_as_compressed_pickle_file(obj, file_path, title="Saving"):
             compressed_file.write(bytes_to_write)
 
 
-def load_from_compressed_pickle_file(file_path, title="Loading"):
+def load_from_compressed_pickle_file(file_path, title=None):
 
     with gzip.open(file_path, "rb") as compressed_file:
         obj = pickle.load(compressed_file)

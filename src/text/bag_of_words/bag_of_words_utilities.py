@@ -273,6 +273,8 @@ def plot_heat_map_of_bag_of_words(bag_of_words, kind=None, terms=None,
 
     figure.canvas.mpl_connect("motion_notify_event", hover)
 
+    return figure
+
 
 def plot_term_cloud_for_bag_of_words(bag_of_words_matrix, idf=None,
                                      terms=None):
@@ -328,6 +330,8 @@ def plot_term_cloud_for_bag_of_words(bag_of_words_matrix, idf=None,
 
     axis.imshow(term_cloud, interpolation="bilinear", aspect="equal")
 
+    return figure
+
 
 def plot_pca_of_bag_of_words(bag_of_words_matrix, kind=None,
                              document_ids=None, corpus=None):
@@ -356,7 +360,7 @@ def plot_pca_of_bag_of_words(bag_of_words_matrix, kind=None,
     # Plotting
 
     figure = pyplot.figure(
-        tight_layout=True,
+        # tight_layout=True,
         figsize=(10, 5),
         # dpi=150
     )
@@ -443,3 +447,5 @@ def plot_pca_of_bag_of_words(bag_of_words_matrix, kind=None,
                 figure.canvas.draw_idle()
 
     figure.canvas.mpl_connect("motion_notify_event", hover)
+
+    return figure

@@ -9,6 +9,7 @@ from pathlib import Path
 from shutil import rmtree
 from time import sleep
 
+import pycountry
 import requests
 from oauthlib.oauth2 import BackendApplicationClient
 from requests.auth import HTTPBasicAuth
@@ -159,13 +160,13 @@ class TwitterClient:
 
         return access_token
 
-    def search(self, query, language_code=None, count=None):
+    def search(self, query, language=None, count=None):
 
         query = re.sub(r"\s{2,}", " ", query.strip())
         parameters = {"q": query}
 
-        if language_code:
-            parameters["lang"] = language_code
+        if language:
+            parameters["lang"] = pycountry.languages.lookup(language).alpha_2
 
         tweets = self.__timeline(
             resource="search/tweets",

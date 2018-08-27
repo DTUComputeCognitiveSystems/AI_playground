@@ -1,12 +1,15 @@
 import bz2
 import re
 import sys
+from collections import namedtuple
 from pathlib import Path
 from xml.etree import cElementTree as ElementTree
 from urllib.parse import urljoin
 from urllib.error import URLError
 
 import mwparserfromhell
+import numpy
+import pycountry
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from tqdm import tqdm, tqdm_notebook
 
@@ -55,13 +58,13 @@ class WikipediaDocument:
 class Wikipedia:
 
     def __init__(self,
-                 language_code="en",
+                 language="English",
                  cache_directory_url=None,
                  maximum_number_of_documents=None):
 
         self.documents = None  # type: list[WikipediaDocument]
 
-        self.__language_code = language_code
+        self.__language_code = pycountry.languages.lookup(language).alpha_2
         self.__maximum_number_of_documents = maximum_number_of_documents
 
         # Wikipedia URLs
@@ -161,6 +164,10 @@ class Wikipedia:
 
         # Progress
         print("Wikipedia loaded.")
+
+    @property
+    def language_code(self):
+        return self.__language_code
 
     def _load_parsed_documents(self):
         print("Loading parsed documents.")
@@ -562,11 +569,17 @@ class Wikipedia:
 
         query_vectorised = self.term_vectorizer.transform([query])
 
-        results = self.searcher.search(
-            query_vectorised = query_vectorised,
-            k_1 = k_1,
-            b = b
+        scores = self.searcher.search(
+            query_vectorised=query_vectorised,
+            k_1=k_1,
+            b=b
         )
+
+        _, keyword_indices = query_vectorised.nonzero()
+        keywords = numpy.array(self.terms)[keyword_indices].tolist()
+
+        SearchResults = namedtuple("SearchResults", ["scores", "keywords"])
+        results = SearchResults(scores=scores, keywords=keywords)
 
         return results
 

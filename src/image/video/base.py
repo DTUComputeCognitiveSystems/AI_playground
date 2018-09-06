@@ -1,3 +1,13 @@
+""" temporary - lines 1-8"""
+import git
+import os
+import sys
+git_root = git.Repo('.', search_parent_directories=True).git.rev_parse("--show-toplevel") # '.' causes issue on windows/osx?
+os.chdir(git_root)
+sys.path.insert(0, git_root)
+
+import cv2
+
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -14,6 +24,7 @@ from src.real_time.base_backend import BackendInterfaceObject
 from src.real_time.base_backend import BackendLoop
 from src.real_time.ipython_backend import IPythonLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
+from src.real_time.opencv_backend import OpenCVLoop
 
 MATPLOTLIB_BASED_BACKENDS = (MatplotlibLoop, IPythonLoop)
 
@@ -64,6 +75,11 @@ class _Video:
         :param bool block: Whether to wait for video to finish (recommended).
         :param blit:
         :param video_path: if this parameter is set, the video given will be opened instead of a webcam
+
+        For backend="opencv":
+        :param frame: OpenCV webcam frame
+        :TODO param video_path: if this parameter is set, the video given will be opened instead of a webcam
+
         """
         # Settings
         self.frame_rate = frame_rate
@@ -101,6 +117,12 @@ class _Video:
             self.real_time_backend = BackgroundLoop(
                 backend_interface=interface,
                 block=block
+            )
+        elif "opencv" in backend:
+            self.real_time_backend = OpenCVLoop(
+                backend_interface=interface,
+                title=title,
+                frame=frame
             )
         else:
             raise NotImplementedError("Unknown backend for video. ")
@@ -280,6 +302,11 @@ class _Video:
             for flair in self.flairs:  # type: VideoFlair
                 flair.initialize()
                 self.artists.extend(flair.artists)
+        
+        # Displaying if using OpenCV backend
+        if isinstance(self.real_time_backend, OpenCVLoop):
+            # Show the frame
+            cv2.imshow(self._title, self._current_frame)
 
         # Allow additional artists from child classes
         self._initialize_video_extensions()
@@ -392,37 +419,38 @@ if __name__ == "__main__":
     plt.ion()
 
     # Run a visible video recording
-    used_backend = MatplotlibLoop()
+    #used_backend = MatplotlibLoop()
+    used_backend = OpenCVLoop()
     used_backend.block = True
     SimpleVideo(
-        video_length=3,
+        video_length=30,
         backend=used_backend,
         title="Visible Video!"
     )
     used_backend.start()
 
     # Run video in background
-    print("\n\nNon-visible video with prints:")
-    used_backend = BackgroundLoop()
-    the_video = SimpleVideo(
-        video_length=2,
-        record_frames=True,
-        backend=used_backend,
-        verbose=True,
-        print_step=10,
-        frame_rate=30
-    )
-    used_backend.start()
+    #print("\n\nNon-visible video with prints:")
+    #used_backend = BackgroundLoop()
+    #the_video = SimpleVideo(
+    #    video_length=2,
+    #    record_frames=True,
+    #    backend=used_backend,
+    #    verbose=True,
+    #    print_step=10,
+    #    frame_rate=30
+    #)
+    #used_backend.start()
 
     # Print times for background video
-    the_frame_times = np.array(the_video.frame_times)
-    time_range = the_frame_times[-1] - the_frame_times[0]
-    the_avg_frame_time = (the_frame_times[1:] - the_frame_times[:-1]).mean()
-    print("Frames recored with non-visible video: {}".format(len(the_video.video_frames)))
-    print("Average frame-time: {:.4f}s".format(the_avg_frame_time))
-    print("Average frame-rate: {:.2f}".format(1 / the_avg_frame_time))
+    #the_frame_times = np.array(the_video.frame_times)
+    #time_range = the_frame_times[-1] - the_frame_times[0]
+    #the_avg_frame_time = (the_frame_times[1:] - the_frame_times[:-1]).mean()
+    #print("Frames recored with non-visible video: {}".format(len(the_video.video_frames)))
+    #print("Average frame-time: {:.4f}s".format(the_avg_frame_time))
+    #print("Average frame-rate: {:.2f}".format(1 / the_avg_frame_time))
 
     # Save frames to video-file
-    video_destination = Path("delete.mp4").resolve()
-    print("Saving video to: {}".format(video_destination))
-    the_video.save_recording_to_video(destination=video_destination)
+    #video_destination = Path("delete.mp4").resolve()
+    #print("Saving video to: {}".format(video_destination))
+    #the_video.save_recording_to_video(destination=video_destination)

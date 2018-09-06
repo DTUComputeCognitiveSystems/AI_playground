@@ -2,14 +2,11 @@ from collections import namedtuple
 from time import time
 
 import keras
-import keras_squeezenet
 import numpy as np
 import pandas as pd
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
 from keras.applications import mobilenet, resnet50
-from keras.applications.imagenet_utils import preprocess_input as sqnet_preprocessing, \
-    decode_predictions as sqnet_decode
 from keras.layers import Dense, Flatten, Dropout
 from keras.models import Model
 
@@ -29,9 +26,7 @@ _keras_models = [
     _model_specification("densenet", densenet, densenet.DenseNet121,
                          224, None, None),
     _model_specification("inception_resnet_v2", inception_resnet_v2, inception_resnet_v2.InceptionResNetV2,
-                         299, None, None),
-    _model_specification("keras_squeezenet", keras_squeezenet, keras_squeezenet.SqueezeNet,
-                         227, sqnet_preprocessing, sqnet_decode),
+                         299, None, None)
 ]
 
 model_modules = {
@@ -40,7 +35,7 @@ model_modules = {
 
 
 class KerasDetector(ResizingImageLabeller):
-    available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2", "keras_squeezenet"]
+    available_models = ["mobilenet", "resnet50", "densenet", "inception_resnet_v2"]
 
     def __init__(self,
                  model_specification='resnet50', resizing_method="sci_resize",

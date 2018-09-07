@@ -8,15 +8,13 @@ from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
 
 class OpenCVLoop(BackendLoop):
     def __init__(self, backend_interface=(),
-                 title="Real time animation", 
-                 block = False):
+                 title = "Real time webcam stream", opencv_frame = None):
         """
         :param BackendInterfaceObject backend_interface:
         :param str title:
         """
         # Settings
         self.title = title
-        self.block = block
 
         # Connect interface
         if isinstance(backend_interface, Iterable):
@@ -26,12 +24,13 @@ class OpenCVLoop(BackendLoop):
         super().__init__(*backend_interface)
 
         # Fields
-        self._current_loop_nr = 0
+        self._current_loop_nr = None
         self._start_time = None
 
     def _start(self):
 
         # Do loop
+        self._current_loop_nr = 0
         # Initialize parts through interfaces
         self.interface_loop_initialization()
         # Set time of start
@@ -39,33 +38,18 @@ class OpenCVLoop(BackendLoop):
 
         while self.stop_now == False:
             self._current_loop_nr += 1
-
+ 
             # Run loop step
             self.interface_loop_step()
+            key = cv2.waitKey(self.loop_time_milliseconds)
+            #print(cv2.getWindowProperty(self.title, 0), self.title)
 
             # Check for end
-            if self.interface_loop_stop_check() or self.stop_now or cv2.getWindowProperty(self.title, 0) < 0 or cv2.waitKey(self.loop_time_milliseconds) == 27:
-                self.__finalize()
-                self.stop_now = True
-
-        # Block main thread
-        if self.block:
-            self.__wait_for_end()
-            # Finalize loop
-            self.interface_finalize()
-            cv2.destroyAllWindows()
-
-    def __finalize(self):
-        self.interface_finalize()
-        cv2.destroyAllWindows()
-
-    def __wait_for_end(self):
-        try:
-            while not self.stop_now:
-                cv2.waitKey(self.loop_time_milliseconds)
-        except (TclError, KeyboardInterrupt):
-            cv2.destroyAllWindows()
-            self.interface_interrupt_handler()
+            if self.interface_loop_stop_check() or self.stop_now or key == 27 or cv2.getWindowProperty(self.title, 0) == -1:
+                print("stopcondition {}, {}, {}".format(self.interface_loop_stop_check(), self.stop_now, cv2.getWindowProperty(self.title, 0)))
+                self.interface_finalize()
+                cv2.destroyAllWindows()
+                self.stop_now = True 
 
     @property
     def current_loop_nr(self) -> int:

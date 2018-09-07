@@ -27,7 +27,7 @@ from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.opencv_backend import OpenCVLoop
 
 MATPLOTLIB_BASED_BACKENDS = (MatplotlibLoop, IPythonLoop)
-
+OPENCV_BASED_BACKENDS = (OpenCVLoop)
 
 class VideoFlair:
     def __init__(self, artists):
@@ -51,9 +51,9 @@ class _Video:
     def __init__(self, frame_rate, stream_type,
                  video_length, length_is_nframes,
                  record_frames,
-                 title, ax, fig, block, blit,
+                 title, ax, fig, opencv_frame, block, blit,
                  verbose, print_step,
-                 backend,
+                 backend, 
                  video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure.
@@ -105,6 +105,10 @@ class _Video:
         if isinstance(backend, BackendLoop):
             self.real_time_backend = backend
             self.real_time_backend.add_interface(interface=interface)
+
+            if type(backend).__name__ == "OpenCVLoop":
+                backend.opencv_frame = opencv_frame
+        
         elif "matplotlib" in backend:
             self.real_time_backend = MatplotlibLoop(
                 backend_interface=interface,
@@ -122,7 +126,7 @@ class _Video:
             self.real_time_backend = OpenCVLoop(
                 backend_interface=interface,
                 title=title,
-                frame=frame
+                opencv_frame = opencv_frame
             )
         else:
             raise NotImplementedError("Unknown backend for video. ")
@@ -306,7 +310,8 @@ class _Video:
         # Displaying if using OpenCV backend
         if isinstance(self.real_time_backend, OpenCVLoop):
             # Show the frame
-            cv2.imshow(self._title, self._current_frame)
+            self.opencv_frame = self._current_frame[:, :, ::-1]
+            cv2.imshow(self._title, self.opencv_frame)
 
         # Allow additional artists from child classes
         self._initialize_video_extensions()
@@ -329,6 +334,12 @@ class _Video:
             # Update flairs
             for flair in self.flairs:  # type: VideoFlair
                 flair.update(self)
+
+        # Displaying if using OpenCV backend
+        if isinstance(self.real_time_backend, OpenCVLoop):
+            # Show the frame
+            self.opencv_frame = self._current_frame[:, :, ::-1]
+            cv2.imshow(self._title, self.opencv_frame)
 
         # Frame storage
         self.frame_times.append(time())
@@ -372,7 +383,7 @@ class SimpleVideo(_Video):
                  frame_rate=5, stream_type="simple",
                  video_length=10, length_is_nframes=False,
                  record_frames=False,
-                 title="Video", ax=None, fig=None, block=True, blit=False,
+                 title="Video", ax=None, fig=None, opencv_frame = None, block=True, blit=False,
                  verbose=False, print_step=1,
                  backend="matplotlib", video_path = None):
         """
@@ -405,6 +416,7 @@ class SimpleVideo(_Video):
             stream_type=stream_type,
             ax=ax,
             fig=fig,
+            opencv_frame = opencv_frame,
             block=block,
             blit=blit,
             backend=backend,
@@ -420,12 +432,12 @@ if __name__ == "__main__":
 
     # Run a visible video recording
     #used_backend = MatplotlibLoop()
-    used_backend = OpenCVLoop()
-    used_backend.block = True
+    #used_backend = OpenCVLoop()
+    used_backend = OpenCVLoop(title="Webcam video stream")
     SimpleVideo(
-        video_length=30,
+        video_length=10,
         backend=used_backend,
-        title="Visible Video!"
+        title=used_backend.title
     )
     used_backend.start()
 

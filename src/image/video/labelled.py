@@ -11,14 +11,16 @@ from time import time
 
 from src.image.object_detection.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.base import _Video, MATPLOTLIB_BASED_BACKENDS
+from src.image.video.base import _Video, MATPLOTLIB_BASED_BACKENDS, OPENCV_BASED_BACKENDS
 import matplotlib.pyplot as plt
 from matplotlib import colors, cm
 import numpy as np
+import cv2
 
 from src.image.video.texter import VideoTexter
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
+from src.real_time.opencv_backend import OpenCVLoop
 from src.image.video.snapshot import CrossHair, FrameCutout
 
 
@@ -28,7 +30,7 @@ class LabelledVideo(_Video):
                  frame_rate=5, stream_type="thread",
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
-                 title="Video", ax=None, fig=None, block=True,
+                 title="Video", ax=None, fig=None, opencv_frame=None, block=True,
                  verbose=False, print_step=1,
                  crosshair_type='box',
                  crosshair_size=(224, 224),
@@ -58,6 +60,7 @@ class LabelledVideo(_Video):
             stream_type=stream_type,
             ax=ax,
             fig=fig,
+            opencv_frame = opencv_frame,
             block=block,
             blit=False,
             backend=backend,
@@ -93,7 +96,11 @@ class LabelledVideo(_Video):
 
             # Cutout coordinates
             self.cutout_coord = self._cross_hair.frame_cutout.coordinates
-
+        elif isinstance(self.real_time_backend, OPENCV_BASED_BACKENDS):
+            # Cross hair
+            self.cutout_coord = FrameCutout(frame_size=self.frame_size, size=crosshair_size).coordinates
+            
+            #print(self._current_frame)
         else:
             self.cutout_coord = FrameCutout(frame_size=self.frame_size, size=crosshair_size).coordinates
 
@@ -156,22 +163,30 @@ class LabelledVideo(_Video):
             self._text.set_text(labels[0])
             self._text.set_background_color(self._colors.to_rgba(probabilities[0]))
 
+        if isinstance(self.real_time_backend, OPENCV_BASED_BACKENDS):
+            print("Frame: {}".format(self.frame_nr))
+            cv2.putText(self.opencv_frame,'Test text',(50,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
+            cv2.putText(self._current_frame[:, :, ::-1],'Test text',(50,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
+            
+            #cv2.rectangle(self._current_frame[:, :, ::-1],(100,0),(200,150),(0,255,0),3)
 
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    backends = [MatplotlibLoop(block=True), BackgroundLoop()]
-    the_backend = backends[0]
+    backends = [MatplotlibLoop(block=True), BackgroundLoop(), OpenCVLoop(title="Webcam video stream")]
+    the_backend = backends[2]
 
     labelling_model = KerasDetector(model_specification="mobilenet")
     the_video = LabelledVideo(
         model=labelling_model,
-        video_length=10,
+        video_length=300,
         backend=the_backend,
         verbose=True,
         store_predictions=True,
         record_frames=True,
+        stream_type="sinple",
+        title = the_backend.title
     )
     the_backend.start()
 
@@ -182,10 +197,10 @@ if __name__ == "__main__":
     frame = the_video.video_frames[nr]
     cut_frame = the_video.cut_frames[nr]
 
-    plt.close("all")
-    plt.figure()
-    ax1 = plt.subplot(2, 1, 1)
-    ax1.imshow(frame)
-    ax2 = plt.subplot(2, 1, 2)
-    ax2.imshow(cut_frame)
+    #plt.close("all")
+    #plt.figure()
+    #ax1 = plt.subplot(2, 1, 1)
+    #ax1.imshow(frame)
+    #ax2 = plt.subplot(2, 1, 2)
+    #ax2.imshow(cut_frame)
 

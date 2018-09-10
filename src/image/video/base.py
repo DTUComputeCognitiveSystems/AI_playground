@@ -309,9 +309,11 @@ class _Video:
         
         # Displaying if using OpenCV backend
         if isinstance(self.real_time_backend, OpenCVLoop):
-            # Show the frame
-            self.opencv_frame = self._current_frame[:, :, ::-1]
-            #cv2.imshow(self._title, self.opencv_frame)
+            # Set the frame before video extensions step
+            # Ugly flips, because the initial format makes it hard to work in openCV image format and inversed last dimension makes image weird color
+            self.opencv_frame = cv2.flip(self._current_frame, 1)
+            self.opencv_frame = self.opencv_frame[:, :, ::-1]
+            self.opencv_frame = cv2.flip(self.opencv_frame, 1)
 
         # Allow additional artists from child classes
         self._initialize_video_extensions()
@@ -341,16 +343,18 @@ class _Video:
             self.video_frames.append(self._current_frame)
 
         if isinstance(self.real_time_backend, OpenCVLoop):
-            # Set the frame
-            self.opencv_frame = self._current_frame[:, :, ::-1]
+            # Set the frame before video extensions step
+            # Ugly flips, because the initial format makes it hard to work in openCV image format and inversed last dimension makes image weird color
+            self.opencv_frame = cv2.flip(self._current_frame, 1)
+            self.opencv_frame = self.opencv_frame[:, :, ::-1]
+            self.opencv_frame = cv2.flip(self.opencv_frame, 1)
 
         # Allow updating additional artists from child classes
         self._step_video_extensions()
 
         # Displaying if using OpenCV backend
         if isinstance(self.real_time_backend, OpenCVLoop):
-            # Show the frame
-            #self._text.update(self.opencv_frame)
+            # Show the frame after video extensions step
             cv2.imshow(self._title, self.opencv_frame)
 
         # Printing

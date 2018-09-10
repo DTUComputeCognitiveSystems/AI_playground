@@ -123,7 +123,7 @@ class VideoCamera(_Video):
                  n_photos=5, backgroundcolor="darkblue", color="white",
                  crosshair_type="box",
                  crosshair_size=(224, 224),
-                 title="Camera", ax=None, fig=None, block=True,
+                 title="Camera", ax=None, fig=None, opencv_frame = None, block=True,
                  verbose=False, print_step=1,
                  backend="matplotlib", 
                  video_path = None):
@@ -150,6 +150,7 @@ class VideoCamera(_Video):
             stream_type=stream_type,
             ax=ax,
             fig=fig,
+            opencv_frame = opencv_frame,
             block=block,
             blit=False,
             backend=backend,

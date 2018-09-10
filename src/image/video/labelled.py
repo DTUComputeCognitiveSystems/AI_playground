@@ -23,6 +23,38 @@ from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.opencv_backend import OpenCVLoop
 from src.image.video.snapshot import CrossHair, FrameCutout
 
+class OpenCVVideoEffects():
+    def __init__(self, opencv_frame = None, opencv_text = "", crosshair = {}):
+        self.opencv_frame = opencv_frame
+        self.opencv_text = opencv_text
+        self.crosshair = crosshair
+        self.frame_size = None
+        self.crosshair_size = None
+
+    def update(self):
+
+        crosshair_point_1 = (int(self.frame_size[1] / 2 - self.crosshair_size[1] / 2), int(self.frame_size[0] / 2 - self.crosshair_size[0] / 2))
+        crosshair_point_2 = (int(self.frame_size[1] / 2 + self.crosshair_size[1] / 2), int(self.frame_size[0] / 2 + self.crosshair_size[0] / 2))
+
+        text_size, _ = cv2.getTextSize(self.opencv_text, cv2.FONT_HERSHEY_DUPLEX, 1, 1)
+        
+        text_bg_point_1 = (self.frame_size[1] - text_size[0] - 10,0)
+        text_bg_point_2 = (self.frame_size[1], text_size[1] + 15)
+        cv2.rectangle(self.opencv_frame, text_bg_point_1, text_bg_point_2, (255,255,255), -1)
+
+        cv2.putText(self.opencv_frame, self.opencv_text,(self.frame_size[1] - text_size[0] - 5, text_size[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 1, (0,0,0))
+        cv2.rectangle(self.opencv_frame, crosshair_point_1, crosshair_point_2, self.crosshair["color"], self.crosshair["thickness"], cv2.LINE_8)
+
+    def setText(self, opencv_text):
+        self.opencv_text = opencv_text
+
+    def setFrame(self, opencv_frame):
+        self.opencv_frame = opencv_frame
+
+    def setCrossHair(self):
+        self.crosshair["color"] = (0, 0, 255)
+        self.crosshair["thickness"] = 3
+        
 
 class LabelledVideo(_Video):
     def __init__(self,
@@ -97,9 +129,14 @@ class LabelledVideo(_Video):
             # Cutout coordinates
             self.cutout_coord = self._cross_hair.frame_cutout.coordinates
         elif isinstance(self.real_time_backend, OPENCV_BASED_BACKENDS):
-            # Cross hair
+            # Cross hair and text object
+            self.opencveffects = OpenCVVideoEffects()
+            self.opencveffects.frame_size = self.frame_size
+            self.opencveffects.crosshair_size = crosshair_size
+
+            # Cutout
             self.cutout_coord = FrameCutout(frame_size=self.frame_size, size=crosshair_size).coordinates
-            
+
             #print(self._current_frame)
         else:
             self.cutout_coord = FrameCutout(frame_size=self.frame_size, size=crosshair_size).coordinates
@@ -164,11 +201,11 @@ class LabelledVideo(_Video):
             self._text.set_background_color(self._colors.to_rgba(probabilities[0]))
 
         if isinstance(self.real_time_backend, OPENCV_BASED_BACKENDS):
-            print("Frame: {}".format(self.frame_nr))
-            cv2.putText(self.opencv_frame,'Test text',(50,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
-            cv2.putText(self._current_frame[:, :, ::-1],'Test text',(50,50), cv2.FONT_HERSHEY_SIMPLEX, 1,(255,255,255),2,cv2.LINE_AA)
-            
-            #cv2.rectangle(self._current_frame[:, :, ::-1],(100,0),(200,150),(0,255,0),3)
+            #print("Frame: {}, OpenCVframe: {}".format(self.frame_nr, self.opencv_frame))
+            self.opencveffects.setFrame(self.opencv_frame)
+            self.opencveffects.setText(labels[0])
+            self.opencveffects.setCrossHair()
+            self.opencveffects.update()
 
 if __name__ == "__main__":
     plt.close("all")
@@ -185,10 +222,11 @@ if __name__ == "__main__":
         verbose=True,
         store_predictions=True,
         record_frames=True,
-        stream_type="sinple",
+        stream_type="simple",
         title = the_backend.title
     )
-    the_backend.start()
+    #the_backend.start()
+    the_video.start()
 
     print("{} predictions made".format(len(the_video.predictions)))
 

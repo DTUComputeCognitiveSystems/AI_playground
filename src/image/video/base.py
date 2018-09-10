@@ -311,7 +311,7 @@ class _Video:
         if isinstance(self.real_time_backend, OpenCVLoop):
             # Show the frame
             self.opencv_frame = self._current_frame[:, :, ::-1]
-            cv2.imshow(self._title, self.opencv_frame)
+            #cv2.imshow(self._title, self.opencv_frame)
 
         # Allow additional artists from child classes
         self._initialize_video_extensions()
@@ -335,19 +335,23 @@ class _Video:
             for flair in self.flairs:  # type: VideoFlair
                 flair.update(self)
 
-        # Displaying if using OpenCV backend
-        if isinstance(self.real_time_backend, OpenCVLoop):
-            # Show the frame
-            self.opencv_frame = self._current_frame[:, :, ::-1]
-            cv2.imshow(self._title, self.opencv_frame)
-
         # Frame storage
         self.frame_times.append(time())
         if self._record_frames:
             self.video_frames.append(self._current_frame)
 
+        if isinstance(self.real_time_backend, OpenCVLoop):
+            # Set the frame
+            self.opencv_frame = self._current_frame[:, :, ::-1]
+
         # Allow updating additional artists from child classes
         self._step_video_extensions()
+
+        # Displaying if using OpenCV backend
+        if isinstance(self.real_time_backend, OpenCVLoop):
+            # Show the frame
+            #self._text.update(self.opencv_frame)
+            cv2.imshow(self._title, self.opencv_frame)
 
         # Printing
         if not self.frame_nr % self._print_step:

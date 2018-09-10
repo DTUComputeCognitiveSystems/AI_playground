@@ -73,6 +73,7 @@ class Camera:
 
         # Reverse last dimension (CV2 apparently loads images in BGR format)
         out = out[:, :, ::-1]
+        out = cv2.flip(out, 1)
 
         return out
 

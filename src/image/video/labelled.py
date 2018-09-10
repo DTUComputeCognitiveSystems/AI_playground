@@ -1,11 +1,11 @@
 """ temporary - lines 1-8"""
-if __name__ == "__main__":
-    import git
-    import os
-    import sys
-    git_root = git.Repo('.', search_parent_directories=True).git.rev_parse("--show-toplevel") # '.' causes issue on windows/osx?
-    os.chdir(git_root)
-    sys.path.insert(0, git_root)
+
+import git
+import os
+import sys
+git_root = git.Repo('.', search_parent_directories=True).git.rev_parse("--show-toplevel") # '.' causes issue on windows/osx?
+os.chdir(git_root)
+sys.path.insert(0, git_root)
 
 import random
 from time import time
@@ -52,7 +52,6 @@ class OpenCVVideoEffects():
         text_bg_point_1 = (self.frame_size[1] - text_size[0] - 10,0)
         text_bg_point_2 = (self.frame_size[1], text_size[1] + 15)
         # Drawing the text background
-        print(sys.getsizeof(self.opencv_frame))
         cv2.rectangle(self.opencv_frame, text_bg_point_1, text_bg_point_2, (255,255,255), -1)
         # Displaying the text on the frame
         cv2.putText(self.opencv_frame, self.opencv_text,(self.frame_size[1] - text_size[0] - 5, text_size[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 1, (0,0,0))
@@ -80,7 +79,7 @@ class LabelledVideo(_Video):
                  verbose=False, print_step=1,
                  crosshair_type='box',
                  crosshair_size=(224, 224),
-                 backend="matplotlib",video_path = None):
+                 backend="opencv",video_path = None):
         """
         Shows the input of the webcam as a video in a Matplotlib figure while labelling them with a machine learning
         model.
@@ -220,6 +219,7 @@ class LabelledVideo(_Video):
             self.opencveffects.setText("{} {:0.2f}%".format(labels[0],probabilities[0] * 100))
             self.opencveffects.setCrossHair()
             self.opencveffects.update()
+            print("Frame: {}, Label:{}, Probability:{:0.2f}%".format(self.frame_nr, labels[0], probabilities[0]))
 
 if __name__ == "__main__":
     plt.close("all")

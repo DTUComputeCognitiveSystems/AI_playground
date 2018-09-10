@@ -42,11 +42,10 @@ class OpenCVLoop(BackendLoop):
             # Run loop step
             self.interface_loop_step()
             key = cv2.waitKey(self.loop_time_milliseconds)
-            #print(cv2.getWindowProperty(self.title, 0), self.title)
-
+            
             # Check for end
             if self.interface_loop_stop_check() or self.stop_now or key == 27 or cv2.getWindowProperty(self.title, 0) == -1:
-                print("stopcondition {}, {}, {}".format(self.interface_loop_stop_check(), self.stop_now, cv2.getWindowProperty(self.title, 0)))
+                #print("stopcondition {}, {}, {}".format(self.interface_loop_stop_check(), self.stop_now, cv2.getWindowProperty(self.title, 0)))
                 self.interface_finalize()
                 cv2.destroyAllWindows()
                 self.stop_now = True 

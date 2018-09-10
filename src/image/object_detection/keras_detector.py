@@ -26,7 +26,7 @@ _keras_models = [
     _model_specification("densenet", densenet, densenet.DenseNet121,
                          224, None, None),
     _model_specification("inception_resnet_v2", inception_resnet_v2, inception_resnet_v2.InceptionResNetV2,
-                         299, None, None),
+                         299, None, None)
 ]
 
 model_modules = {

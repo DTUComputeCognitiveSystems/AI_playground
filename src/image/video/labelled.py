@@ -216,7 +216,7 @@ class LabelledVideo(_Video):
         if isinstance(self.real_time_backend, OPENCV_BASED_BACKENDS):
             # Apply openCV video effects and display the text and the crosshair 
             self.opencveffects.setFrame(self.opencv_frame)
-            self.opencveffects.setText(labels[0])
+            self.opencveffects.setText("{} {:0.2f}%".format(labels[0],probabilities[0] * 100))
             self.opencveffects.setCrossHair()
             self.opencveffects.update()
 

@@ -26,6 +26,13 @@ class VideoRecognitionDashboard:
             disabled=False,
         )
 
+        self.select_backend = Dropdown(
+            options=["opencv","matplotlib"],
+            value="opencv",
+            description='Backend:',
+            disabled=False,
+        )
+
         self.use_recorded = RadioButtons(
             options=['Webcam', 'MP4'],
             value='Webcam',
@@ -62,7 +69,7 @@ class VideoRecognitionDashboard:
         self.widget_box = VBox(
             (
                 HBox(
-                    (self.start_button, self.use_recorded, self.video_length, self.select_network),
+                    (self.start_button, self.use_recorded, self.video_length, self.select_network, self.select_backend),
                     layout=Layout(justify_content="space-around")
                 ),
                 HBox(
@@ -101,6 +108,7 @@ class VideoRecognitionDashboard:
         # Get settings
         model_name = self.select_network.value
         video_length = self.video_length.value
+        selected_backend = self.select_backend.value
 
         # Make network
         net = KerasDetector(model_specification=model_name, exlude_animals=True)
@@ -110,7 +118,7 @@ class VideoRecognitionDashboard:
         if self.use_recorded.value == "MP4":
             video_path = self.video_path.value
             video_length = 120
-        the_video = LabelledVideo(net, video_length=video_length, video_path=video_path)
+        the_video = LabelledVideo(net, backend=selected_backend, video_length=video_length, video_path=video_path)
         self.progress_text.value = "Video running!"
         the_video.start()
         plt.show()

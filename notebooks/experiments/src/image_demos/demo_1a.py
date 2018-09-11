@@ -26,6 +26,13 @@ class VideoRecognitionDashboard:
             disabled=False,
         )
 
+        self.select_backend = Dropdown(
+            options=["opencv","matplotlib"],
+            value="opencv",
+            description='Backend:',
+            disabled=False,
+        )
+
         self.use_recorded = RadioButtons(
             options=['Webcam', 'MP4'],
             value='Webcam',

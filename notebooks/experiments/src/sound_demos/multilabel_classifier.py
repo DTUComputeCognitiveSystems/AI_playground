@@ -1,4 +1,3 @@
-# TODO: Change path to pretrained weights
 import os
 import glob
 import time
@@ -134,8 +133,9 @@ class Recorder:
 
 class SoundClassifier:
     
-    def __init__(self, mix=False):
+    def __init__(self, weights_path='sound_classification_weights.hdf5', mix=False):
         
+        self.weights_path = weights_path
         self.mix = mix
         
         ### Recording settings ###
@@ -321,7 +321,8 @@ class SoundClassifier:
         model.add(Activation('softmax'))
         
         # load the saved checkpoint weights
-        model.load_weights('/Users/nbip/proj/dtu/dtu-bach/dev/sound_classification_weights.hdf5')
+        # model.load_weights('/Users/nbip/proj/dtu/dtu-bach/dev/sound_classification_weights.hdf5')
+        model.load_weights(self.weights_path)
         
         # pop the top layers?
         # Try to remove a different number of layers. Removing 2 seems to work okay

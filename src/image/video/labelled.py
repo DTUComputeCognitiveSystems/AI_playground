@@ -29,10 +29,10 @@ from src.image.video.snapshot import CrossHair, FrameCutout
 class LabelledVideo(_Video):
     def __init__(self,
                  model, backgroundcolor="darkblue", color="white", store_predictions=False,
-                 frame_rate=5, stream_type="thread",
+                 frame_rate=24, stream_type="thread",
                  video_length=3, length_is_nframes=False,
                  record_frames=False,
-                 title="Video", ax=None, fig=None, opencv_frame=None, block=True,
+                 title="Video", ax=None, fig=None, opencv_frame=None, block=True, blit=False,
                  verbose=False, print_step=1,
                  crosshair_type='box',
                  crosshair_size=(224, 224),
@@ -64,7 +64,7 @@ class LabelledVideo(_Video):
             fig=fig,
             opencv_frame = opencv_frame,
             block=block,
-            blit=False,
+            blit=blit,
             backend=backend,
             verbose=verbose,
             print_step=print_step,
@@ -176,13 +176,15 @@ class LabelledVideo(_Video):
             self.opencveffects.setText("{} {:0.2f}%".format(labels[0],probabilities[0] * 100))
             self.opencveffects.setCrossHair()
             self.opencveffects.update()
-            print("Frame: {}, Label:{}, Probability:{:0.2f}%".format(self.frame_nr, labels[0], probabilities[0]))
+
+        print("Frame: {}, Label:{}, Probability:{:0.2f}%".format(self.frame_nr, labels[0], probabilities[0]))
+
 
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
 
-    backends = [MatplotlibLoop(block=True), BackgroundLoop(), OpenCVLoop(title="Webcam video stream")]
+    backends = [MatplotlibLoop(block=True, blit = False), BackgroundLoop(), OpenCVLoop(title="Webcam video stream")]
     the_backend = backends[2]
 
     labelling_model = KerasDetector(model_specification="mobilenet")

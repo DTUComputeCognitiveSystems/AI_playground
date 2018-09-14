@@ -15,12 +15,12 @@ sys.path.insert(0, git_root)
 
 # Set up logging
 
-LOG_CONFIG_PATH = "notebooks/logging.json"
+LOG_CONFIG_PATH = "notebooks/logger_config.json"
 
 def setup_logging(
     default_level=logging.INFO):
     """
-        Setup logging configuration
+        Load logging configuration
     """
     global LOG_CONFIG_PATH
 
@@ -31,5 +31,20 @@ def setup_logging(
     else:
         logging.basicConfig(level=default_level)
 
+def handle_exception(exc_type, exc_value, exc_traceback):
+    """
+        Function used as an exception handler
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+# Run setup
 setup_logging()
+# Create logger object
+logger = logging.getLogger("main_logger")
+# Attach the except hook
+sys.excepthook = handle_exception
 

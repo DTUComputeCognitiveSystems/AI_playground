@@ -2,6 +2,7 @@
 import git
 import os
 import sys
+import platform
 # Logging modules
 import json
 import logging
@@ -39,7 +40,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
 
-    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    logger.error("Uncaught exception ({} {} {})".format(platform.system(), platform.release(), os.name), exc_info=(exc_type, exc_value, exc_traceback))
 
 # Run setup
 setup_logging()

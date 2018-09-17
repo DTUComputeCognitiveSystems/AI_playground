@@ -11,6 +11,8 @@ import logging.config
 from IPython import get_ipython
 import re
 
+# Configurations
+ROOT_DIRECTORY_NAME = "AI_playground"
 LOG_FILE_PATH = "errors.log"
 LOG_CONFIG_PATH = "notebooks/logger_config.json"
 
@@ -57,7 +59,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.error("Uncaught exception ({} {} {})".format(platform.system(), platform.release(), os.name), exc_info=(exc_type, exc_value, exc_traceback))
 
 # Changing the root directory
-root_directory = findRootDir(os.path.realpath("__file__"), "AI_playground")
+root_directory = findRootDir(os.path.realpath("__file__"), ROOT_DIRECTORY_NAME)
 os.chdir(root_directory)
 sys.path.insert(0, root_directory)
 

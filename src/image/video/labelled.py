@@ -1,11 +1,6 @@
-""" temporary - lines 1-8"""
-
-import git
-import os
-import sys
-git_root = git.Repo('.', search_parent_directories=True).git.rev_parse("--show-toplevel") # '.' causes issue on windows/osx?
-os.chdir(git_root)
-sys.path.insert(0, git_root)
+""" assuming that you are located in the project root when you run this file from the command line"""
+if __name__ == "__main__":
+    exec(open("notebooks/global_setup.py").read())
 
 import random
 from time import time

@@ -9,7 +9,6 @@ import logging
 import logging.config
 # Ipython
 from IPython import get_ipython
-import re
 
 # Configurations
 ROOT_DIRECTORY_NAME = "AI_playground"
@@ -37,16 +36,6 @@ def run_from_ipython():
         return True
     except NameError:
         return False
-
-def setup_logging(
-    default_level=logging.INFO):
-    """
-        Load logging configuration
-    """
-    global LOG_CONFIG_PATH
-    with open(LOG_CONFIG_PATH, 'rt') as f:
-        config = json.load(f)
-    logging.config.dictConfig(config)
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     """
@@ -78,9 +67,9 @@ if run_from_ipython():
     ipython.log.setLevel(logging.INFO)
 else:
     # Run setup
-    setup_logging()
+    config = json.load(open(LOG_CONFIG_PATH, 'rt'))
+    logging.config.dictConfig(config)
     # Create logger object
     logger = logging.getLogger("main_logger")
     # Attach the except hook
     sys.excepthook = handle_exception
-

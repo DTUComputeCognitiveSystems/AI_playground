@@ -27,6 +27,7 @@ class BackendInterface:
         self._finalize = finalize
         self._interrupt_handler = interrupt_handler
         self._loop_time_milliseconds = loop_time_milliseconds
+
     def _loop_initialization(self):
         pass
 
@@ -62,9 +63,12 @@ class BackendInterface:
     def interrupt_handler(self):
         return self._interrupt_handler
 
+    def _loop_time_milliseconds(self):
+        pass
+
     @property
     def loop_time_milliseconds(self):
-        pass
+        return self._loop_time_milliseconds
 
 
 class BackendMultiInterface:

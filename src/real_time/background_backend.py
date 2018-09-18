@@ -112,7 +112,14 @@ if __name__ == "__main__":
     class ExampleInterface(BackendInterface):
         def __init__(self):
             self.counter = None
-
+            super().__init__(
+                loop_initialization = self._loop_initialization,
+                loop_step = self._loop_step,
+                loop_stop_check = self._loop_stop_check,
+                finalize = self._finalize,
+                interrupt_handler = self._interrupt_handler,
+                loop_time_milliseconds = self.loop_time_milliseconds
+            )
         # Here I initialize all variables, models, plots etc.
         def _loop_initialization(self):
             print("Initializing ExampleInterface.")

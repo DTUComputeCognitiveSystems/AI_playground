@@ -12,7 +12,14 @@ from src.text.utility.text_plots import flow_text_into_axes
 
 class HighlightCharacters(BackendInterface):
     def __init__(self, backend, lines_in_view=20, letter_modifiers=None):
-        super().__init__()
+        super().__init__(
+            loop_initialization = self._loop_initialization,
+            loop_step = self._loop_step,
+            loop_stop_check = self._loop_stop_check,
+            finalize = self._finalize,
+            interrupt_handler = self._interrupt_handler,
+            loop_time_milliseconds = self.loop_time_milliseconds
+        )
         self.n_lines = lines_in_view
         self.backend = backend  # type: TextInputLoop
         self.letter_modifiers = dict() if letter_modifiers is None else letter_modifiers

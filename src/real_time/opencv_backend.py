@@ -3,14 +3,14 @@ from collections import Iterable
 from time import time
 
 import cv2
-from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
+from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
 class OpenCVLoop(BackendLoop):
     def __init__(self, backend_interface=(),
                  title = "Real time webcam stream", opencv_frame = None):
         """
-        :param BackendInterfaceObject backend_interface:
+        :param BackendInterface backend_interface:
         :param str title:
         """
         # Settings

@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 from src.image.capture_webcam import CameraStream, CameraStreamProcess, SimpleStream, Camera
 from src.image.capture_video import VCR, VCRStream
 from src.real_time.background_backend import BackgroundLoop
-from src.real_time.base_backend import BackendInterfaceObject
+from src.real_time.base_backend import BackendInterface
 from src.real_time.base_backend import BackendLoop
 from src.real_time.ipython_backend import IPythonLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
@@ -88,7 +88,7 @@ class _Video:
         self._print_step = print_step
 
         # Make real-time interface
-        interface = BackendInterfaceObject(
+        interface = BackendInterface(
             loop_initialization=self._loop_initialization,
             loop_step=self._loop_step,
             loop_stop_check=self._loop_stop_check,

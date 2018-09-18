@@ -5,14 +5,14 @@ from time import time
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 
-from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
+from src.real_time.base_backend import BackendLoop
 
 
 class IPythonLoop(BackendLoop):
     def __init__(self, backend_interface=(), fig=None, title="Real time animation",
                  block=True):
         """
-        :param BackendInterfaceObject backend_interface:
+        :param BackendInterface backend_interface:
         :param bool block:
         """
         # Settings

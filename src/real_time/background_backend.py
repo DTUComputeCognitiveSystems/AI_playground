@@ -2,7 +2,7 @@ import sched
 from collections import Iterable
 from time import time
 
-from src.real_time.base_backend import BackendLoop, BackendInterface, BackendInterfaceObject
+from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
 class BackgroundLoop(BackendLoop):
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     # Make interface object
     stop_flags = [True] + [False for _ in range(5)]
-    interface = BackendInterfaceObject(
+    interface = BackendInterface(
         loop_initialization=lambda: print("before"),
         loop_step=lambda: print("iteration {}".format(backend.current_loop_nr)),
         loop_stop_check=lambda: stop_flags.pop(),

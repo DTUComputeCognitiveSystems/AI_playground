@@ -6,7 +6,7 @@ from time import time
 from ipywidgets import widgets
 from IPython.display import display
 
-from src.real_time.base_backend import BackendLoop, BackendInterfaceObject
+from src.real_time.base_backend import BackendLoop, BackendInterface
 
 
 class UpdateChecker(Thread):
@@ -51,7 +51,7 @@ class TextInputLoop(BackendLoop):
     def __init__(self, backend_interface=(), use_widget=False, n_lines=20,
                  widget_name="Input:", check_delay=.15, text_height="450px"):
         """
-        :param BackendInterfaceObject backend_interface:
+        :param BackendInterface backend_interface:
         """
         self.n_lines = n_lines
         self.use_widget = use_widget
@@ -242,7 +242,7 @@ class TextInputLoop(BackendLoop):
         return self._start_time
 
 
-class _TestInterfaceOLD(BackendInterfaceObject):
+class _TestInterfaceOLD(BackendInterface):
     def __init__(self, backend, n_lines=3):
         super().__init__()
         self.n_lines = n_lines

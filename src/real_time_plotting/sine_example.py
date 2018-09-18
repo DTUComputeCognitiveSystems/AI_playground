@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from math import sin
 
 from src.image.video.snapshot import VideoCamera
-from src.real_time.base_backend import BackendInterfaceObject
+from src.real_time.base_backend import BackendInterface
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.base_backend import BackendLoop
 
@@ -17,7 +17,7 @@ class SineCurve:
         self.time_delta = time_per_frame
 
         # Make real-time interface
-        interface = BackendInterfaceObject(
+        interface = BackendInterface(
             loop_initialization=self._loop_initialization,
             loop_step=self._loop_step,
             loop_stop_check=self._loop_stop_check,

@@ -9,7 +9,7 @@ from src.real_time.text_input_backend import TextInputLoop
 from src.text.utility.text_modifiers import TextModifier
 from src.text.utility.text_plots import flow_text_into_axes
 
-
+# pylint: disable=E0202
 class HighlightCharacters(BackendInterface):
     def __init__(self, backend, lines_in_view=20, letter_modifiers=None):
         super().__init__(

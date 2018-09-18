@@ -109,6 +109,7 @@ if __name__ == "__main__":
     print("\n\nExample 2\n" + "-" * 30 + "\n")
 
     # This is a class that can do work at each real time iteration
+    # pylint: disable=E0202
     class ExampleInterface(BackendInterface):
         def __init__(self):
             self.counter = None

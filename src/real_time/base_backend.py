@@ -3,8 +3,7 @@
 def noop(*args, **kwargs):
     pass
 
-#class BackendInterfaceObject(BackendInterface):
-
+# pylint: disable=E0202
 class BackendInterface:
     """
     Interface for a backend. 5 Functions can be set for performing tasks at various relevant times.

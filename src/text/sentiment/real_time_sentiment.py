@@ -10,7 +10,7 @@ from src.real_time.text_input_backend import TextInputLoop
 from src.text.sentiment.sentiment_highlighting import sentiment_text_modifiers
 from src.text.utility.text_plots import flow_text_into_axes
 
-
+# pylint: disable=E0202
 class SentimentHighlighter(BackendInterface):
     def __init__(self, backend, lines_in_view=20, remove_axes=True, facecolor='white'):
         super().__init__(

@@ -189,7 +189,7 @@ class _Video:
         self.dprint("Saving video to: {}".format(destination))
 
         # Delete video if it exists
-        if destination.is_file():
+        if destination.is_file(): # pylint: disable=E1101
             destination.unlink()
 
         # Make temporary directory for frame-images

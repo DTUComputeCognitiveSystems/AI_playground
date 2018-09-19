@@ -32,16 +32,6 @@
             "maxBytes": 10485760,
             "backupCount": 20,
             "encoding": "utf8"
-        },
-
-        "error_file_handler2": {
-            "class": "logging.handlers.RotatingFileHandler",
-            "level": "ERROR",
-            "formatter": "simple",
-            "filename": "errors2.log",
-            "maxBytes": 10485760,
-            "backupCount": 20,
-            "encoding": "utf8"
         }
     },
 
@@ -55,6 +45,6 @@
 
     "root": {
         "level": "INFO",
-        "handlers": ["console", "error_file_handler2"]
+        "handlers": ["console"]
     }
 }

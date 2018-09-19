@@ -1,3 +1,7 @@
+""" assuming that you are located in the project root when you run this file from the command line"""
+if __name__ == "__main__":
+    exec(open("notebooks/global_setup.py").read())
+
 from datetime import datetime
 from time import time
 
@@ -5,7 +9,6 @@ import matplotlib.pyplot as plt
 from matplotlib import patches
 
 from src.image.video.base import _Video, VideoFlair
-from src.image.video.texter import VideoTexter
 from src.real_time.matplotlib_backend import MatplotlibLoop
 
 
@@ -116,6 +119,74 @@ class CrossHair(VideoFlair):
         pass
 
 
+class VideoTexter(VideoFlair):
+    def __init__(self, initial_text="", backgroundcolor="darkblue", color="white", position="ne"):
+        super().__init__([])
+        position = position.lower().strip()
+        self._initial_text = initial_text
+
+        # Vertical
+        if position in ("sw", "s", "se"):
+            self._verticalalignment = 'bottom'
+            self._y = 0.0
+        elif position in ("w", "e", "c"):
+            self._verticalalignment = 'center'
+            self._y = 0.5
+        else:
+            self._verticalalignment = 'top'
+            self._y = 1.0
+
+        # Horizontal
+        if position in ("sw", "w", "nw"):
+            self._horizontalalignment = 'left'
+            self._x = 0.0
+        elif position in ("n", "s", "c"):
+            self._horizontalalignment = 'center'
+            self._x = 0.5
+        else:
+            self._horizontalalignment = 'right'
+            self._x = 1.0
+
+        self._backgroundcolor = backgroundcolor
+        self._color = color
+        self._text = None  # type: matplotlib.text.Text
+
+    def initialize(self, fig=None):
+        fig = plt if fig is None else fig
+        self._text = fig.text(
+            x=self._x,
+            y=self._y,
+            s=self._initial_text,
+            horizontalalignment=self._horizontalalignment,
+            verticalalignment=self._verticalalignment,
+            transform=plt.gca().transAxes,
+            backgroundcolor=self._backgroundcolor,
+            color=self._color
+        )
+        self._artists.append(self.text)
+
+    def update(self, video):
+        """
+        :param _Video video:
+        :return:
+        """
+        self.text.set_text("Text")
+
+    def set_text(self, s):
+        self.text.set_text(s)
+
+    def set_background_color(self, new_color):
+        self._text.set_backgroundcolor(new_color)
+
+    def color(self, new_color):
+        self._text.set_color(new_color)
+
+    @property
+    def text(self):
+        return self._text
+
+
+
 class VideoCamera(_Video):
     def __init__(self,
                  frame_rate=5, stream_type="simple",
@@ -218,7 +289,15 @@ class VideoCamera(_Video):
 if __name__ == "__main__":
     plt.close("all")
     plt.ion()
-    the_video = VideoCamera(n_photos=5, stream_type="process", verbose=True)
+    the_video = VideoCamera(n_photos=5, stream_type="thread", verbose=True)
     the_video.start()
 
     print("Number of pictures taken: {}".format(len(the_video.photos)))
+
+
+    # VideoTexter test
+    # video = SimpleVideo(
+    #     video_length=10
+    # )
+    # video.add_flair(VideoTexter())
+    # video.start()

@@ -14,11 +14,10 @@ import numpy as np
 import cv2
 
 from src.image.video.videoeffects import OpenCVVideoEffects
-from src.image.video.texter import VideoTexter
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.opencv_backend import OpenCVLoop
-from src.image.video.snapshot import CrossHair, FrameCutout
+from src.image.video.snapshot import CrossHair, FrameCutout, VideoTexter
         
 
 class LabelledVideo(_Video):

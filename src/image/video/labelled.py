@@ -13,11 +13,10 @@ from matplotlib import colors, cm
 import numpy as np
 import cv2
 
-from src.image.video.videoeffects import OpenCVVideoEffects
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.opencv_backend import OpenCVLoop
-from src.image.video.snapshot import CrossHair, FrameCutout, VideoTexter
+from src.image.video.snapshot import MatplotlibCrossHair, MatplotlibVideoTexter, FrameCutout, OpenCVVideoEffects
         
 
 class LabelledVideo(_Video):
@@ -83,11 +82,11 @@ class LabelledVideo(_Video):
 
             # Cross hair
             if crosshair_type is not None:
-                self._cross_hair = CrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size=crosshair_size)
+                self._cross_hair = MatplotlibCrossHair(frame_size=self.frame_size, ch_type=crosshair_type, size=crosshair_size)
                 self.flairs.extend([self._cross_hair])
 
             # Label text
-            self._text = VideoTexter(backgroundcolor=backgroundcolor, color=color)
+            self._text = MatplotlibVideoTexter(backgroundcolor=backgroundcolor, color=color)
             self.flairs.extend([self._text])
 
             # Cutout coordinates

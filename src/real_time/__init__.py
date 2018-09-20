@@ -1,3 +1,6 @@
+# Refactored architecture
+from src.real_time.frontend_opencv import OpenCVFrontendController
+# Old architecture
 from src.real_time.base_backend import BackendInterface
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop

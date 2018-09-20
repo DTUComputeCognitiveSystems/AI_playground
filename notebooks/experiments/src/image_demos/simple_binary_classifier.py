@@ -8,7 +8,7 @@ import numpy as np
 
 from src.image.object_detection.keras_detector import KerasDetector
 from keras.applications.imagenet_utils import preprocess_input
-from src.image.video.labelled import LabelledVideo
+from src.image.video.labelled_video import LabelledVideo
 
 
 class SimpleBinaryClassifier:

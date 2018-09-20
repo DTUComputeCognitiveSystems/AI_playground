@@ -16,7 +16,7 @@ import cv2
 from src.real_time.background_backend import BackgroundLoop
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.opencv_backend import OpenCVLoop
-from src.image.video.snapshot import MatplotlibCrossHair, MatplotlibVideoTexter, FrameCutout, OpenCVVideoEffects
+from src.image.video.video_tools import MatplotlibCrossHair, MatplotlibVideoTexter, FrameCutout, OpenCVVideoEffects
         
 
 class LabelledVideo(_Video):

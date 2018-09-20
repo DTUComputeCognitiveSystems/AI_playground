@@ -9,8 +9,8 @@ from matplotlib import pyplot as plt
 from scipy.misc import imsave, imread
 
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled import LabelledVideo
-from src.image.video.snapshot import VideoCamera
+from src.image.video.labelled_video import LabelledVideo
+from src.image.video.video_tools import VideoCamera
 from src.real_time.matplotlib_backend import MatplotlibLoop
 
 images_dir_name = "ml_images"

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from math import sin
 
-from src.image.video.snapshot import VideoCamera
+from src.image.video.video_tools import VideoCamera
 from src.real_time.base_backend import BackendInterface
 from src.real_time.matplotlib_backend import MatplotlibLoop
 from src.real_time.base_backend import BackendLoop

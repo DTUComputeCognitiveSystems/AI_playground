@@ -10,25 +10,103 @@ from src.image.backend_opencv import OpenCVBackendController
 
 from time import time
 
+# noinspection PyUnusedLocal
+def noop(*args, **kwargs):
+    pass
+
+# pylint: disable=E0202
+class LoopInterface:
+    """
+    Interface for a backend. 5 Functions can be set for performing tasks at various relevant times.
+    The wanted loop-time can also be set.
+    """
+    def __init__(self, loop_initialize=noop, loop_step=noop, loop_stop_check=noop, loop_finalize=noop,
+                 interrupt_handler=noop, loop_time_milliseconds=200):
+        """
+        Dynamic version of the backend interface.
+        :param Callable loop_initialization:
+        :param Callable loop_step:
+        :param Callable loop_stop_check:
+        :param Callable finalize:
+        :param Callable interrupt_handler:
+        :param int loop_time_milliseconds:
+        """
+        self._loop_initialize = loop_initialize
+        self._loop_step = loop_step
+        self._loop_stop_check = loop_stop_check
+        self._loop_finalize = loop_finalize
+        self._interrupt_handler = interrupt_handler
+        self._loop_time_milliseconds = loop_time_milliseconds
+
+    def _loop_initialize(self):
+        pass
+
+    @property
+    def loop_initialize(self):
+        return self._loop_initialize
+
+    def _loop_step(self):
+        pass
+
+    @property
+    def loop_step(self):
+        return self._loop_step
+
+    def _loop_stop_check(self):
+        pass
+
+    @property
+    def loop_stop_check(self):
+        return self._loop_stop_check
+
+    def _loop_finalize(self):
+        pass
+
+    @property
+    def loop_finalize(self):
+        return self._loop_finalize
+
+    def _interrupt_handler(self):
+        pass
+
+    @property
+    def interrupt_handler(self):
+        return self._interrupt_handler
+
+    def _loop_time_milliseconds(self):
+        pass
+
+    @property
+    def loop_time_milliseconds(self):
+        return self._loop_time_milliseconds
+
+
+
 class VideoLoop:
     def __init__(self, model, store_predictions=False,
-                 frame_rate=24, stream_type="thread",
-                 video_length=3, length_is_nframes=False,
-                 record_frames=False,
-                 title="Video", 
-                 verbose=False,
-                 crosshair_size=(224, 224),
-                 backend="opencv", frontend="opencv", video_path = None):
+                 frame_rate = 24, stream_type = "thread",
+                 video_length = 3, length_is_nframes = False,
+                 record_frames = False,
+                 title = "Video", 
+                 verbose = False,
+                 show_crosshair = True, show_labels = True,
+                 cutout_size = (224, 224),
+                 backend = "opencv", frontend = "opencv", video_path = None):
         # Video settings
         self.frame_rate = frame_rate
         self.stream_type = stream_type
         self.record_frames = record_frames
         self.frame_rate = frame_rate
         self.frame_time = int(1000 * 1. / frame_rate)
+        self.video_length = video_length
+        self.length_is_nframes = length_is_nframes
         self.title = title
         self.verbose = verbose
-        self.crosshair_size = crosshair_size
+        self.show_crosshair = show_crosshair
+        self.show_labels = show_labels
+
         # Model settings
+        self.cutout_size = cutout_size
         self.predictions = None  # type: list
         self.cut_frames = []
         self.current_label = None
@@ -41,6 +119,14 @@ class VideoLoop:
         #     dummy_video = VCR(video_path) 
         #     self._frame_size = dummy_video.get_frame_size_only()
 
+        # Getting the frontend interface
+        interface = LoopInterface(
+            loop_initialize=self.loop_initialize,
+            loop_step=self.loop_step,
+            loop_stop_check=self.loop_stop_check,
+            loop_finalize=self.loop_finalize,
+            loop_time_milliseconds=self.frame_time
+        )
         
         # Getting the backend object
         if backend == "opencv":
@@ -50,38 +136,36 @@ class VideoLoop:
 
         # Getting the frontend object
         if frontend == "opencv":
-            self.frontend = OpenCVFrontendController()
+            self.frontend = OpenCVFrontendController(interface = interface, 
+                                                     title = self.title,
+                                                     show_crosshair = self.show_crosshair, 
+                                                     show_labels = self.show_labels)
         else:
-            self.frontend = OpenCVFrontendController()
+            self.frontend = OpenCVFrontendController(interface = interface, 
+                                                     title = self.title,
+                                                     show_crosshair = self.show_crosshair, 
+                                                     show_labels = self.show_labels)
         
-    def run(self):
-
-        self.loop_initialize()
-        self.loop_step()
-        self.loop_finalize()
-
-        # Get photo
-        self.current_frame = self.backend.current_frame
-        self.current_frame_time = time()
-        self.frame_size = self.current_frame.shape
+    def start(self):
+        # Run loop on the frontend
+        self.frontend.run()
 
     def loop_initialize(self):
         self.current_frame = self.backend.current_frame
         self.current_frame_time = time()
         self.frame_size = self.current_frame.shape
+        # Forwarding currrent parameters size to frontend
+        self.frontend.frame_size = self.frame_size
+        self.frontend.title = self.title
         
-        # Determine coordinates of cutout for grapping part of frame
-        self.current_frame_cutout_coordinates = self.calculateFrameCutout(frame_size=self.frame_size, size=self.crosshair_size).coordinates
-        
-    
     def loop_step(self):
-
-        # Get frame cutout coordinates
-        start_x, start_y, width, height = self.current_frame_cutout_coordinates
-        end_x, end_y = start_x + width, start_y + height
+        
+        # Get the frame
+        self.current_frame = self.backend.current_frame
+        self.current_frame_time = time()
 
         # Get first frame cutout
-        self.current_frame_cutout = self.current_frame[start_x:end_x, start_y:end_y]
+        self.current_frame_cutout = self.backend.current_frame_cutout(frame = self.current_frame, frame_size = self.frame_size)
         
         # Get labels and probabilities for the frame cutout
         labels, probabilities = self.model.label_frame(frame=self.current_frame_cutout)
@@ -90,11 +174,10 @@ class VideoLoop:
         self.current_label = labels[0]
         self.current_label_probability = probabilities[0]
 
-        # Show crosshair
-
-        # Show label
-
-        # Display
+        # Forward current frame parameters to the frontend
+        self.frontend.current_label = self.current_label
+        self.frontend.current_label_probability = self.current_label_probability
+        self.frontend.current_frame = self.current_frame
 
         # Store cut frames if stated
         if self.record_frames:
@@ -106,42 +189,31 @@ class VideoLoop:
                 self.current_frame_time, labels, probabilities
             ))
 
-        # Get next image
-        self.current_frame = self.backend.current_frame
-        self.current_frame_time = time()
-
     def loop_finalize(self):
         pass
+
+    def loop_stop_check(self):
+        this_is_the_end = False
+
+        if self.video_length is None:
+            this_is_the_end = False
+        elif self.length_is_nframes and self.frontend.current_loop_nr >= self.video_length - 1:
+            this_is_the_end = True
+        elif time() >= self.frontend.start_time + self.video_length:
+            this_is_the_end = True
+
+        if this_is_the_end:
+            self.dprint("\tEnd condition met.")
+
+        return this_is_the_end
     
-    def calculateFrameCutout(self, frame_size, size=None, width_ratio=0.5, height_ratio=None):
-        # Check if specific size is wanted
-        if size is not None:
-            height, width = size
+    def dprint(self, *args, **kwargs):
+        if self.verbose:
+            print(*args, **kwargs)
 
-        # Otherwise compute size from ratios
-        else:
-            # Ensure two ratios
-            if width_ratio is None and height_ratio is not None:
-                width_ratio = height_ratio
-            if height_ratio is None and width_ratio is not None:
-                height_ratio = width_ratio
-            assert isinstance(width_ratio, float) and 0 < width_ratio <= 1
-            assert isinstance(height_ratio, float) and 0 < height_ratio <= 1
 
-            # Determine cutout-size
-            width = int(frame_size[1] * width_ratio)
-            height = int(frame_size[0] * height_ratio)
+if __name__ == "__main__":
+    labelling_model = KerasDetector(model_specification="mobilenet")
+    videoloop = VideoLoop(model = labelling_model, video_length = None)
+    videoloop.start()
 
-        # Determine space around cutout
-        horizontal_space = frame_size[1] - width
-        vertical_space = frame_size[0] - height
-
-        # Determine coordinates
-        coordinates = (int(horizontal_space / 2), int(vertical_space / 2), width, height)
-
-        # Set fields
-        self.coordinates = coordinates
-        self.horizontal_space = horizontal_space
-        self.vertical_space = vertical_space
-        self.width = width
-        self.height = height

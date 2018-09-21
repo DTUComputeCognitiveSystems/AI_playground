@@ -72,8 +72,8 @@ class Camera:
             pass
 
         # Reverse last dimension (CV2 apparently loads images in BGR format)
-        out = out[:, :, ::-1]
-        out = cv2.flip(out, 1)
+        #out = out[:, :, ::-1]
+        #out = cv2.flip(out, 1)
 
         return out
 
@@ -263,8 +263,8 @@ class VCR:
             is_valid, out = self.cam.read()
             if is_valid:
                 # Reverse last dimension (CV2 apparently loads images in BGR format)
-                out = out[:, :, ::-1]
-                out = cv2.flip(out, 1)
+                #out = out[:, :, ::-1]
+                #out = cv2.flip(out, 1)
                 return is_valid, out
             else:
                 return False, None
@@ -360,6 +360,42 @@ class OpenCVBackendController():
     def current_frame(self):
         self.current_frame_time = time()
         return self.camera_stream.current_frame
+
+    def current_frame_cutout(self, frame, frame_size, cutout_size=(224,224), width_ratio=0.5, height_ratio=None):
+        self.current_frame_time = time()
+        current_frame_preprocessed = frame[:, :, ::-1]
+        current_frame_preprocessed = cv2.flip(current_frame_preprocessed, 1)
+
+        # Check if specific size is wanted
+        if cutout_size is not None:
+            height, width = cutout_size
+
+        # Otherwise compute size from ratios
+        else:
+            # Ensure two ratios
+            if width_ratio is None and height_ratio is not None:
+                width_ratio = height_ratio
+            if height_ratio is None and width_ratio is not None:
+                height_ratio = width_ratio
+            assert isinstance(width_ratio, float) and 0 < width_ratio <= 1
+            assert isinstance(height_ratio, float) and 0 < height_ratio <= 1
+
+            # Determine cutout-size
+            width = int(frame_size[1] * width_ratio)
+            height = int(frame_size[0] * height_ratio)
+
+        # Determine space around cutout
+        horizontal_space = frame_size[1] - width
+        vertical_space = frame_size[0] - height
+
+        # Determine coordinates
+        coordinates = (int(horizontal_space / 2), int(vertical_space / 2), width, height)
+
+        # Determine coordinates of cutout for grapping part of frame
+        start_x, start_y, width, height = coordinates
+        end_x, end_y = start_x + width, start_y + height
+
+        return current_frame_preprocessed[start_x:end_x, start_y:end_y]
     
     def stop(self):
         return self.camera_stream.stop()

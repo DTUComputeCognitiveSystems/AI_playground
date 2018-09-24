@@ -6,6 +6,7 @@ from src.image.object_detection.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
 
 from src.real_time.frontend_opencv import OpenCVFrontendController
+from src.real_time.frontend_matplotlib import MatplotlibFrontendController
 from src.image.backend_opencv import OpenCVBackendController
 
 from time import time
@@ -21,21 +22,21 @@ class LoopInterface:
     The wanted loop-time can also be set.
     """
     def __init__(self, loop_initialize=noop, loop_step=noop, loop_stop_check=noop, loop_finalize=noop,
-                 interrupt_handler=noop, loop_time_milliseconds=200):
+                 loop_interrupt_handler=noop, loop_time_milliseconds=200):
         """
         Dynamic version of the backend interface.
         :param Callable loop_initialization:
         :param Callable loop_step:
         :param Callable loop_stop_check:
         :param Callable finalize:
-        :param Callable interrupt_handler:
+        :param Callable loop_interrupt_handler:
         :param int loop_time_milliseconds:
         """
         self._loop_initialize = loop_initialize
         self._loop_step = loop_step
         self._loop_stop_check = loop_stop_check
         self._loop_finalize = loop_finalize
-        self._interrupt_handler = interrupt_handler
+        self._loop_interrupt_handler = loop_interrupt_handler
         self._loop_time_milliseconds = loop_time_milliseconds
 
     def _loop_initialize(self):
@@ -66,12 +67,12 @@ class LoopInterface:
     def loop_finalize(self):
         return self._loop_finalize
 
-    def _interrupt_handler(self):
+    def _loop_interrupt_handler(self):
         pass
 
     @property
-    def interrupt_handler(self):
-        return self._interrupt_handler
+    def loop_interrupt_handler(self):
+        return self._loop_interrupt_handler
 
     def _loop_time_milliseconds(self):
         pass
@@ -124,6 +125,7 @@ class VideoLoop:
             loop_initialize=self.loop_initialize,
             loop_step=self.loop_step,
             loop_stop_check=self.loop_stop_check,
+            loop_interrupt_handler = self.loop_interrupt_handler,
             loop_finalize=self.loop_finalize,
             loop_time_milliseconds=self.frame_time
         )
@@ -137,6 +139,11 @@ class VideoLoop:
         # Getting the frontend object
         if frontend == "opencv":
             self.frontend = OpenCVFrontendController(interface = interface, 
+                                                     title = self.title,
+                                                     show_crosshair = self.show_crosshair, 
+                                                     show_labels = self.show_labels)
+        if frontend == "matplotlib":
+            self.frontend = MatplotlibFrontendController(interface = interface, 
                                                      title = self.title,
                                                      show_crosshair = self.show_crosshair, 
                                                      show_labels = self.show_labels)
@@ -192,6 +199,9 @@ class VideoLoop:
     def loop_finalize(self):
         pass
 
+    def loop_interrupt_handler(self):
+        pass
+
     def loop_stop_check(self):
         this_is_the_end = False
 
@@ -214,6 +224,6 @@ class VideoLoop:
 
 if __name__ == "__main__":
     labelling_model = KerasDetector(model_specification="mobilenet")
-    videoloop = VideoLoop(model = labelling_model, video_length = None)
+    videoloop = VideoLoop(model = labelling_model, video_length = None, frontend = "matplotlib")
     videoloop.start()
 

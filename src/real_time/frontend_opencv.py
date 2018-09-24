@@ -28,12 +28,13 @@ class OpenCVFrontendController:
         self.current_label_probability = None
         self.current_frame = None
         self.frame_size = (1,1)
-        self.start_time = None
+        self._start_time = None
+        self._current_loop_nr = 0
         
     def run(self):
-        self.current_loop_nr = 0
+        self._current_loop_nr = 0
         self.stop_now = False
-        self.start_time = time()
+        self._start_time = time()
         self.interface.loop_initialize()
 
         if self.show_crosshair == True:
@@ -42,7 +43,7 @@ class OpenCVFrontendController:
             crosshair_point_2 = (int(self.frame_size[1] / 2 + self.crosshair["size"][1] / 2), int(self.frame_size[0] / 2 + self.crosshair["size"][0] / 2))
 
         while self.stop_now == False:
-            self.current_loop_nr += 1
+            self._current_loop_nr += 1
 
             # Run loop step
             self.interface.loop_step()
@@ -79,3 +80,10 @@ class OpenCVFrontendController:
                 cv2.destroyAllWindows()
                 self.stop_now = True 
 
+    @property
+    def current_loop_nr(self) -> int:
+        return self._current_loop_nr
+
+    @property
+    def start_time(self) -> float:
+        return self._start_time

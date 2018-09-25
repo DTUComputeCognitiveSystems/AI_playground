@@ -83,7 +83,7 @@ class LoopInterface:
 
 
 class VideoLoop:
-    def __init__(self, regime = "object_recognition", model = None, n_photos = None, store_predictions = False,
+    def __init__(self, regime = "object_detection", model = None, n_photos = None, store_predictions = False,
                  frame_rate = 24, stream_type = "thread",
                  video_length = None, length_is_nframes = False,
                  record_frames = False,
@@ -106,6 +106,7 @@ class VideoLoop:
         self.show_crosshair = show_crosshair
         self.show_labels = show_labels
         self.this_is_the_end = None # Determines whether the video has stopped
+        self.video_path = video_path
 
         # Regime: object_detection - settings
         self.cutout_size = cutout_size
@@ -137,9 +138,9 @@ class VideoLoop:
         
         # Getting the backend object
         if backend == "opencv":
-            self.backend = OpenCVBackendController(frame_rate = self.frame_rate)
+            self.backend = OpenCVBackendController(frame_rate = self.frame_rate, video_path = self.video_path)
         else:
-            self.backend = OpenCVBackendController(frame_rate = self.frame_rate)
+            self.backend = OpenCVBackendController(frame_rate = self.frame_rate, video_path = self.video_path)
 
         # Getting the frontend object
         if frontend == "opencv":
@@ -231,8 +232,9 @@ class VideoLoop:
             self.this_is_the_end = True
 
         # Checking if regime = picture_taking
-        if len(self.frontend.photos["pictures"]) >= self.n_photos and self.this_is_the_end == False:
-            self.this_is_the_end = True
+        if self.regime == "picture_taking":
+            if len(self.frontend.photos["pictures"]) >= self.n_photos and self.this_is_the_end == False:
+                self.this_is_the_end = True
 
         if self.this_is_the_end:
             self.dprint("\tEnd condition met.")
@@ -246,6 +248,6 @@ class VideoLoop:
 
 if __name__ == "__main__":
     labelling_model = KerasDetector(model_specification="mobilenet")
-    videoloop = VideoLoop(model = labelling_model, n_photos = 3, regime = "object_detection", video_length = None, frontend = "matplotlib")
+    videoloop = VideoLoop(model = labelling_model, regime = "object_detection", video_length = None, frontend = "opencv", video_path = "small.mp4")
     videoloop.start()
 

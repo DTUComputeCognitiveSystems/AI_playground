@@ -155,7 +155,7 @@ class VideoRecognitionDashboard:
             video_path = self.video_path.value
             video_length = 120
         #the_video = LabelledVideo(net, backend=selected_backend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
-        the_video = VideoLoop(net, frontend = selected_frontend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
+        the_video = VideoLoop(model = net, regime = "object_detection", frontend = selected_frontend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
         self.progress_text.value = "Video running!"
         the_video.start()
 

@@ -2,7 +2,6 @@
 if __name__ == "__main__":
     exec(open("notebooks/global_setup.py").read())
 
-from src.image.object_detection.models_base import ImageLabeller
 from src.image.object_detection.keras_detector import KerasDetector
 
 from src.real_time.frontend_opencv import OpenCVFrontendController
@@ -84,16 +83,17 @@ class LoopInterface:
 
 
 class VideoLoop:
-    def __init__(self, model, store_predictions=False,
+    def __init__(self, regime = "object_recognition", model = None, n_photos = None, store_predictions = False,
                  frame_rate = 24, stream_type = "thread",
-                 video_length = 3, length_is_nframes = False,
+                 video_length = None, length_is_nframes = False,
                  record_frames = False,
-                 title = "Video", 
+                 title = "Real-time video", 
                  verbose = False,
                  show_crosshair = True, show_labels = True,
                  cutout_size = (224, 224),
                  backend = "opencv", frontend = "opencv", video_path = None):
         # Video settings
+        self.regime = regime #[object_detection, picture_taking, plain_camera]
         self.frame_rate = frame_rate
         self.stream_type = stream_type
         self.record_frames = record_frames
@@ -105,8 +105,9 @@ class VideoLoop:
         self.verbose = verbose
         self.show_crosshair = show_crosshair
         self.show_labels = show_labels
+        self.this_is_the_end = None # Determines whether the video has stopped
 
-        # Model settings
+        # Regime: object_detection - settings
         self.cutout_size = cutout_size
         self.predictions = None  # type: list
         self.cut_frames = []
@@ -114,6 +115,10 @@ class VideoLoop:
         self.current_label_probability = 0.0
         self.store_predictions = store_predictions
         self.model = model
+
+        # Regime: picture_taking - settings
+        self.n_photos = n_photos
+        self.cutout_coordinates = None
 
         # # Set frame size
         # if not video_path == None:
@@ -140,16 +145,19 @@ class VideoLoop:
         if frontend == "opencv":
             self.frontend = OpenCVFrontendController(interface = interface, 
                                                      title = self.title,
+                                                     regime = self.regime,
                                                      show_crosshair = self.show_crosshair, 
                                                      show_labels = self.show_labels)
         if frontend == "matplotlib":
             self.frontend = MatplotlibFrontendController(interface = interface, 
                                                      title = self.title,
+                                                     regime = self.regime,
                                                      show_crosshair = self.show_crosshair, 
                                                      show_labels = self.show_labels)
         else:
             self.frontend = OpenCVFrontendController(interface = interface, 
                                                      title = self.title,
+                                                     regime = self.regime,
                                                      show_crosshair = self.show_crosshair, 
                                                      show_labels = self.show_labels)
         
@@ -171,30 +179,40 @@ class VideoLoop:
         self.current_frame = self.backend.current_frame
         self.current_frame_time = time()
 
-        # Get first frame cutout
-        self.current_frame_cutout = self.backend.current_frame_cutout(frame = self.current_frame, frame_size = self.frame_size)
+        if self.regime == "object_detection":
+            # Get first frame cutout
+            self.current_frame_cutout = self.backend.current_frame_cutout(frame = self.current_frame, frame_size = self.frame_size)
+            
+            # Get labels and probabilities for the frame cutout
+            labels, probabilities = self.model.label_frame(frame=self.current_frame_cutout)
+
+            # Set analysis
+            self.current_label = labels[0]
+            self.current_label_probability = probabilities[0]
+
+            # Forward current frame parameters to the frontend
+            self.frontend.current_label = "{}: {:0.4f}".format(self.current_label, self.current_label_probability)
+            
+            # Store cut frames if stated
+            if self.record_frames:
+                self.cut_frames.append(self.current_frame_cutout)
+            
+            # Storage
+            if self.store_predictions:
+                self.predictions.append((
+                    self.current_frame_time, labels, probabilities
+                ))
+
+        elif self.regime == "picture_taking":
+            # Forward current frame parameters to the frontend
+            self.cutout_coordinates = self.backend.get_current_frame_cutout_coordinates(frame = self.current_frame, frame_size = self.frame_size)
+            self.current_label = "Pictures taken: {}".format(len(self.frontend.photos["pictures"]))
+            self.frontend.current_label = self.current_label
+        else:
+            self.show_labels = False
         
-        # Get labels and probabilities for the frame cutout
-        labels, probabilities = self.model.label_frame(frame=self.current_frame_cutout)
-
-        # Set analysis
-        self.current_label = labels[0]
-        self.current_label_probability = probabilities[0]
-
-        # Forward current frame parameters to the frontend
-        self.frontend.current_label = self.current_label
-        self.frontend.current_label_probability = self.current_label_probability
+        # Forward current frame to the frontend
         self.frontend.current_frame = self.current_frame
-
-        # Store cut frames if stated
-        if self.record_frames:
-            self.cut_frames.append(self.current_frame_cutout)
-        
-         # Storage
-        if self.store_predictions:
-            self.predictions.append((
-                self.current_frame_time, labels, probabilities
-            ))
 
     def loop_finalize(self):
         pass
@@ -203,19 +221,23 @@ class VideoLoop:
         pass
 
     def loop_stop_check(self):
-        this_is_the_end = False
+        self.this_is_the_end = False
 
         if self.video_length is None:
-            this_is_the_end = False
+            self.this_is_the_end = False
         elif self.length_is_nframes and self.frontend.current_loop_nr >= self.video_length - 1:
-            this_is_the_end = True
+            self.this_is_the_end = True
         elif time() >= self.frontend.start_time + self.video_length:
-            this_is_the_end = True
+            self.this_is_the_end = True
 
-        if this_is_the_end:
+        # Checking if regime = picture_taking
+        if len(self.frontend.photos["pictures"]) >= self.n_photos and self.this_is_the_end == False:
+            self.this_is_the_end = True
+
+        if self.this_is_the_end:
             self.dprint("\tEnd condition met.")
-
-        return this_is_the_end
+        
+        return self.this_is_the_end
     
     def dprint(self, *args, **kwargs):
         if self.verbose:
@@ -224,6 +246,6 @@ class VideoLoop:
 
 if __name__ == "__main__":
     labelling_model = KerasDetector(model_specification="mobilenet")
-    videoloop = VideoLoop(model = labelling_model, video_length = None, frontend = "matplotlib")
+    videoloop = VideoLoop(model = labelling_model, n_photos = 3, regime = "object_detection", video_length = None, frontend = "matplotlib")
     videoloop.start()
 

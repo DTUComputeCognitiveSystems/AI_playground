@@ -337,6 +337,7 @@ class OpenCVBackendController():
         self.video_path = video_path
         self.stream_type = stream_type
         self.camera_stream = None
+        self.cutout_coordinates = None
 
         # Open up a camera-stram
         if self.video_path == None:
@@ -359,9 +360,9 @@ class OpenCVBackendController():
     @property
     def current_frame(self):
         self.current_frame_time = time()
-        return self.camera_stream.current_frame
+        return cv2.flip(self.camera_stream.current_frame, 1)
 
-    def current_frame_cutout(self, frame, frame_size, cutout_size=(224,224), width_ratio=0.5, height_ratio=None):
+    def get_current_frame_cutout_coordinates(self, frame, frame_size, cutout_size=(224,224), width_ratio=0.5, height_ratio=None):
         self.current_frame_time = time()
         current_frame_preprocessed = frame[:, :, ::-1]
         current_frame_preprocessed = cv2.flip(current_frame_preprocessed, 1)
@@ -389,11 +390,24 @@ class OpenCVBackendController():
         vertical_space = frame_size[0] - height
 
         # Determine coordinates
-        coordinates = (int(horizontal_space / 2), int(vertical_space / 2), width, height)
+        self.cutout_coordinates = (int(horizontal_space / 2), int(vertical_space / 2), width, height)
 
         # Determine coordinates of cutout for grapping part of frame
-        start_x, start_y, width, height = coordinates
+        #start_x, start_y, width, height = coordinates
+        #end_x, end_y = start_x + width, start_y + height
+        return self.cutout_coordinates
+
+    def current_frame_cutout(self, frame, frame_size, cutout_size=(224,224), width_ratio=0.5, height_ratio=None):
+
+        # Get cutout coordinates
+        start_x, start_y, width, height = self.get_current_frame_cutout_coordinates(frame = frame, frame_size = frame_size, cutout_size = cutout_size, width_ratio = width_ratio, height_ratio = height_ratio)
         end_x, end_y = start_x + width, start_y + height
+
+        self.current_frame_time = time()
+        # Reverse the last dimension, since opencv loads it in the BGR format
+        current_frame_preprocessed = frame[:, :, ::-1]
+        # Flip the image horizontally, since originally it is not flipped
+        current_frame_preprocessed = cv2.flip(current_frame_preprocessed, 1)
 
         return current_frame_preprocessed[start_x:end_x, start_y:end_y]
     

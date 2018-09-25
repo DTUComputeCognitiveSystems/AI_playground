@@ -178,7 +178,7 @@ if __name__ == "__main__":
     plt.ion()
 
     backends = [MatplotlibLoop(block=True, blit = False), BackgroundLoop(), OpenCVLoop(title="Webcam video stream")]
-    the_backend = backends[2]
+    the_backend = backends[0]
 
     labelling_model = KerasDetector(model_specification="mobilenet")
     the_video = LabelledVideo(

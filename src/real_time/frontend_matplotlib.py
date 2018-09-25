@@ -4,11 +4,13 @@ if __name__ == "__main__":
 
 from matplotlib import pyplot as plt, animation, patches
 from _tkinter import TclError
+from datetime import datetime
 from time import time
 
 class MatplotlibFrontendController:
     def __init__(self, interface, 
                  title = None,
+                 regime = None,
                  show_crosshair = True,
                  show_labels = True):
 
@@ -17,31 +19,29 @@ class MatplotlibFrontendController:
         self.show_crosshair = show_crosshair
         self.show_labels = show_labels
         self.title = title
-
-        # Crosshair parameters
+        self.regime = regime #[object_recognition, picture_taking, plain_video]
+        # Crosshair attributes
         self.crosshair = {}
         self.crosshair["size"] = (224, 224)
-
         self.crosshair["linewidth"] = 1
         self.crosshair["edgecolor"] = "r" # Red
-
         # Local class attributes
         self.current_label = None
-        self.current_label_probability = None
         self.current_frame = None
         self.frame_size = (1,1)
-        self._current_loop_nr = 0
+        self._current_loop_nr = None
         self._start_time = None
-
-        # Settings
+        # Matplotlib attributes
         self.block = True
         self.fig = None
         self.artists = []
         self.canvas = None
         self.ax = None
         self._animation = None
-
-
+        # Regime-specific attributes
+        self.photos = {}
+        self.photos["pictures"] = []
+        self.photos["info"] = []
         
     def run(self):
         self._current_loop_nr = 0
@@ -63,6 +63,9 @@ class MatplotlibFrontendController:
             self.stop_now = True
         self.canvas.mpl_connect('close_event', closer)
 
+        if self.regime == "picture_taking":
+            self.canvas.mpl_connect("key_press_event", self._take_photo)
+
         # Do animation
         self._animation = animation.FuncAnimation(
             fig = self.fig,
@@ -80,8 +83,6 @@ class MatplotlibFrontendController:
             plt.close(self.fig)
 
     def __initialize_animation(self):
-        # Set time of start
-        self._start_time = time()
 
         # Initialize parts through interfaces
         self.interface.loop_initialize()
@@ -89,12 +90,6 @@ class MatplotlibFrontendController:
         # Get and set axes
         self.ax = plt.gca() if self.ax is None else self.ax
         plt.sca(self.ax)
-
-        # Add thread-stopper to closing event
-        # def closer(_):
-        #     self.camera_stream.stop()
-
-        # self.real_time_backend.canvas.mpl_connect('close_event', closer)
 
         # Title and axis settings
         self.ax.set_title(self.title)
@@ -122,13 +117,13 @@ class MatplotlibFrontendController:
 
         # Add labels
         if self.show_labels == True:
-            self.text = self.fig.text(
+            self.text = self.ax.text(
                 x = 1.0,
                 y = 1.0,
                 s = "",
                 horizontalalignment = "right",
                 verticalalignment = "top",
-                transform = plt.gca().transAxes,
+                transform = self.ax.transAxes,
                 backgroundcolor = "darkblue",
                 color = "white"
             )
@@ -138,18 +133,25 @@ class MatplotlibFrontendController:
 
     def __animate_step(self, i):
         self._current_loop_nr = i
+
         # Run animation step
         self.interface.loop_step()
+
         # OpenCV loads image in BGR format instead of RGB. Reverse the last dimension.
         self.current_frame = self.current_frame[:, :, ::-1]
-        # Make image plot
-        self._image_plot = plt.imshow(self.current_frame)
-        self.artists.append(self._image_plot)
-        # Update image plot
-        self._image_plot.set_data(self.current_frame)
+
+        # Make or update image plot
+        # We get the first current_frame after the first interface.loop_step(). This is why it is here.
+        if self._current_loop_nr == 0:
+            self._image_plot = plt.imshow(self.current_frame)
+            self.artists.append(self._image_plot)
+        else:
+            # Update image plot
+            self._image_plot.set_data(self.current_frame)
+
         # Set text
         if self.show_labels == True:
-            self.text.set_text("{}: {:0.4f}".format(self.current_label, self.current_label_probability))
+            self.text.set_text(self.current_label)
         # Check for end
         if self.interface.loop_stop_check() or self.stop_now:
             self.fig.canvas.stop_event_loop()
@@ -159,7 +161,7 @@ class MatplotlibFrontendController:
         return self.artists
 
     def __finalize(self):
-        self.interface.finalize()
+        self.interface.loop_finalize()
         plt.close("all")
 
     def __wait_for_end(self):
@@ -169,6 +171,14 @@ class MatplotlibFrontendController:
         except (TclError, KeyboardInterrupt):
             plt.close("all")
             self.interface.interrupt_handler()
+
+    def _take_photo(self, event):
+        key = event.key
+
+        if "enter" in key:
+            c_time = datetime.now()
+            self.photos["pictures"].append(self.current_frame)
+            self.photos["info"].append((self._current_loop_nr, str(c_time.date()), str(c_time.time())))
 
     @property
     def current_loop_nr(self) -> int:

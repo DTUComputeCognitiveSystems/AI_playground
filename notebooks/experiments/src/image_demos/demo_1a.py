@@ -4,7 +4,6 @@ from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox,
 from matplotlib import pyplot as plt
 
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled_video import LabelledVideo
 from src.image.video.video_loop import VideoLoop
 
 class VideoRecognitionDashboard:

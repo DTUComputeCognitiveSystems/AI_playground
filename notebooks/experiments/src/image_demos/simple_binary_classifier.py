@@ -8,7 +8,7 @@ import numpy as np
 
 from src.image.object_detection.keras_detector import KerasDetector
 from keras.applications.imagenet_utils import preprocess_input
-from src.image.video.labelled_video import LabelledVideo
+#from src.image.video.labelled_video import LabelledVideo
 
 
 class SimpleBinaryClassifier:
@@ -65,16 +65,17 @@ class SimpleBinaryClassifier:
         print("Accuracy on the validation set is {:}%.".format(100 * acc))
 
     def run_live(self, video_length=10):
-        the_video = LabelledVideo(
-            KerasDetector(
-                model_specification=self.model,
-                preprocessing=lambda x: preprocess_input(np.copy(x).astype(np.float32)),
-                decoding=self._decoding
-            ),
-            video_length=video_length,
-            crosshair_type='box',
-            crosshair_size=(224, 224),
-        )
-        the_video.start()
-        while not the_video.real_time_backend.stop_now:
-            plt.pause(.5)
+        # the_video = LabelledVideo(
+        #     KerasDetector(
+        #         model_specification=self.model,
+        #         preprocessing=lambda x: preprocess_input(np.copy(x).astype(np.float32)),
+        #         decoding=self._decoding
+        #     ),
+        #     video_length=video_length,
+        #     crosshair_type='box',
+        #     crosshair_size=(224, 224),
+        # )
+        # the_video.start()
+        # while not the_video.real_time_backend.stop_now:
+        #     plt.pause(.5)
+        pass

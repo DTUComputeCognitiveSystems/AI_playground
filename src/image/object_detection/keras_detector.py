@@ -11,7 +11,7 @@ from keras.layers import Dense, Flatten, Dropout
 from keras.models import Model
 
 from src.image.object_detection.models_base import ResizingImageLabeller
-from src.image.video import SimpleVideo
+#from src.image.video import SimpleVideo
 
 _model_specification = namedtuple(
     "model_specification",
@@ -122,52 +122,52 @@ def configure_simple_model():
     return head_model
 
 
-if __name__ == "__main__":
-    print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
+# if __name__ == "__main__":
+#     print("-" * 100 + "\nSpeed Comparison of Keras Models\n" + "-" * 100 + "\n")
 
-    # Get some frames from a video
-    video = SimpleVideo(
-        record_frames=True,
-        frame_rate=10,
-        video_length=1,
-        title="Test Video"
-    )
-    video.start()
-    frames = video.video_frames
+#     # Get some frames from a video
+#     video = SimpleVideo(
+#         record_frames=True,
+#         frame_rate=10,
+#         video_length=1,
+#         title="Test Video"
+#     )
+#     video.start()
+#     frames = video.video_frames
 
-    # Go through models and time performance
-    n_models = len(KerasDetector.available_models)
-    times = []
-    for model_nr, a_model_name in enumerate(KerasDetector.available_models):
+#     # Go through models and time performance
+#     n_models = len(KerasDetector.available_models)
+#     times = []
+#     for model_nr, a_model_name in enumerate(KerasDetector.available_models):
 
-        print("\n" + "-" * 40 + "\n{} / {}: {}".format(model_nr + 1, n_models, a_model_name))
+#         print("\n" + "-" * 40 + "\n{} / {}: {}".format(model_nr + 1, n_models, a_model_name))
 
-        # Make model
-        model = KerasDetector(
-            model_specification=a_model_name,
-            verbose=False,
-            n_labels_returned=2
-        )
+#         # Make model
+#         model = KerasDetector(
+#             model_specification=a_model_name,
+#             verbose=False,
+#             n_labels_returned=2
+#         )
 
-        # Label all frames
-        start_time = time()
-        labels = []
-        for frame in frames:
-            labels.append(model.label_frame(frame=frame))
-        total_time = time() - start_time
-        times.append(total_time)
-        print("\tTotal time   : {:.2f}s".format(total_time))
-        print("\tAverage time : {:.2f}s".format(total_time / len(frames)))
-        print("\tLabels       : {}".format(labels))
+#         # Label all frames
+#         start_time = time()
+#         labels = []
+#         for frame in frames:
+#             labels.append(model.label_frame(frame=frame))
+#         total_time = time() - start_time
+#         times.append(total_time)
+#         print("\tTotal time   : {:.2f}s".format(total_time))
+#         print("\tAverage time : {:.2f}s".format(total_time / len(frames)))
+#         print("\tLabels       : {}".format(labels))
 
-    # Pandas table at the end
-    times = np.array(times)
-    table = pd.DataFrame(
-        data=np.array([times, times / len(frames)]).T,
-        index=KerasDetector.available_models,
-        columns=["Total time", "Average time"]
-    )
-    table = table.sort_values("Total time", ascending=False)
-    print("\n\n" + "-" * 100)
-    print("Comparison table\n")
-    print(table)
+#     # Pandas table at the end
+#     times = np.array(times)
+#     table = pd.DataFrame(
+#         data=np.array([times, times / len(frames)]).T,
+#         index=KerasDetector.available_models,
+#         columns=["Total time", "Average time"]
+#     )
+#     table = table.sort_values("Total time", ascending=False)
+#     print("\n\n" + "-" * 100)
+#     print("Comparison table\n")
+#     print(table)

@@ -5,14 +5,18 @@ import pyqtgraph as pg
 from scipy import signal
 
 def run_livepred(predictor):
-        
+    global app
     app = QtCore.QCoreApplication.instance()
     if app is None:
         app = QtGui.QApplication([])
 
     livepred = LivePredictions(predictor=predictor)
     livepred.show()
+
+    # Because of an error, need to try ignoring it to get further
+    # This error occurs as discussed here https://stackoverflow.com/questions/41542571/pyqtgraph-tries-to-put-tensorflow-stuff-onto-a-qgraphicsscene-on-cleanup
     app.exec_()
+
     livepred.close_stream()
 
 

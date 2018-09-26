@@ -22,7 +22,7 @@ class Recorder:
     def __init__(self, n_classes=2, n_files=12, prefix='aib', wav_dir=None):
     
         if wav_dir is None:
-            self.wav_dir = "/tmp"
+            self.wav_dir = "tmp"
         else:
             self.wav_dir = wav_dir
 
@@ -133,7 +133,7 @@ class Recorder:
 
 class SoundClassifier:
     
-    def __init__(self, weights_path='sound_classification_weights.hdf5', mix=False):
+    def __init__(self, weights_path='notebooks/experiments/src/sound_demos/sound_classification_weights.hdf5', mix=False):
         
         self.weights_path = weights_path
         self.mix = mix
@@ -200,7 +200,7 @@ class SoundClassifier:
         self.base_train = self.base_model.predict(self.train_data)
         self.base_val = self.base_model.predict(self.validation_data)
         self.base_test = self.base_model.predict(self.test_data)
-        
+
         # build and compile top model
         self.top_model = self._build_top_model()
         
@@ -326,8 +326,9 @@ class SoundClassifier:
         
         # pop the top layers?
         # Try to remove a different number of layers. Removing 2 seems to work okay
+        # Previous one was model.layers.pop() which did not work
         for _ in range(2):
-            model.layers.pop()
+            model.pop()
 
         # needed fix, to have an output of the model
         model.outputs = [model.layers[-1].output]

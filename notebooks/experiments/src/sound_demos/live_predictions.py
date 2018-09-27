@@ -4,20 +4,20 @@ from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 from scipy import signal
 
+
 def run_livepred(predictor):
-    global app
-    app = QtCore.QCoreApplication.instance()
-    if app is None:
-        app = QtGui.QApplication([])
-
-    livepred = LivePredictions(predictor=predictor)
-    livepred.show()
-
     # Because of an error, need to try ignoring it to get further
     # This error occurs as discussed here https://stackoverflow.com/questions/41542571/pyqtgraph-tries-to-put-tensorflow-stuff-onto-a-qgraphicsscene-on-cleanup
-    app.exec_()
+    try:
+        app = QtCore.QCoreApplication.instance()
+        if app is None:
+            app = QtGui.QApplication([])
 
-    livepred.close_stream()
+        livepred = LivePredictions(predictor=predictor)
+        livepred.show()
+        app.exec_()
+    finally:
+        livepred.close_stream()
 
 
 class LivePredictions(QtGui.QMainWindow):
@@ -104,7 +104,7 @@ class LivePredictions(QtGui.QMainWindow):
                                   rate=self.rate,
                                   input=True,
                                   frames_per_buffer=self.chunk)
-        
+ 
     def close_stream(self):
         self.stream.stop_stream()
         self.stream.close()
@@ -177,3 +177,8 @@ class LivePredictions(QtGui.QMainWindow):
             
         except KeyboardInterrupt:
             self.close_stream()
+
+        # Fixes the error with "OSError: [Errno -9988] Stream closed"
+        except OSError:
+            pass
+

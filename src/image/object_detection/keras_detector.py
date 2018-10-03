@@ -4,6 +4,7 @@ from time import time
 import keras
 import numpy as np
 import pandas as pd
+import json
 from keras.applications import densenet
 from keras.applications import inception_resnet_v2
 from keras.applications import mobilenet, resnet50
@@ -40,10 +41,23 @@ class KerasDetector(ResizingImageLabeller):
     def __init__(self,
                  model_specification='resnet50', resizing_method="sci_resize",
                  preprocessing=None, decoding=lambda x: [x],
-                 n_labels_returned=1, exlude_animals=False, verbose=False):
+                 n_labels_returned=1, exlude_animals=False, verbose=False, language="eng-US"):
         self._preprocessing = preprocessing
         self._prediction_decoding = decoding
         self.vegetarian = exlude_animals
+        self.language = language # 3-letter language codes used in ISO 639-2, plus locale in 2 letters
+        self.language_labels_list = None # List of labels for chosen language
+        self.language_loaded = False # Used to determine, what source to use for the labels [eng-US, dan-DK]
+
+        # Load the language file
+        try:
+            json_data=open("imagenet_class_index_dk.json").read()
+            self.language_labels_list = json.loads(json_data)
+            self.language_loaded = True
+        except:
+            raise Exception("No language file found for Keras. Continuing with eng-US")
+        finally:
+            pass
 
         # Get model by name
         if isinstance(model_specification, str):
@@ -92,12 +106,21 @@ class KerasDetector(ResizingImageLabeller):
         predictions = self._model.predict(x=frame)
         if self.vegetarian:
             predictions[0, :397] = 0
-
+        
         # Convert predictions (index for removing batch-dimension)
         decoded = self._prediction_decoding(predictions)[0]
 
         # Get labels and probabilities
-        labels = [val[1] for val in decoded]
+        if self.language_loaded == True and self.language == "dan-DK":
+            k = [key for key, value in self.language_labels_list.items() if decoded[0][0] == value[0]]
+            #print("k: {}, d: {}, l: {}".format(k, decoded[0][0], self.language_labels_list[k[0]][2]))
+            labels = [self.language_labels_list[k[0]][2]]
+        elif self.language_loaded == True and self.language == "eng-US":
+            k = [key for key, value in self.language_labels_list.items() if decoded[0][0] == value[0]]
+            labels = [self.language_labels_list[k[0]][1]]
+        else:
+            labels = [val[1] for val in decoded]
+
         probabilities = [val[2] for val in decoded]
 
         return labels, probabilities

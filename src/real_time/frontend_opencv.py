@@ -3,6 +3,8 @@ if __name__ == "__main__":
     exec(open("notebooks/global_setup.py").read())
 
 import cv2
+import numpy as np
+from PIL import ImageFont, ImageDraw, Image
 from time import time
 from datetime import datetime
 
@@ -56,16 +58,31 @@ class OpenCVFrontendController:
             
             # Add labels
             if self.show_labels == True:
-                ## Getting the text size on the screen to align it nicely
-                text_size, _ = cv2.getTextSize(self.current_label, cv2.FONT_HERSHEY_DUPLEX, 1, 1)
+                
+                # Choose a font and get the text size
+                # This is done because CV2 devault putText function does not work well with unicode
+                font = ImageFont.truetype("src/utility/arial.ttf", 24)
+                text_size = font.getsize(self.current_label)
+
                 ## Calculating the coordinates to put text on the screen
                 text_bg_point_1 = (self.frame_size[1] - text_size[0] - 10,0)
                 text_bg_point_2 = (self.frame_size[1], text_size[1] + 15)
                 ## Drawing the text background
                 cv2.rectangle(self.current_frame, text_bg_point_1, text_bg_point_2, (255,255,255), -1)
-                ## Displaying the text on the frame
-                cv2.putText(self.current_frame, self.current_label,(self.frame_size[1] - text_size[0] - 5, text_size[1] + 5), cv2.FONT_HERSHEY_DUPLEX, 1, (0,0,0))
-        
+
+                # Draw the text
+                ## Convert to PIL Image
+                cv2_im_rgb = cv2.cvtColor(self.current_frame, cv2.COLOR_BGR2RGB)
+                pil_im = Image.fromarray(cv2_im_rgb)
+
+                draw = ImageDraw.Draw(pil_im)
+
+                ## Draw the text
+                draw.text((self.frame_size[1] - text_size[0] - 5, 5), self.current_label, font=font, fill=(0,0,0,255))
+
+                ## Save the image
+                self.current_frame = cv2.cvtColor(np.array(pil_im), cv2.COLOR_RGB2BGR)
+                
             # Show image, flipped on horizontal axis
             cv2.imshow(self.title, self.current_frame)
 

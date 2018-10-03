@@ -4,8 +4,7 @@ from ipywidgets.widgets import Button, Dropdown, FloatText, Layout, Label, VBox,
 from matplotlib import pyplot as plt
 
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled import LabelledVideo
-
+from src.image.video.video_loop import VideoLoop
 
 class VideoRecognitionDashboard:
     def __init__(self):
@@ -46,10 +45,10 @@ class VideoRecognitionDashboard:
             style={'description_width': '100px'},
         )
 
-        self.select_backend = Dropdown(
+        self.select_frontend = Dropdown(
             options=["opencv","matplotlib"],
             value="opencv",
-            description='Backend:',
+            description='Frontend:',
             disabled=False,
             layout=Layout(width='220px', padding='8px 0 0 0'),
             style={'description_width': '100px'},
@@ -101,7 +100,7 @@ class VideoRecognitionDashboard:
                             layout=Layout(justify_content="space-around")
                         ),
                         VBox(
-                            (self.select_network, self.select_backend),
+                            (self.select_network, self.select_frontend),
                             layout=Layout(justify_content="space-around")
                         )
                         
@@ -143,7 +142,7 @@ class VideoRecognitionDashboard:
         # Get settings
         model_name = self.select_network.value
         video_length = self.video_length.value
-        selected_backend = self.select_backend.value
+        selected_frontend = self.select_frontend.value
         selected_framerate = self.select_framerate.value
 
         # Make network
@@ -154,12 +153,10 @@ class VideoRecognitionDashboard:
         if self.use_recorded.value == "MP4":
             video_path = self.video_path.value
             video_length = 120
-        the_video = LabelledVideo(net, backend=selected_backend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
+        #the_video = LabelledVideo(net, backend=selected_backend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
+        the_video = VideoLoop(model = net, regime = "object_detection", frontend = selected_frontend, frame_rate = selected_framerate, video_length=video_length, video_path=video_path)
         self.progress_text.value = "Video running!"
         the_video.start()
-        plt.show()
-        while not the_video.real_time_backend.stop_now:
-            plt.pause(.5)
 
         # Re-enable controls
         self.start_button.disabled = False

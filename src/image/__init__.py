@@ -1,1 +1,2 @@
-from src.image.video import SimpleVideo, VideoCamera, LabelledVideo
+# New architecture
+from src.image.backend_opencv import OpenCVBackendController

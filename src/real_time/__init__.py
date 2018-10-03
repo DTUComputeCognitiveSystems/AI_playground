@@ -1,4 +1,5 @@
-from src.real_time.base_backend import BackendInterfaceObject, BackendInterface
-from src.real_time.background_backend import BackgroundLoop
-from src.real_time.matplotlib_backend import MatplotlibLoop
+# Refactored architecture
+from src.real_time.frontend_opencv import OpenCVFrontendController
+from src.real_time.frontend_matplotlib import MatplotlibFrontendController
+# Text loop
 from src.real_time.text_input_backend import TextInputLoop

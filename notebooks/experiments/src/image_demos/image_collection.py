@@ -7,25 +7,24 @@ import numpy as np
 from keras.preprocessing.image import ImageDataGenerator
 from matplotlib import pyplot as plt
 from scipy.misc import imsave, imread
+import time
 
 from src.image.object_detection.keras_detector import KerasDetector
-from src.image.video.labelled import LabelledVideo
-from src.image.video.snapshot import VideoCamera
-from src.real_time.matplotlib_backend import MatplotlibLoop
+from src.image.video.video_loop import VideoLoop
 
 images_dir_name = "ml_images"
 
 
-def run_video_recognition(model_name="mobilenet", video_length=10):
-    """
-    :param model_name: model to use for object recognition. Different models have different performances and run times
-    :param video_length: length of video in seconds
-    """
-    net = KerasDetector(model_specification=model_name, exlude_animals=True)
-    the_video = LabelledVideo(net, video_length=video_length)
-    the_video.start()
-    while not the_video.real_time_backend.stop_now:
-        plt.pause(.5)
+# def run_video_recognition(model_name="mobilenet", video_length=10):
+#     """
+#     :param model_name: model to use for object recognition. Different models have different performances and run times
+#     :param video_length: length of video in seconds
+#     """
+#     net = KerasDetector(model_specification=model_name, exlude_animals=True)
+#     the_video = LabelledVideo(net, video_length=video_length)
+#     the_video.start()
+#     while not the_video.real_time_backend.stop_now:
+#         plt.pause(.5)
 
 
 class ImageCollector:
@@ -60,22 +59,21 @@ class ImageCollector:
             # Make title
             if use_binary:
                 if i:
-                    title = "Images WITH object"
+                    title = "Images WITH object \n (press ENTER to take a photo)"
                 else:
-                    title = "Images WITHOUT object"
+                    title = "Images WITHOUT object \n (press ENTER to take a photo)"
             else:
-                title = "Object {}: {}".format(i + 1, label_name)
+                title = "Object {}: {} \n (press ENTER to take a photo)".format(i + 1, label_name)
 
             # Start up the camera
-            plt.close("all")
-            back_end = MatplotlibLoop()
-            my_camera = VideoCamera(n_photos=self.num_pictures, backend=back_end, title=title,
-                                    crosshair_size=self.picture_size)
+            #back_end = MatplotlibLoop()
+            my_camera = VideoLoop(n_photos = self.num_pictures, regime = "picture_taking", title = title, frontend = "matplotlib",
+                                  cutout_size = self.picture_size)
             my_camera.start()
 
             # Wait for camera
-            while not my_camera.real_time_backend.stop_now:
-                plt.pause(.5)
+            while not my_camera.this_is_the_end:
+                time.sleep(.5)
 
             # Get coordinates from camera-cutout
             start_y, start_x, _, _ = my_camera.cutout_coordinates
@@ -83,7 +81,7 @@ class ImageCollector:
             # Store label and cut-out-photos
             self.labels.append(label_name)
             self.frames.append(
-                np.stack(my_camera.photos[:self.num_pictures])[:, start_x:start_x + self.picture_size[0],
+                np.stack(my_camera.frontend.photos["pictures"][:self.num_pictures])[:, start_x:start_x + self.picture_size[0],
                 start_y:start_y + self.picture_size[1]])
 
     def load_network(self, model_name="mobilenet", net=None):

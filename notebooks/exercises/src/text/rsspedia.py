@@ -6,7 +6,8 @@ class Rsspedia:
 
         self.wikipedia = wikipedia
 
-        self.search_results = self.content = self.texts = self.wikipedia_results = None
+        self.search_results = []
+        self.content = self.texts = self.wikipedia_results = None
 
     def search_wikipedia(self, search_texts, k_1=1.2, b=0.75):
 
@@ -47,7 +48,7 @@ class Rsspedia:
                     formatted_result_list.append(formatted_result)
                 formatted_result_list.append("</ol>")
                 formatted_results = "\n".join(formatted_result_list)
-                self.search_results = formatted_results
+                self.search_results.append(formatted_results)
 
     def loadTexts(self, texts):
         self.texts = texts

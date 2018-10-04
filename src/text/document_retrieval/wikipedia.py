@@ -59,7 +59,7 @@ class Wikipedia:
 
     def __init__(self,
                  language="English",
-                 cache_directory_url=None,
+                 cache_directory_url="tmp",
                  maximum_number_of_documents=None):
 
         self.documents = None  # type: list[WikipediaDocument]

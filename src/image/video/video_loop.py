@@ -176,7 +176,12 @@ class VideoLoop:
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     labelling_model = KerasDetector(model_specification = "mobilenet", language = "dan-DK")
     videoloop = VideoLoop(model = labelling_model, regime = "object_detection", video_length = None, frontend = "opencv") #, video_path = "small.mp4"
+=======
+    labelling_model = KerasDetector(model_specification="mobilenet")
+    videoloop = VideoLoop(model = labelling_model, regime = "object_detection", video_length = None, frontend = "opencv", video_path = "small.mp4")
+>>>>>>> f5f0707aefed86f84c9a2bd4a8ca7a7a0dd753cd
     videoloop.start()
 

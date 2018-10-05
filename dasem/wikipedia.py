@@ -815,7 +815,8 @@ class ExplicitSemanticAnalysis(object):
         D = np.array((self._Y * y.T).todense())
         indices = np.argsort(-D, axis=0)
         titles = [self._titles[index] for index in indices[:n, 0]]
-        return titles
+        texts = [self._Y[index] for index in indices[:n, 0]]
+        return (titles, texts)
 
     def sort_by_outlierness(self, phrases):
         """Return phrases based on outlierness.

@@ -1,11 +1,15 @@
 import feedparser
 import pandas as pd
 from afinn import Afinn
-from ipywidgets.widgets import Accordion, Layout, Label, VBox, HTML, Dropdown, Button
+from ipywidgets.widgets import Accordion, Layout, Label, VBox, HTML, Dropdown, Button, Output
+from IPython.core.display import display
 from notebooks.exercises.src.text.rsspedia import Rsspedia
 
 class RSSDashboard:
     def __init__(self):
+        self.data_titles = []
+        self.data_scores = []
+        self.afinne = None
 
         self.select = Dropdown(
             options={'Politiken.dk': 0, 
@@ -18,9 +22,11 @@ class RSSDashboard:
             value=1,
             description='Vælg nyhedskilde:',
             disabled=False,
+            layout=Layout(width='300px'),
+            style={'description_width': '130px'},
         )
 
-        self.container = HTML(
+        self.container = Output(
             value = "",
         )
 
@@ -54,17 +60,16 @@ class RSSDashboard:
 
         feed = feedparser.parse(RSS_feeds[self.select.value][1])
 
-        afinn = Afinn(language = "da")
-        data_titles = []
-        data_scores = []
+        self.afinn = Afinn(language = "da")
+
         # Get relevant objects from RSS feed ans store titles and scores
         for i in range(len(feed["entries"])):
-            data_titles.append(feed["entries"][i]["title"])
-            data_scores.append(afinn.score(feed["entries"][i]["title"]))
+            self.data_titles.append(feed["entries"][i]["title"])
+            self.data_scores.append(self.afinn.score(feed["entries"][i]["title"]))
 
         # Dataframe
         pd.set_option('display.max_colwidth', -1) # Used to display whole title (non-truncated)
-        df = pd.DataFrame({"Title": data_titles, "Score": data_scores}) # Creating the data frame and populating it
+        df = pd.DataFrame({"Title": self.data_titles, "Score": self.data_scores}) # Creating the data frame and populating it
 
         # Highlight the positive and negative sentiments
         def highlight(s):
@@ -76,5 +81,5 @@ class RSSDashboard:
                 return ['background-color: #FFFFFF']*2
 
         df = df.style.apply(highlight, axis=1)
-
-        self.container.value = df
+        display(df)
+        #self.container.value = display(df)

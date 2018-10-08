@@ -52,3 +52,17 @@ class Rsspedia:
 
     def loadTexts(self, texts):
         self.texts = texts
+
+    def display_beautifully(self, titles, texts, urls):
+        formatted_result_list = ["<ol>"]
+        for i in range(len(titles)):
+            formatted_result = "\n".join([
+                "<li>",
+                f"<p><a href=\"{urls[i]}\">{titles[i]}</a></p>",
+                f"<p>{texts[i]}</p>",
+                "</li>"
+            ])
+            formatted_result_list.append(formatted_result)
+        formatted_result_list.append("</ol>")
+        formatted_results = "\n".join(formatted_result_list)
+        return formatted_results

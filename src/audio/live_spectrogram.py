@@ -33,13 +33,21 @@ class LiveSpectrogram(QtGui.QMainWindow):
         self.mainbox = QtGui.QWidget()
         self.setCentralWidget(self.mainbox)
         self.mainbox.setLayout(QtGui.QVBoxLayout())
-
+        self.label = QtGui.QLabel()
+        self.mainbox.layout().addWidget(self.label)
         self.canvas = pg.GraphicsLayoutWidget()
         self.mainbox.layout().addWidget(self.canvas)
 
-        self.label = QtGui.QLabel()
-        self.mainbox.layout().addWidget(self.label)
-        
+
+
+        self.button_texts = ["Continue!", "Freeze!"]
+
+        self.stop_button = QtGui.QPushButton(self.button_texts[1]) #button for freezing and starting module
+        self.stop_button.clicked.connect(self.toggle_update)
+        self.stop_button.setStyleSheet('QPushButton {background-color: #F75D59; color: #000000;}') #make red to indicate that this stops
+
+        self.mainbox.layout().addWidget(self.stop_button)
+
         #  line plot: wave form
         self.lineplot = self.canvas.addPlot()
         self.h2 = self.lineplot.plot(pen='r')
@@ -67,6 +75,7 @@ class LiveSpectrogram(QtGui.QMainWindow):
 
         self.img.setLookupTable(lut)
         self.img.setLevels([-100,100])
+        self.do_update= True
 
         #### Start  #####################
         
@@ -98,7 +107,18 @@ class LiveSpectrogram(QtGui.QMainWindow):
                                                       self.rate,
                                                       noverlap=self.noverlap)
         self.spec = np.zeros(self.Sxx.shape)
-        
+    def toggle_update(self):
+        self.do_update = not self.do_update
+
+        self.stop_button.setText(self.button_texts[int(self.do_update)])
+        if self.do_update:
+            self.stop_button.setStyleSheet(
+                'QPushButton {background-color: #F75D59; color: #000000;}')  # make red to indicate that this stops
+        else:
+            self.stop_button.setStyleSheet(
+                'QPushButton {background-color: #54C571; color: #000000;}')  # make red to indicate that this stops
+
+
     def tape_add(self):
         raw, audio = self.read_stream()
         self.tape[:-self.chunk] = self.tape[self.chunk:]
@@ -122,10 +142,12 @@ class LiveSpectrogram(QtGui.QMainWindow):
             psd = 20 * np.log10(psd + self.eps)
 
             # self.img.setImage(self.spec.T)
-            self.img.setImage(psd.T, autoLevels=False)
-            self.h2.setData(self.tape)
+            self.label.setText('Wave and spectrogram')
+            if self.do_update:
+                self.img.setImage(psd.T, autoLevels=False)
+                self.h2.setData(self.tape)
 
-            self.label.setText('wave and spectrogram')
+
             
             QtCore.QTimer.singleShot(1, self._update)
 

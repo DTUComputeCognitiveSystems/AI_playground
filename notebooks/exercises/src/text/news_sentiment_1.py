@@ -19,7 +19,7 @@ class RSSDashboard:
                     'Børsen.dk': 4,
                     'Ekstrabladet.dk': 5
             },
-            value=1,
+            value=0,
             description='Vælg nyhedskilde:',
             disabled=False,
             layout=Layout(width='300px'),

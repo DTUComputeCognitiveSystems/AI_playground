@@ -9,7 +9,7 @@ class RSSDashboard:
     def __init__(self):
         self.data_titles = []
         self.data_scores = []
-        self.afinne = None
+        self.afinn = None
 
         self.select = Dropdown(
             options={'Politiken.dk': 0, 
@@ -49,7 +49,7 @@ class RSSDashboard:
     def start(self):
         return self.widget_box
 
-    def _do_sentiment_analysis(self, _):
+    def _do_sentiment_analysis(self, selected_value = None):
         RSS_feeds = [('Politiken.dk', 'http://politiken.dk/rss/senestenyt.rss'), 
                     ('DR.dk', 'http://www.dr.dk/Forms/Published/rssNewsFeed.aspx?config=6b82610d-b898-49b2-80ef-85c5642519c3&rss=Yes&rssTitle=DR+Nyheder+Online&overskrift=Politik+-+seneste+20&Url=%2fnyheder%2f'), 
                     ('BT.dk', 'https://www.bt.dk/bt/seneste/rss'),
@@ -58,7 +58,10 @@ class RSSDashboard:
                     ('Ekstrabladet.dk', 'http://ekstrabladet.dk/seneste10.rss')
         ]
 
-        feed = feedparser.parse(RSS_feeds[self.select.value][1])
+        if selected_value:
+            feed = feedparser.parse(RSS_feeds[selected_value][1])
+        else:
+            feed = feedparser.parse(RSS_feeds[self.select.value][1])
 
         self.afinn = Afinn(language = "da")
 

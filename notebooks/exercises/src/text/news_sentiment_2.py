@@ -64,11 +64,11 @@ class PrimeMinisterSpeechDashboard:
                      '1998 (Poul Nyrup Rasmussen)': 20,  
                      '1997 (Poul Nyrup Rasmussen)': 21 
             },
-            value=1,
+            value=0,
             description='Vælg talen:',
             disabled=False,
-            layout=Layout(width='300px'),
-            style={'description_width': '130px'},
+            layout=Layout(width='400px'),
+            style={'description_width': '100px'},
         )
 
         self.container = Output(
@@ -102,11 +102,18 @@ class PrimeMinisterSpeechDashboard:
                 current_sentiment += self.afinn.score(line)
             self.speeches_sentiments[os.path.basename(filepath).replace(".txt","")] = current_sentiment
 
-    def _do_sentiment_analysis(self, speech_number = None):
+    def _do_sentiment_analysis( self, 
+                                number_of_averaged_scores = 10,
+                                smoothing_constant = 0.9,
+                                use_exp_smoothing = True,
+                                use_imputation = True,
+                                speech_number = None):
         if speech_number:
-            current_speech = speech_number
+            current_speech = self.speeches_names[speech_number][1]
+            current_speech_title = self.speeches_names[speech_number][0]
         else:
             current_speech = self.speeches_names[self.select.value][1]
+            current_speech_title = self.speeches_names[self.select.value][0]
         scores = []
         for i in range(len(self.speeches[current_speech])):
             scores.append(self.afinn.score(self.speeches[current_speech][i]))
@@ -126,18 +133,37 @@ class PrimeMinisterSpeechDashboard:
 
         df = df.style.apply(highlight, axis=1)
 
+        # Imputation - using previous nonzero score instead of zero
+        running_score = 0
+        imputed_scores = []
+        for i in range(len(scores)):
+            if scores[i] != 0:
+                running_score = scores[i]
+                imputed_scores.append(scores[i])
+            else:
+                imputed_scores.append(running_score)
+
         smoothed_scores = []
-        smoothed_scores.append(scores[0])
-        smoothing_constant = 0.3
-        number_of_averaged_scores = 10
-        for i in range(len(scores) - 1):
-            s = 0
-            for j in range(number_of_averaged_scores):
-                if j == 0:
-                    s = scores[i - j] * smoothing_constant
-                elif i - j >= 0:
-                    s = s + scores[i - j] * (1 - smoothing_constant / number_of_averaged_scores)        
-            smoothed_scores.append(s)
+        
+        if not use_imputation:
+            imputed_scores = scores
+
+        for i in range(len(imputed_scores)):
+            if use_exp_smoothing: # Exp smoothing
+                if i == 0:
+                    smoothed_scores.append(imputed_scores[i])
+                else:
+                    smoothed_scores.append(imputed_scores[i - 1] * (1 - smoothing_constant) + imputed_scores[i] * smoothing_constant)
+            else:   # Arithmetic smoothing
+                s = 0
+                if i > number_of_averaged_scores:
+                    n = number_of_averaged_scores
+                else:
+                    n = i + 1
+
+                for j in range(n):
+                    s = s + imputed_scores[i - j]
+                smoothed_scores.append(s  / n)
 
         # Data for plotting
         y = np.array(smoothed_scores)
@@ -146,12 +172,16 @@ class PrimeMinisterSpeechDashboard:
         y_s = spline(x, y, x_s)
 
         fig, ax = plt.subplots(figsize=(20, 10))
-        ax.plot(x_s, y_s, color="black")
-        ax.set(xlabel='Tid', ylabel='Sentiment', title="Statsministeren's tale sentiment")
+        ax.plot(x_s, y_s, color="black", linewidth = 3)
+
+        ax.tick_params(labelsize = 13)
+        ax.set_xlabel('Tid', fontsize=16)
+        ax.set_ylabel('Sentiment', fontsize=15)
+        ax.set_title('Statsministeren\'s tale: {}'.format(current_speech_title), fontsize=18)
 
         # use xnew, ynew to plot filled-color graphs
-        plt.fill_between(x_s, 0, y_s, where=(y_s-1) < -1 , color='red')
-        plt.fill_between(x_s, 0, y_s, where=(y_s-1) > -1 , color='green')
+        plt.fill_between(x_s, 0, y_s, where=(y_s-1) < -1 , color='#E7D1AC')
+        plt.fill_between(x_s, 0, y_s, where=(y_s-1) > -1 , color='#A8D2D1')
 
         ax.grid()
         plt.show()

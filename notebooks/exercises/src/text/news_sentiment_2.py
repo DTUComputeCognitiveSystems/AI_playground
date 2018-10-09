@@ -102,8 +102,11 @@ class PrimeMinisterSpeechDashboard:
                 current_sentiment += self.afinn.score(line)
             self.speeches_sentiments[os.path.basename(filepath).replace(".txt","")] = current_sentiment
 
-    def _do_sentiment_analysis(self, _):
-        current_speech = self.speeches_names[self.select.value][1]
+    def _do_sentiment_analysis(self, speech_number = None):
+        if speech_number:
+            current_speech = speech_number
+        else:
+            current_speech = self.speeches_names[self.select.value][1]
         scores = []
         for i in range(len(self.speeches[current_speech])):
             scores.append(self.afinn.score(self.speeches[current_speech][i]))
@@ -122,7 +125,6 @@ class PrimeMinisterSpeechDashboard:
                 return ['background-color: #FFFFFF']*2
 
         df = df.style.apply(highlight, axis=1)
-        display(df)
 
         smoothed_scores = []
         smoothed_scores.append(scores[0])
@@ -153,3 +155,6 @@ class PrimeMinisterSpeechDashboard:
 
         ax.grid()
         plt.show()
+
+        display(df)
+        return

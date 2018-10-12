@@ -1,7 +1,7 @@
 from functools import lru_cache
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile
-import fastText
+import fasttext as fastText
 from pathlib import Path
 
 from src.utility.connectivity import download_file

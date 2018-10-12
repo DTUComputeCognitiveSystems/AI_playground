@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import wikipedia
 from IPython.display import display, clear_output
-from fastText import FastText
+import fasttext as FastText
 from ipywidgets import Tab, Text, Checkbox, Label, HBox, VBox, Button, Dropdown, Textarea
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA

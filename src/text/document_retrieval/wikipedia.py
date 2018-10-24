@@ -400,10 +400,18 @@ class Wikipedia:
                                     include_header_infoboxes=False
                                 )
 
+                                fulltext = self._parse_wikipedia_article(
+                                    article_text=text,
+                                    sections="all",
+                                    include_header_image_captions=False,
+                                    include_header_infoboxes=False
+                                )
+
                                 document = {
                                     "title": title,
                                     "url": url,
-                                    "abstract": abstract
+                                    "abstract": abstract,
+                                    "text": fulltext
                                 }
 
                                 documents.append(document)
@@ -432,7 +440,7 @@ class Wikipedia:
                                  sections="first paragraph",
                                  include_header_image_captions=False,
                                  include_header_infoboxes=False):
-
+        text = ""
         if sections not in ["first paragraph", "lead", "all"]:
             raise ValueError(
                 "Can only extract the first paragraph, the lead, or all sections."
@@ -535,9 +543,13 @@ class Wikipedia:
                 text += infobox_string
 
         if sections == "all":
-            remaining_sections_markup = sections_markup[1:]
+            remaining_sections_markup = mwparserfromhell.parse(sections_markup[1:])
+            #try:
             remove_footnotes_from_wikimedia_markup(
-                remaining_sections_markup)
+                    remaining_sections_markup)
+            #except Exception:
+                #print(sections_markup)
+
             text += remaining_sections_markup.strip_code(
                 normalize=True,
                 collapse=True,

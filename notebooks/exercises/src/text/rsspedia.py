@@ -1,3 +1,7 @@
+""" assuming that you are located in the project root when you run this file from the command line"""
+if __name__ == "__main__":
+    exec(open("notebooks/global_setup.py").read())
+    
 import re
 from src.text.document_retrieval.wikipedia import Wikipedia
 
@@ -66,3 +70,29 @@ class Rsspedia:
         formatted_result_list.append("</ol>")
         formatted_results = "\n".join(formatted_result_list)
         return formatted_results
+
+    def search_wiki(self, search_texts, n_matches = 3, search_type = "okapibm25"):
+        k_1 = 1.2
+        b = 0.75
+
+        titles = texts = urls = []
+
+        if search_texts:
+            for i, text in enumerate(search_texts):
+                wikipedia_results, search_terms = self.wikipedia.search(
+                    query=text,
+                    k_1=k_1,
+                    b=b
+                )
+
+                for index, score in wikipedia_results[:3].items():
+                    document = self.wikipedia.documents[index]
+
+                    titles.append(document.title)
+                    texts.append(document.abstract)
+                    urls.append(document.url)
+
+        return titles, texts, urls
+
+if __name__ == "__main__":
+    print(1)

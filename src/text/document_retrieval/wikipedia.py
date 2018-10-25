@@ -211,7 +211,8 @@ class Wikipedia:
                 WikipediaDocument(
                     title=document["title"],
                     url=document["url"],
-                    abstract=document["abstract"]
+                    abstract=document["abstract"],
+                    text=document["text"]
                 )
             )
 

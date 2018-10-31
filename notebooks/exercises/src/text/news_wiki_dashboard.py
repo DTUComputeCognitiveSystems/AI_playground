@@ -10,6 +10,7 @@ from notebooks.exercises.src.text.news_wiki_search import RsspediaSearch
 class RSSWikiDashboard:
     def __init__(self, wikipedia:Wikipedia, rsspediainit:RsspediaInit):
         self.data_titles = []
+        self.data_results = []
         self.rsspediainit = rsspediainit
         self.wikipedia = wikipedia
 
@@ -80,7 +81,22 @@ class RSSWikiDashboard:
     def start(self):
         return self.widget_box
 
-    def _run(self, selected_value = None):
+    def display_beautifully(self):
+        content_items = []
+        for i in range(len(self.data_results)):
+            news, titles, texts, urls, scores = self.data_results[i]
+            #content_items.append(self.rsspedia_search.display_beautifully(titles, texts, urls, scores))
+            content_items.append(HTML(value = "{}".format(self.rsspedia_search.display_beautifully(titles, texts, urls, scores))))
+        accordion = Accordion(children = (content_items),)
+
+        for i in range(len(self.data_titles)):
+            accordion.set_title(i, "{}. {}".format(i + 1, self.data_titles[i]))
+
+        display(accordion)
+
+    def _run(self, *args, **kwargs):
+        selected_value = False
+        self.data_results = []
         RSS_feeds = [('Politiken.dk', 'http://politiken.dk/rss/senestenyt.rss'), 
                     ('DR.dk', 'http://www.dr.dk/Forms/Published/rssNewsFeed.aspx?config=6b82610d-b898-49b2-80ef-85c5642519c3&rss=Yes&rssTitle=DR+Nyheder+Online&overskrift=Politik+-+seneste+20&Url=%2fnyheder%2f'), 
                     ('BT.dk', 'https://www.bt.dk/bt/seneste/rss'),
@@ -94,8 +110,10 @@ class RSSWikiDashboard:
                              ("fasttext_a"),
                              ("fasttext_b")
         ]
+        search_algorithm = search_algorithms[self.select_search.value]
 
-        rsspedia_search = RsspediaSearch(rsspediainit = self.rsspediainit, wikipedia = self.wikipedia)
+        self.rsspedia_search = RsspediaSearch(rsspediainit = self.rsspediainit, wikipedia = self.wikipedia)
+        
 
         if selected_value:
             feed = feedparser.parse(RSS_feeds[selected_value][1])
@@ -106,5 +124,7 @@ class RSSWikiDashboard:
         # Get relevant objects from RSS feed ans store titles and scores
         for i in range(len(feed["entries"])):
             self.data_titles.append(feed["entries"][i]["title"])
-
-
+            titles, texts, urls, scores = self.rsspedia_search.search_wiki(search_texts = [feed["entries"][i]["title"]], n_matches = self.select_nmatches.value, search_type = search_algorithm)
+            self.data_results.append([feed["entries"][i]["title"], titles, texts, urls, scores])
+        
+        return self.display_beautifully()

@@ -3,6 +3,7 @@ from scipy.spatial.distance import cdist
 import re
 from pathlib import Path
 from src.text.document_retrieval.wikipedia import Wikipedia
+import numpy as np
 # ESA relatedness package
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -13,6 +14,16 @@ class RsspediaInit:
         self.content = self.wikipedia_results = None
         # Initialize wikipedia
         self.wikipedia = wikipedia
+        self.wikipedia.documents_clean = self.wikipedia.documents.copy()
+        self.wikipedia_abstract_vectors = []
+        self.wikipedia_title_vectors = []
+
+        # self.texts = []
+        # self.texts_clean = []
+        # self._transformer = []
+        # self._Y = []
+        # self.model = []
+
         # Remove all the line breaks and caret returns from wiki texts
         pattern = re.compile('[\n\r ]+', re.UNICODE)
         self.texts = [self.wikipedia.documents[i].text for i in range(len(self.wikipedia.documents))]
@@ -27,13 +38,10 @@ class RsspediaInit:
         bin_path = Path("data", "fasttext", "wiki.da.bin")
         self.model = FastText.load_fasttext_format(str(bin_path))
         
-        # Fasttext: Compute vectorized representation for all wikipedia articles (takes time)
+        # # Fasttext: Compute vectorized representation for all wikipedia articles (takes time)
         i = 0
         i_max = 0
         n_removed = 0
-        self.wikipedia.documents_clean = self.wikipedia.documents.copy()
-        self.wikipedia_abstract_vectors = []
-        self.wikipedia_title_vectors = []
         pattern1 = re.compile('[^a-zA-Z0-9åÅøØæÆ]+', re.UNICODE)
 
         for n in range(len(self.wikipedia.documents)):
@@ -49,7 +57,7 @@ class RsspediaInit:
                     i = i + 1
                     if i_max > 0 and i > i_max:
                         break
-            except IndexError as e:
+            except IndexError:
                 print("n: {}, n_removed: {}, w.d: {}, w.d_c: {}".format(n, n_removed, len(self.wikipedia.documents), len(self.wikipedia.documents_clean)))
     
     def getCleanWordsList(self, text, return_string = False):
@@ -61,7 +69,7 @@ class RsspediaInit:
         #              "jeg", "mig", "mine", "min", "mit", "du", "dig", "din", "dit", "dine", "han", "ham", "hun", "hende", 
         #              "de", "dem", "vi", "os", "sin", "sit", "sine", "sig"]
         
-        stop_words = ["den", "det", "denne", "dette", "en", "et", "om", "for", "til", "at", "af", "på", "som", "og", "er"]
+        stop_words = ["den", "det", "denne", "dette", "en", "et", "om", "for", "til", "at", "af", "på", "som", "og", "er", "i"]
         
         n_removed = 0
         for i in range(len(words)):

@@ -31,8 +31,6 @@ class RsspediaSearch:
     def get_ngrams(self, text):
         words = self.rsspediainit.getCleanWordsList(text)
         words_copy = words.copy()
-        n_removed = 0
-        
 
         for i in range(len(words_copy)):
             if i > 0:
@@ -45,12 +43,12 @@ class RsspediaSearch:
         dists = cdist(A, B, 'cosine')
         return np.argmin(dists, axis=0), dists #np.min(dists, axis=0)
 
-    def display_beautifully(self, titles, texts, urls):
+    def display_beautifully(self, titles, texts, urls, scores):
         formatted_result_list = ["<ol>"]
         for i in range(len(titles)):
             formatted_result = "\n".join([
                 "<li>",
-                f"<p><a href=\"{urls[i]}\">{titles[i]}</a></p>",
+                f"<p><a href=\"{urls[i]}\">{round(scores[i], 3)} {titles[i]}</a></p>",
                 f"<p>{texts[i]}</p>",
                 "</li>"
             ])
@@ -117,11 +115,17 @@ class RsspediaSearch:
                         cdist_list = (cdist_list1 * p + cdist_list2 * (1 - p))
                         cdist_list_sorted = np.sort(cdist_list, axis = 0) # Sorted list of cosine distances - to get top N matches
                         
-                        for j in range(5):
+                        for j in range(n_matches):
                             x = np.where(cdist_list == cdist_list_sorted[j])[0]
-                            r.append( (x, cdist_list[x][0]))
+                            try:
+                                r.append( (x, cdist_list[x][0]))
+                            except Exception:
+                                print("--- EXCEPTION ---")
+                                print("j {} text {} nm {} i {} len {}".format(j, text, n_matches, i , len(ngrams)))
+                                print("*** {} *** {} ***".format(cdist_result, cdist_result2))
+                                print("{} *** {}".format(x, cdist_list[x]))
                             if verbose:
-                                print("{} {} {} {}".format(x, wikipedia.documents_clean[x[0]].title, cdist_list[x], ngrams[i]))
+                                print("{} {} {} {}".format(x, self.wikipedia.documents_clean[x[0]].title, cdist_list[x], ngrams[i]))
 
                     # When np.where returns multiple matches, we flatten them
                     r_copy = r.copy()
@@ -172,12 +176,15 @@ class RsspediaSearch:
                             rd.append( (x, cdist_result[x][0]))
                             if cdist_result[x][0] < 0.10 and i + j not in ids_removed:
                                 titles_pruned.pop(i + j - n_removed)
+                                texts.pop(i + j - n_removed)
+                                urls.pop(i + j - n_removed)
+                                scores.pop(i + j - n_removed)
                                 n_removed = n_removed + 1
                                 ids_removed.append(i + j)
                                 #print("removed: {}".format(i + j))
                             #print("{}-th title: {}, {}-th title: {}, dist: {}".format(i, titles[i], j + i, titles[j + i], cdist_result[x]))
-                titles = titles_pruned[:int(n_matches / n_mult_factor)]
-        return titles, texts, urls, scores
+                titles = titles_pruned
+        return titles[:int(n_matches / n_mult_factor)], texts[:int(n_matches / n_mult_factor)], urls[:int(n_matches / n_mult_factor)], scores[:int(n_matches / n_mult_factor)]
 
 
 #rsspedia = Rsspedia(wikipedia, rsspediainitAVG)

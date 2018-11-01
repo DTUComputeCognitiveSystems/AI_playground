@@ -97,6 +97,7 @@ class RSSWikiDashboard:
     def _run(self, *args, **kwargs):
         selected_value = False
         self.data_results = []
+        self.data_titles = []
         RSS_feeds = [('Politiken.dk', 'http://politiken.dk/rss/senestenyt.rss'), 
                     ('DR.dk', 'http://www.dr.dk/Forms/Published/rssNewsFeed.aspx?config=6b82610d-b898-49b2-80ef-85c5642519c3&rss=Yes&rssTitle=DR+Nyheder+Online&overskrift=Politik+-+seneste+20&Url=%2fnyheder%2f'), 
                     ('BT.dk', 'https://www.bt.dk/bt/seneste/rss'),

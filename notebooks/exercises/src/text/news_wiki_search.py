@@ -15,7 +15,7 @@ class RsspediaSearch:
         # Initialize wikipedia
         self.wikipedia = wikipedia
         
-        self.texts = rsspediainit.texts
+        #self.texts = rsspediainit.texts
         
         # Calculate tf-idf representation for wiki texts (takes time)
         self._transformer = rsspediainit._transformer
@@ -88,9 +88,15 @@ class RsspediaSearch:
                     titles = [self.wikipedia.documents[index].title for index in indices[:n_matches, 0]]
                     texts = [self.wikipedia.documents[index].abstract for index in indices[:n_matches, 0]]
                     urls = [self.wikipedia.documents[index].url for index in indices[:n_matches, 0]]
+                    scores = [0.0 for i in range(len(texts))]
                 elif search_type == "fasttext_a":
                     # Calculate the vectorized representation
                     text_vector = self.rsspediainit.sumVectorRepresentation(text = text, type = self.embedding_composition)
+                    # print("1 text_vector: {}".format(text_vector))
+                    # print("2 abstract vectors type: {}".format(type(self.wikipedia_abstract_vectors)))
+                    
+                    # print("3 abstract vectors 0: {}".format(self.wikipedia_abstract_vectors[0]))
+                    # print("4 text_vector: {}".format(text_vector))
 
                     cdist_result = self.cdist_func(self.wikipedia_abstract_vectors, [text_vector])
                     cdist_list = cdist_result[1] # List of all the cosine distances
@@ -102,7 +108,7 @@ class RsspediaSearch:
                         titles.append(document.title)
                         texts.append(document.abstract)
                         urls.append(document.url)
-                        scores.append(cdist_list[result])
+                        scores.append(cdist_list[result][0])
                 elif search_type == "fasttext_b":
                     ngrams = self.get_ngrams(text)
                     r = []
@@ -117,13 +123,21 @@ class RsspediaSearch:
                         
                         for j in range(n_matches):
                             x = np.where(cdist_list == cdist_list_sorted[j])[0]
-                            try:
+                            # Check if the result is empty, then we just skip it. 
+                            # This means that one of the n-grams yielded a vector embedding filled with zeros.
+                            # Thus, the cosine distance is undefined.
+                            if(cdist_list[x].any()):
                                 r.append( (x, cdist_list[x][0]))
-                            except Exception:
-                                print("--- EXCEPTION ---")
-                                print("j {} text {} nm {} i {} len {}".format(j, text, n_matches, i , len(ngrams)))
-                                print("*** {} *** {} ***".format(cdist_result, cdist_result2))
-                                print("{} *** {}".format(x, cdist_list[x]))
+                            else:
+                                continue
+                            # try:
+                            #     r.append( (x, cdist_list[x][0]))
+                            # except Exception:
+                            #     print("--- EXCEPTION ---")
+                            #     print("j {} text {} nm {} i {} len {}".format(j, text, n_matches, i , len(ngrams)))
+                            #     print("*** ngram[i]: {}".format(ngrams[i]))
+                            #     print("*** {} *** {} ***".format(cdist_result, cdist_result2))
+                            #     print("{} *** {}".format(x, cdist_list[x]))
                             if verbose:
                                 print("{} {} {} {}".format(x, self.wikipedia.documents_clean[x[0]].title, cdist_list[x], ngrams[i]))
 

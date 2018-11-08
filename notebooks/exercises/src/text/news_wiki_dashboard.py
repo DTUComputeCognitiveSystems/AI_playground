@@ -9,6 +9,11 @@ from notebooks.exercises.src.text.news_wiki_search import RsspediaSearch
 
 class RSSWikiDashboard:
     def __init__(self, wikipedia:Wikipedia, rsspediainit:RsspediaInit):
+        """
+        :param Wikipedia wikipedia: wikipedia class object initialized with correct language
+        :param RsspediaInit rsspediainit: rsspedia init object - prepares the data and embeddings
+        """
+        
         self.data_titles = []
         self.data_results = []
         self.rsspediainit = rsspediainit

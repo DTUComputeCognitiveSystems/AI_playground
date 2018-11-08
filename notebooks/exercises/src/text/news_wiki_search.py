@@ -8,6 +8,11 @@ from notebooks.exercises.src.text.news_wiki_search_init import RsspediaInit
 
 class RsspediaSearch:
     def __init__(self, wikipedia: Wikipedia, rsspediainit: RsspediaInit):
+        """
+        :param Wikipedia wikipedia: wikipedia class object initialized with correct language
+        :param RsspediaInit rsspediainit: rsspedia init object - prepares the data and embeddings
+        """
+
         self.rsspediainit = rsspediainit
         self.embedding_composition = rsspediainit.embedding_composition
         self.search_results = []
@@ -92,12 +97,7 @@ class RsspediaSearch:
                 elif search_type == "fasttext_a":
                     # Calculate the vectorized representation
                     text_vector = self.rsspediainit.sumVectorRepresentation(text = text, type = self.embedding_composition)
-                    # print("1 text_vector: {}".format(text_vector))
-                    # print("2 abstract vectors type: {}".format(type(self.wikipedia_abstract_vectors)))
-                    
-                    # print("3 abstract vectors 0: {}".format(self.wikipedia_abstract_vectors[0]))
-                    # print("4 text_vector: {}".format(text_vector))
-
+                    # Calculate the distance between the wiki abstract vectors and the searchable texts
                     cdist_result = self.cdist_func(self.wikipedia_abstract_vectors, [text_vector])
                     cdist_list = cdist_result[1] # List of all the cosine distances
                     cdist_list_sorted = np.sort(cdist_list, axis = 0) # Sorted list of cosine distances - to get top N matches
@@ -113,11 +113,14 @@ class RsspediaSearch:
                     ngrams = self.get_ngrams(text)
                     r = []
                     for i in range(len(ngrams)):
+                        # First, compute the distance between the current n-gram and the title of the wikipedia article.
                         cdist_result = self.cdist_func(self.wikipedia_title_vectors, [self.rsspediainit.sumVectorRepresentation(text = ngrams[i], type = self.embedding_composition)])
+                        # Second, compute the distance between the current n-gram and the search text.
                         cdist_result2 = self.cdist_func([self.rsspediainit.sumVectorRepresentation(text = text, type = self.embedding_composition)], [self.rsspediainit.sumVectorRepresentation(text = ngrams[i], type = self.embedding_composition)])
 
                         cdist_list1 = cdist_result[1] # List of all the cosine distances
                         cdist_list2 = cdist_result2[1]
+                        # Third, combine the two cosine distances using the p parameter that takes values in this range: (0,1)
                         cdist_list = (cdist_list1 * p + cdist_list2 * (1 - p))
                         cdist_list_sorted = np.sort(cdist_list, axis = 0) # Sorted list of cosine distances - to get top N matches
                         
@@ -130,18 +133,12 @@ class RsspediaSearch:
                                 r.append( (x, cdist_list[x][0]))
                             else:
                                 continue
-                            # try:
-                            #     r.append( (x, cdist_list[x][0]))
-                            # except Exception:
-                            #     print("--- EXCEPTION ---")
-                            #     print("j {} text {} nm {} i {} len {}".format(j, text, n_matches, i , len(ngrams)))
-                            #     print("*** ngram[i]: {}".format(ngrams[i]))
-                            #     print("*** {} *** {} ***".format(cdist_result, cdist_result2))
-                            #     print("{} *** {}".format(x, cdist_list[x]))
+   
                             if verbose:
                                 print("{} {} {} {}".format(x, self.wikipedia.documents_clean[x[0]].title, cdist_list[x], ngrams[i]))
 
                     # When np.where returns multiple matches, we flatten them
+                    # Example: r[13] = [123, 1413], and we remove r[13] and add r[n+1] = 123, r[n+2] = 1413
                     r_copy = r.copy()
                     uniques = []
                     for i in range(len(r)-1, -1, -1):
@@ -200,6 +197,3 @@ class RsspediaSearch:
                 titles = titles_pruned
         return titles[:int(n_matches / n_mult_factor)], texts[:int(n_matches / n_mult_factor)], urls[:int(n_matches / n_mult_factor)], scores[:int(n_matches / n_mult_factor)]
 
-
-#rsspedia = Rsspedia(wikipedia, rsspediainitAVG)
-#rsspedia = Rsspedia(wikipedia, rsspediainitSUM)

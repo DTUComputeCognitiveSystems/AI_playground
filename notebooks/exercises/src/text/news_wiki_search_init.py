@@ -18,6 +18,11 @@ ensure_directory(DATA_DIRECTORY)
 
 class RsspediaInit:
     def __init__(self, wikipedia: Wikipedia, embedding_composition = "sum"):
+        """
+        :param Wikipedia wikipedia: wikipedia class object initialized with correct language
+        :param str embedding_composition: "sum" or "average" the embeddings to calculate the representation
+        """
+
         self.embedding_composition = embedding_composition
         self.search_results = []
         self.content = self.wikipedia_results = None

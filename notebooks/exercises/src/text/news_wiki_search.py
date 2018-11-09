@@ -70,13 +70,10 @@ class RsspediaSearch:
         urls = []
         scores = []
         
-        # (1) Remove unnecessary symbols from the search text
-        pattern = re.compile('[^a-zA-Z0-9åÅøØæÆ ]+', re.UNICODE)
-
         if search_texts:
             for i, text in enumerate(search_texts):
                 # (1) Remove unnecessary symbols from the search text
-                text = pattern.sub('', text)
+                text = self.rsspediainit.getCleanWordsList(text, return_string = True)
                 
                 if search_type == "okapibm25":
                     wikipedia_results, search_terms = self.wikipedia.search(query = text, k_1 = 1.2, b = 0.75)

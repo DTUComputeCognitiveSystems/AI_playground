@@ -33,7 +33,7 @@ class Recorder:
         # sampling rate, use 22050 to match pre trained model
         self.sample_rate = 22050
     
-    def record(self, seconds=4, framesize=2205):
+    def record(self, seconds=4, framesize=2205, clear_output = True):
         
         FORMAT = pyaudio.paInt16
         CHANNELS = 1                 # Must be Mono 
@@ -44,17 +44,23 @@ class Recorder:
 
         try:
             for i in range(self.n_classes):
+                
+                if clear_output:
+                    IPython.display.clear_output(wait=True)
 
-                IPython.display.clear_output(wait=True)
                 print('Get ready to record class {}, {} files'.format(i, self.n_files))
                 time.sleep(3)
-                IPython.display.clear_output(wait=True)
+
+                if clear_output:
+                    IPython.display.clear_output(wait=True)
                 
                 for cnt in [3, 2, 1]:
-                    print('Get ready to record class {}, {} files'.format(i, self.n_files))
+                    if clear_output:
+                        print('Get ready to record class {}, {} files'.format(i, self.n_files))
                     print('{}...'.format(cnt))
                     time.sleep(1)
-                    IPython.display.clear_output(wait=True)                
+                    if clear_output:
+                        IPython.display.clear_output(wait=True)                
 
                 # instantiate pyaudio
                 p = pyaudio.PyAudio()
@@ -67,8 +73,8 @@ class Recorder:
                                frames_per_buffer=FRAMESIZE)
 
                 for j in range(self.n_files):
-                    
-                    IPython.display.clear_output(wait=True)
+                    if clear_output:
+                        IPython.display.clear_output(wait=True)
                     print("Recording class {}, file no {}/{}...".format(i, j + 1, self.n_files))
 
                     data = stream.read(NOFRAMES * FRAMESIZE)

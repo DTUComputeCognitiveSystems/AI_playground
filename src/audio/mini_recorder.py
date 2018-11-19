@@ -3,13 +3,13 @@ import numpy as np
 import wave
 
 class miniRecorder:
-    def __init__(self, seconds=1, rate=44100):
+    def __init__(self, seconds=1, rate=22050):# rate=44100
         
         # self.format = pyaudio.paInt16
         self.format = pyaudio.paFloat32
         self.channels = 1
         self.rate = rate               # sampling rate (Hz)
-        self.framesize = 2**10         # buffer size, number of data points to read at a time
+        self.framesize = 2205         # buffer size, number of data points to read at a time 2 ** 10
         self.record_seconds = seconds  # how long should the recording be
         self.noframes = int((rate * seconds) / self.framesize)  # number of frames needed
         
@@ -52,8 +52,11 @@ class miniRecorder:
 
         wavefile.close()
     
-    def playback(self):
-        
+    def playback(self, sound=None):
+
+        if not sound:
+            sound = self.sound
+
         # instantiate pyaudio
         p = pyaudio.PyAudio()
         
@@ -65,7 +68,7 @@ class miniRecorder:
                                   )
         
         try:
-            stream.write(self.sound, len(self.sound))
+            stream.write(sound, len(sound))
         except:
             print("Error:", sys.exc_info()[0])
             

@@ -3,6 +3,7 @@ from src.audio.mini_recorder import miniRecorder
 import librosa
 import pyaudio
 from ipywidgets.widgets import Layout, Label, HBox, VBox, HTML, Dropdown, Button, Output
+import numpy as np
 import os
 import sys
 import glob
@@ -138,9 +139,9 @@ class SoundDemo1Dashboard1:
             for d in enumerate(self.data[0]):
                 i = i + 1
                 # instantiate stream
-                stream = p.open(format=pyaudio.paFloat32,
+                stream = p.open(format=pyaudio.paInt16, #paFloat32
                                      channels=1,
-                                     rate=44100,
+                                     rate=22050,
                                      output=True,
                                      )
                 print("Playing example {}, label {} ...".format(i, self.data[1][i - 1]))
@@ -198,7 +199,8 @@ class SoundDemo1Dashboard2:
         """
         :param int i: 
         """
-
+        self.test_sound = None
+        self.test_data = None
         self.select_test_data_options = None
 
         self.select_test_data = Dropdown(
@@ -285,10 +287,12 @@ class SoundDemo1Dashboard2:
             # print("changed to {}".format(change['new']))
 
     def _playback(self, v):
-        if self.test_recording:
+        if self.test_sound is not None:
             # Instantiate miniRecorder
             self.rec = miniRecorder(seconds=1.5)
-            self.rec.playback(self.test_recording)
+            self.rec.data = self.test_data
+            self.rec.sound = self.test_sound
+            self.rec.playback()
         else:
             print("No test sound has been loaded. Please load the test sound first.")
 
@@ -308,14 +312,21 @@ class SoundDemo1Dashboard2:
             # Instantiate miniRecorder
             self.rec = miniRecorder(seconds=1.5)
             # Start recording
-            _ = self.rec.record()
-            self.test_recording = self.rec.sound
-            self.rec.write2file(self.test_filename)
+            _ = self.rec.record(save_file=True)
+            self.test_sound = self.rec.sound
+            self.test_data = self.rec.data
+            #self.rec.write2file(fname=os.path.join(WAV_DIR, self.test_filename))
+            #print("File path: {}, data: {}".format(os.path.join(WAV_DIR, self.test_filename), self.rec.data))
         else:
             file = glob.glob(os.path.join(WAV_DIR, self.test_filename))
             if file:
-                (sound_clip, fs) = librosa.load(file, sr=self.sample_rate)
-                self.test_recording = sound_clip
+                try:
+                    (sound_clip, fs) = librosa.load(os.path.join(WAV_DIR, self.test_filename), sr=22050)
+                    print(type(sound_clip))
+                    self.test_sound = np.array(sound_clip)
+                    print("File loaded successfully.")
+                except Exception:
+                    print("File loading has not succeeded.")
             else:
                 print("No file named {} has been found in {}".format(self.test_filename, WAV_DIR))
 

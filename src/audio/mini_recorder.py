@@ -17,7 +17,7 @@ class miniRecorder:
 
         # instantiate pyaudio
         self.p = pyaudio.PyAudio()
-
+        
         # instantiate stream
         self.stream = self.p.open(format=self.format,
                                   channels=self.channels,
@@ -25,7 +25,7 @@ class miniRecorder:
                                   input=True,
                                   frames_per_buffer=self.framesize)
 
-    def record(self, save_file=False):
+    def record(self):
 
         # discard one frame before recording
         discard = self.stream.read(self.framesize)
@@ -36,9 +36,6 @@ class miniRecorder:
         self.sound = np.frombuffer(self.data, dtype=np.int16)  # np.float32 \ pyaudio.paInt16
 
         print("Finished recording...")
-
-        if save_file:
-            self.write2file(fname="tmp/test.wav")
 
         # stop recording
         self.stream.stop_stream()
@@ -57,7 +54,10 @@ class miniRecorder:
 
         wavefile.close()
 
-    def playback(self, sound=None):
+    def playback(self, sound=None, format=None):
+
+        if format is None:
+            format = self.format
 
         if sound is None:
             sound = self.sound
@@ -66,7 +66,7 @@ class miniRecorder:
         p = pyaudio.PyAudio()
 
         # instantiate stream
-        stream = p.open(format=self.format,
+        stream = p.open(format=format,
                         channels=self.channels,
                         rate=self.rate,
                         output=True,

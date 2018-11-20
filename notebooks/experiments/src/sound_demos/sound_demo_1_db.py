@@ -139,7 +139,7 @@ class SoundDemo1Dashboard1:
             for d in enumerate(self.data[0]):
                 i = i + 1
                 # instantiate stream
-                stream = p.open(format=pyaudio.paInt16, #paFloat32
+                stream = p.open(format=pyaudio.paFloat32, # float32 insteda of paInt16 because librosa loads in float32
                                      channels=1,
                                      rate=22050,
                                      output=True,
@@ -292,13 +292,18 @@ class SoundDemo1Dashboard2:
             self.rec = miniRecorder(seconds=1.5)
             self.rec.data = self.test_data
             self.rec.sound = self.test_sound
-            self.rec.playback()
+            if self.test_data is None:
+                self.rec.playback(format=pyaudio.paFloat32)
+            else:
+                self.rec.playback()
         else:
             print("No test sound has been loaded. Please load the test sound first.")
 
     def _run(self, v):
         self.prefix = "test"
         self.test_filename = "test.wav"
+        self.test_sound = None
+        self.test_data = None
 
         # If we choose to record the data, then we record it here
         if self.select_test_data.value == 0:
@@ -312,17 +317,15 @@ class SoundDemo1Dashboard2:
             # Instantiate miniRecorder
             self.rec = miniRecorder(seconds=1.5)
             # Start recording
-            _ = self.rec.record(save_file=True)
+            _ = self.rec.record()
             self.test_sound = self.rec.sound
             self.test_data = self.rec.data
-            #self.rec.write2file(fname=os.path.join(WAV_DIR, self.test_filename))
-            #print("File path: {}, data: {}".format(os.path.join(WAV_DIR, self.test_filename), self.rec.data))
+            self.rec.write2file(fname=os.path.join(WAV_DIR, self.test_filename))
         else:
             file = glob.glob(os.path.join(WAV_DIR, self.test_filename))
             if file:
                 try:
                     (sound_clip, fs) = librosa.load(os.path.join(WAV_DIR, self.test_filename), sr=22050)
-                    print(type(sound_clip))
                     self.test_sound = np.array(sound_clip)
                     print("File loaded successfully.")
                 except Exception:
